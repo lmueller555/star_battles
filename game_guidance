@@ -1,0 +1,204 @@
+1) Ship ecosystem
+1.1 What BSGO did (grounded)
+
+BSGO organized player ships by both role and size class. Roles included Interceptor (fast and agile), Assault (durable, damage-forward), Command (support/auras), and multi-role variants, all of which show up in contemporary and preserved community references. 
+Battlestar Galactica Online
++2
+SWAT Portal
++2
+
+Size classes were Strike (light), Escort (medium), Line (heavy); Capital/XL hulls (battlestars/basestars) existed but were outside regular player ownership. Class lists are preserved on wiki pages that group Cylon and Colonial ships into Strike, Escort, and Line families. 
+BSGO Wiki
++1
+
+Ships also had slot families (cannons, launchers, hull, engine, computer) and visible stat categories (e.g., hull points, hull recovery, power and recovery, avoidance/critical defense, speeds, and FTL parameters). A developer blog and update notes describe stealth ship stat tables and slot layouts explicitly, including cannon vs. launcher slots and role slots/toggle abilities. 
+Battlestar Galactica Online
++2
+BSGO Wiki
++2
+
+1.2 Implementation guidance
+
+Retain the same conceptual layering: pick a role (how it fights and supports), a size (how it moves and survives), and a slot layout (what it can equip). Roles should bias core attributes: Interceptors emphasize top speed, turn rate, avoidance; Assault ships emphasize hull, armor, and raw weapon count; Command ships emphasize computer slots and team effects; multi-role stays balanced. Size classes should scale silhouette, durability, inertia, and slot counts—Strike small and evasive; Escort midline; Line slow, tanky, with broad arcs and heavier mounts.
+
+2) Core stats and how they function in play
+
+Define a survivability layer (hull points, armor, hull regeneration per second, a “durability” buffer that degrades under sustained damage, and defensive modifiers such as avoidance and critical defense). Damage first checks whether a shot hits (attacker accuracy vs defender avoidance), then applies critical chance adjusted by the defender’s critical defense, then reduces damage by armor. Keep a minimum penetration (e.g., a floor percentage that always gets through) so armor can’t nullify all small-arms fire. Hull regeneration should pause briefly after taking damage unless a special module says otherwise.
+
+Movement should have cruise speed and a higher boost speed with a per-second energy drain. Acceleration, strafe caps, turn rates, and turn accelerations define “handling.” Add an inertia compensation factor that gradually aligns velocity with where the nose is pointing, so snappy ships feel “space-arcade” while heavy ships carry momentum.
+
+Energy or “power” is a global budget shared by weapons, boost, and electronics. Power capacity and regeneration determine sustained fire/boost windows; heavier fittings trade efficiency for peak performance.
+
+Sensors mimic “DRADIS” theming: a cone or sphere of awareness with a defined range (listed on some ship entries in the original game), a detection time that rises near the edge of range, and a lock break if distance exceeds range or if enemy ECM exceeds your ECCM. 
+Battlestar Galactica Online
+
+FTL is constrained by three numbers: a range (light-years), a charge time (longer in “threat” or combat state), and a cost per LY. BSGO shipped with visible FTL statistics on several public ship/stat pages and developer notes; your game can replicate the feel with identical concepts: if distance ≤ range and you have sufficient fuel/power, begin charging; in combat, use a higher “threat charge.” 
+Battlestar Galactica Online
+
+3) Equipment system
+3.1 What BSGO exposed (grounded)
+
+Ships had distinct slot families for cannons (ballistic/energy guns), launchers (missiles, mines), hull modules (e.g., power cores, armor plates), engines, and computers (targeting, sensors, electronic warfare). Update notes and dev blogs lay out this taxonomy clearly, including distinctions like “cannon slots” vs “launcher slots,” and the idea of role-exclusive abilities. 
+BSGO Wiki
+
+3.2 Implementation guidance
+
+Keep each slot family impactful. Cannons: hitscan or fast projectiles, optimal range bands, accuracy cones, DPS sustained by power and heat budgets. Launchers: require lock, track targets, limited ammo and reloads, counterable by flares/point defense. Hull modules: power-economy, armor, regen, structural reinforcements. Engines: boost tuning, turn/strafe assists, inertial dampers. Computers: DRADIS range, lock speed, accuracy, ECCM/ECM, PD automation. If you want set identity, let Command hulls unlock more computer slots while Assault gains extra weapon/hull slots.
+
+4) Weapons, targeting, arcs, and point defense
+
+Target acquisition begins with a soft target (nearest hostile, cycle list) and a lock that advances when the target stays in arc and range while LOS is clear. Lock rate can scale with your targeting computer versus the enemy’s ECM. The lock breaks when line-of-sight is lost, the target exceeds break range, or a jam effect lands.
+
+Each hardpoint should have a gimbal limit—a firing cone relative to the ship’s forward axis. Interceptors get tighter gimbals and demand nose-in flying; heavy Line mounts can have broader lateral arcs that reward broadside positioning but rotate slowly.
+
+Accuracy should be distance- and angle-sensitive. Hitscan cannons roll a hit chance after factoring base accuracy, crosshair error, target avoidance, and any magnetism/aim assists. Projectile cannons and missiles need a lead solution and can be obstructed by terrain or ships.
+
+Damage and crits resolve after hit, with crit chance reduced by the defender’s critical defense. Armor applies either a flat reduction or a curve; always keep a penetration floor so small-arms remain relevant. Point defense automatically engages missiles in a short range and arc, consuming power/ammo on a short interval and rolling accuracy vs missile evasion.
+
+5) Flight model (extra-detailed)
+
+Inputs should map to throttle, pitch/yaw/roll, horizontal and vertical strafe, boost, brake, freelook, target selection, fire, and FTL. Interceptors respond instantly, with high turn acceleration and strong inertia compensation; Line ships feel ponderous, keep momentum, and need forethought to bring guns on target.
+
+Forward velocity changes toward a speed target (cruise or boost) based on acceleration, with gentle passive drag to keep numbers readable. Strafe axes should blend toward their caps at a tunable rate; roll behavior can auto-level slowly for comfort. Rotational motion should be smoothed (think critically damped) so ships don’t feel twitchy.
+
+Assists: optional auto-throttle (hold a set speed), auto-level (reduce roll when idle), tiny aim magnetism inside a few degrees so cannons feel responsive. A lead indicator shows the intercept point based on projectile speed and target velocity, improving readability for projectile weapons.
+
+Inertia and collisions: inertia compensation gradually realigns your actual velocity vector with the ship’s nose; heavier ships have less compensation, so they “drift” more. Collisions apply impulses, damage durability first, then hull, and can briefly perturb the camera for feedback.
+
+6) Camera systems (very detailed)
+
+Use three modes.
+
+Chase camera (default): position the camera behind and slightly above the ship, with a subtle shoulder offset so the ship doesn’t block the crosshair. Let the camera yaw and pitch ease toward the ship’s orientation rather than snapping. Dynamically increase FOV with speed and add short recoil kicks on weapon fire. Allow partial banking with roll for kinetic feel, but keep it moderated for readability. At higher speeds, add a small “look-ahead” that nudges the aim point forward in the travel direction so players see where they’re going.
+
+Freelook: when held, decouple the camera’s yaw/pitch from the ship within a clamped cone. On release, smoothly return to the chase angle. This is invaluable for situational awareness without breaking aim.
+
+Cinematic lock camera: when locked to a target, optionally bias the camera to keep both the player and the target framed, with automatic zoom that widens at long range and tightens during close dogfights. A very short cutaway to a launched missile can be stylish if you return quickly to the main view.
+
+Make all camera gains, offsets, FOV scaling, and easing rates editable so you can tune “feel” later.
+
+7) Balance philosophy
+
+Lean on time-to-kill (TTK) targets. For equal-class 1v1s, aim for roughly 8–14 seconds of focused fire. Keep role identities: Interceptors win via positional control and sustained accuracy but fold to mistakes; Assault wins attrition and objective pressure; Command shifts fights with auras (accuracy, power regen, sensor strength) and counter-EW; multi-role has flexible fittings but no extreme. Size matters: Strike ships get avoidance and strafe dominance; Escort carries more guns and midline survivability; Line brings alpha and board control but needs escort protection.
+
+Balance accuracy curves, armor floors, and regen so no role is unanswerable. If heavy ships underperform in dogfights, widen their firing arcs slightly or give them slow-turning turrets with decent tracking so position, not mouse agility, is their win condition.
+
+8) Sectors, systems, FTL, and navigation
+8.1 What BSGO did (grounded)
+
+All player activity took place within The Veil sector, a web of dozens of star systems reachable via the sector map. Sources from the game’s lifetime document 50+ systems, with a subset open to both factions and some faction-restricted or special-access systems. 
+Battlestar Galactica Online
++1
+
+BSGO ships and UI exposed FTL range, charge times, and cost per light-year, as evidenced by dev posts and ship/stat tables; players could also pre-select a jump on the map and commit it later with a hotkey. 
+Battlestar Galactica Online
+
+8.2 Implementation guidance
+
+Represent the galaxy as sectors that contain systems on a 2-D map for readability. Compute line distances between systems in light-years to test against the ship’s FTL range. If the destination is within range and the ship has sufficient fuel/power, begin charging; if the ship has recently taken or dealt damage, use a longer “threat charge” value. Allow “preset” jumps: the player selects a destination on the map (UI indicates it’s armed), then a hotkey executes the jump when permissible. Add FTL interdiction as a counter: jammers delay or cancel charging for enemies within a radius.
+
+9) Resources, mining, repairs, economy
+9.1 What BSGO had (grounded)
+
+Tylium served as fuel and a basic currency; Titanium (note: often spelled “Titanium” in community docs) repaired hull and systems and had fixed exchange rates; Water was a rarer value good. Dedicated mining ships landed on planetoids to extract these resources; they were unarmed and relied on escorts. These loops are described in preserved pages and guides. 
+Battlestar Galactica Online
++1
+
+9.2 Implementation guidance
+
+Use Tylium (or your analogue) to fund FTL and sustained boost, and as a sink for ammo crafting. Let Titanium repair durability in space or be spent for faster hull repairs at stations. Water can be a credit faucet from richer nodes. Mining gameplay should have a scan phase (reveals nodes by grade), a latch/beam phase with a yield-per-second that scales with grade and module tier, and a stability mini-game that affects efficiency. Spawn pirate drones or event hooks if stability is neglected. Make Line ships competent at area denial but less effective at rapid harvest, while dedicated miners excel at yield but require cover.
+
+10) UI and controls
+
+HUD needs a clean crosshair with a lead reticle for projectile weapons, a lock progress ring, and visible gimbal arcs so pilots understand where guns can track. Show target panels with range, relative speed, and scannable defenses if a scan module is active. Display power, boost meter, Tylium, weapon heat/ammo, and status effects. Implement a DRADIS-style radar with contact rings and filters.
+
+Interaction and bindings should cover target nearest/cycle, free-look, boost, brake, weapon groups, countermeasures (flares/PD), sector map, commit jump, and interact/dock. Keep everything rebindable; ship fitting and tech trees should be accessible from a hangar screen, with slot families clearly labeled.
+
+Docking prompts should appear within a generous range threshold. In BSGO, preserved guides show an outpost docking prompt appearing at “999 metres or closer” under normal conditions; in your game, keep the threshold round and readable. 
+Battlestar Galactica Online
+
+11) AI behaviors
+
+Interceptors should make slashing passes, disengage at moderate damage, and re-engage from advantageous vectors. Assault AI should close to a preferred range band and maintain orbit, leveraging missiles on opening and cannons for sustain. Command AI should bias toward allied clusters, prioritize jamming or counter-jamming, and flee if isolated. Mining escorts prioritize anti-missile PD and area denial.
+
+12) Networking considerations (if you add multiplayer later)
+
+Run an authoritative simulation server. Clients send compact input frames; the server simulates movement, lock progress, ballistic/projectile arcs, and authoritative hit resolution. Clients render predicted effects immediately but accept server corrections. DRADIS updates should be distance- and importance-aware to conserve bandwidth.
+
+13) Data and authoring philosophy
+
+Even without code, standardize how designers enter ship frames, slot counts, and baseline stats per role and size. Keep numbers human-readable (metres, m/s, seconds, light-years). Expose balance “knobs” (accuracy falloff, crit baselines, armor floors, lock rates, FTL timing) in one place. Avoid hard-wiring: let frames and items be data-driven so you can add variants quickly (e.g., stealth “Type-2” hulls with revised slot mixes, which BSGO occasionally introduced in updates). 
+BSGO Wiki
+
+14) Tuning checklist
+
+Target a consistent TTK for equal-class duels.
+
+Ensure speed readability through camera FOV scaling and gentle screen shake; too much speed without FOV change harms aim.
+
+Balance gimbal vs. turn rate; widen gimbals slightly for heavy ships before inflating accuracy.
+
+Set power economy so a typical build can boost and fire together for ~8–10 seconds before recovery is needed.
+
+Calibrate FTL pacing: in-system cooldowns feel good between 30–45s; sector jumps with 10–25s charge outside threat, longer in threat.
+
+15) Units of measurement (grounded + implementation)
+15.1 What BSGO showed (grounded)
+
+In-game UI elements presented tactical distances in metres. Surviving guides include explicit metre-based readouts—for example, an outpost docking prompt at “999 metres or closer.” Use metres for HUD ranges and short-range navigation, and promote to kilometres for larger values. 
+Battlestar Galactica Online
+
+15.2 Implementation guidance
+
+Adopt metres as the base unit for all positional and range displays; present speed in metres per second; present sensor/DRADIS in metres or kilometres depending on scale. Present FTL on the sector map in light-years for clarity, with UI tooltips computing cost and charge time at selection.
+
+Practical defaults that read cleanly on a vector display: interceptor cruise ~60–90 m/s, line-class ~30–50 m/s; weapon optimal ranges clustered in the 600–1600 m band so they sit nicely inside a 1–3 km DRADIS ring; docking/interact radii in the 500–1000 m range so players don’t “thread the needle.”
+
+16) Flying and camera mechanics (expanded narrative)
+
+Flight feel is your game’s signature. Interceptors should feel like scalpels—rapid acceleration, high strafe authority, near-instant rotational response with noticeable but forgiving inertia compensation. Escorts should be smooth and predictable, with moderate strafe and enough turn acceleration to keep targets in arc without joystick gymnastics. Line ships should demand planning: slower turn acceleration, visibly narrower gimbals on forward batteries, and optional side mounts that reward broadside positioning.
+
+Camera must support this readability. The default chase camera sits behind and a touch above the ship; it softly follows orientation rather than snapping, and gently “banks” with roll so turns feel dynamic without compromising aim. As speed climbs—especially when boosting—gradually widen FOV so the sense of speed rises without compressing the reticle. A tiny shoulder offset reduces model occlusion of the crosshair. When players hold freelook, detach camera yaw/pitch within a comfortable cone and smoothly recover when released. During a hard lock, offer an optional composition that keeps both ships in frame and subtly zooms to preserve clarity at varying ranges. Each of these effects should be subtle and tunable—the camera should help the pilot, not dominate the experience.
+
+17) Everything else worth not forgetting
+
+Weapon groups: allow players to bind multiple cannons or a mixed set to separate triggers (e.g., “light guns” for finisher accuracy vs “heavy guns” for alpha).
+
+Countermeasures: flares or PD to counter missiles; a lock-break cool-down to avoid infinite cycling.
+
+Electronic warfare: jammers that extend lock time or reduce sensor strength; ECCM to counter.
+
+Role abilities: small, thematically consistent passives or toggles—Command boosts ally sensor strength or power regen; Interceptor gets brief over-throttle; Assault gets hardened systems; stealth frames get unique signature tricks (per the dev blog’s stealth framing). 
+Battlestar Galactica Online
+
+Progression: fitting quality tiers and small stat bumps keep growth steady; later frames remix slot layouts the way BSGO updates sometimes introduced upgraded variants. 
+BSGO Wiki
+
+Accessibility: optional aim assist within a few degrees, color-blind friendly DRADIS/reticle palettes, and readable metre/ kilometre formatting.
+
+18) BSGO-specific facts I relied on (for inspiration only)
+
+Roles and size classes (Interceptor/Assault/Command; Strike/Escort/Line) are documented across preserved player guides and ship lists. 
+Battlestar Galactica Online
++4
+Battlestar Galactica Online
++4
+SWAT Portal
++4
+
+The Veil sector, a multi-system map with factional access rules, is captured in sector-map and sector-systems pages. 
+Battlestar Galactica Online
++1
+
+Slot families and stealth-ship stat tables (cannon vs launcher slots, role slots, toggles) appear in developer posts and updates. 
+Battlestar Galactica Online
++2
+BSGO Wiki
++2
+
+Resource loop and the role of mining ships (Tylium/Titanium/Water; miners are unarmed and land on planetoids) are preserved in mining documentation. 
+Battlestar Galactica Online
++1
+
+Metre-based UI readouts (e.g., docking within 999 metres) are shown in player guides. 
+Battlestar Galactica Online
