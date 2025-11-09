@@ -11,6 +11,7 @@ from game.math.ballistics import compute_lead
 from game.combat.formulas import apply_armor, calculate_crit, calculate_hit_chance
 from game.ftl.utils import compute_ftl_charge, compute_ftl_cost
 from game.mining.formulas import compute_mining_yield
+from game.world.sector import SectorMap
 
 
 def test_hit_chance_clamped() -> None:
@@ -67,3 +68,15 @@ def test_ftl_cost_and_charge() -> None:
 def test_mining_yield() -> None:
     yield_rate = compute_mining_yield(10.0, 1.5, 0.2, 0.8)
     assert isclose(yield_rate, 14.4)
+
+
+def test_sector_map_reachability() -> None:
+    sector = SectorMap()
+    root = Path(__file__).resolve().parents[1]
+    sector.load(root / "game" / "assets" / "data" / "sector_map.json")
+    default = sector.default_system()
+    assert default is not None
+    distance = sector.distance(default.id, "helios_beta")
+    assert distance > 0
+    reachable = {system.id for system in sector.reachable(default.id, distance + 0.1)}
+    assert "helios_beta" in reachable

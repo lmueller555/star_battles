@@ -15,6 +15,7 @@ from game.render.renderer import VectorRenderer
 from game.sensors.dradis import DradisSystem
 from game.ships.ship import Ship
 from game.world.space import SpaceWorld
+from game.ui.sector_map import SectorMapView
 
 
 class SandboxScene(Scene):
@@ -32,12 +33,17 @@ class SandboxScene(Scene):
         self.hud: HUD | None = None
         self.sim_dt = 1.0 / 60.0
         self.fps = 60.0
+        self.map_view: SectorMapView | None = None
+        self.map_open = False
+        self.armed_system_id: str | None = None
+        self.jump_feedback: str = ""
+        self.jump_feedback_timer: float = 0.0
 
     def on_enter(self, **kwargs) -> None:
         self.content = kwargs["content"]
         self.input = kwargs["input"]
         self.logger = kwargs["logger"]
-        self.world = SpaceWorld(self.content.weapons, self.logger)
+        self.world = SpaceWorld(self.content.weapons, self.content.sector, self.logger)
         player_frame = self.content.ships.get("interceptor_mk1")
         self.player = Ship(player_frame, team="player", modules=["pd"])
         self.player.assign_weapon("hp_light_1", "light_cannon_mk1")
@@ -59,6 +65,11 @@ class SandboxScene(Scene):
         self.camera = ChaseCamera(70.0, aspect)
         self.renderer = VectorRenderer(surface)
         self.hud = HUD(surface)
+        self.map_view = SectorMapView(self.content.sector)
+        self.map_open = False
+        self.armed_system_id = None
+        self.jump_feedback = ""
+        self.jump_feedback_timer = 0.0
         pygame.mouse.set_visible(False)
         pygame.event.set_grab(True)
 
@@ -69,31 +80,57 @@ class SandboxScene(Scene):
     def handle_event(self, event: pygame.event.Event) -> None:
         if self.input:
             self.input.handle_event(event)
+        if self.map_open and self.map_view:
+            selection = self.map_view.handle_event(event)
+            if selection:
+                self.armed_system_id = selection
+                self.map_view.selection.armed_id = selection
+                if self.content:
+                    system = self.content.sector.get(selection)
+                    self.jump_feedback = f"Jump armed: {system.name} (press J to commit)"
+                    self.jump_feedback_timer = 4.0
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            self.manager.activate("title")
+            if self.map_open:
+                self.map_open = False
+                pygame.mouse.set_visible(False)
+                pygame.event.set_grab(True)
+            else:
+                self.manager.activate("title")
 
     def update(self, dt: float) -> None:
         self.sim_dt = dt
         if not self.input or not self.player or not self.world or not self.dradis:
             return
         self.input.update_axes()
-        mouse_dx, mouse_dy = self.input.mouse()
-        self.player.control.look_delta = Vector3(mouse_dx, mouse_dy, 0.0)
-        self.player.control.strafe = Vector3(
-            self.input.axis_state.get("strafe_x", 0.0),
-            self.input.axis_state.get("strafe_y", 0.0),
-            0.0,
-        )
-        self.player.control.throttle = self.input.axis_state.get("throttle", 0.0)
-        self.player.control.boost = self.input.action("boost")
-        self.player.control.brake = self.input.action("brake")
-        roll_input = 0.0
-        pressed = pygame.key.get_pressed()
-        if pressed[pygame.K_z]:
-            roll_input -= 1.0
-        if pressed[pygame.K_c]:
-            roll_input += 1.0
-        self.player.control.roll_input = roll_input
+        if self.input.consume_action("open_map"):
+            self.map_open = not self.map_open
+            pygame.mouse.set_visible(self.map_open)
+            pygame.event.set_grab(not self.map_open)
+        if self.map_open:
+            self.player.control.look_delta = Vector3()
+            self.player.control.strafe = Vector3()
+            self.player.control.throttle = 0.0
+            self.player.control.boost = False
+            self.player.control.brake = False
+            self.player.control.roll_input = 0.0
+        else:
+            mouse_dx, mouse_dy = self.input.mouse()
+            self.player.control.look_delta = Vector3(mouse_dx, mouse_dy, 0.0)
+            self.player.control.strafe = Vector3(
+                self.input.axis_state.get("strafe_x", 0.0),
+                self.input.axis_state.get("strafe_y", 0.0),
+                0.0,
+            )
+            self.player.control.throttle = self.input.axis_state.get("throttle", 0.0)
+            self.player.control.boost = self.input.action("boost")
+            self.player.control.brake = self.input.action("brake")
+            roll_input = 0.0
+            pressed = pygame.key.get_pressed()
+            if pressed[pygame.K_z]:
+                roll_input -= 1.0
+            if pressed[pygame.K_c]:
+                roll_input += 1.0
+            self.player.control.roll_input = roll_input
 
         if self.input.consume_action("toggle_overlay"):
             self.hud.toggle_overlay()
@@ -109,6 +146,18 @@ class SandboxScene(Scene):
                 else:
                     idx = next((i for i, s in enumerate(enemies) if id(s) == self.player.target_id), -1)
                     self.player.target_id = id(enemies[(idx + 1) % len(enemies)])
+
+        if self.input.consume_action("commit_jump") and self.armed_system_id and self.world and self.player:
+            success, message = self.world.begin_jump(self.player, self.armed_system_id)
+            self.jump_feedback = message
+            self.jump_feedback_timer = 4.0
+            if success:
+                self.map_open = False
+                pygame.mouse.set_visible(False)
+                pygame.event.set_grab(True)
+                if self.map_view:
+                    self.map_view.selection.armed_id = None
+                self.armed_system_id = None
 
         target = next((s for s in self.world.ships if id(s) == self.player.target_id), None)
 
@@ -129,6 +178,8 @@ class SandboxScene(Scene):
         if target and not target.is_alive():
             self.player.target_id = None
         self.fps = 0.9 * self.fps + 0.1 * (1.0 / dt)
+        if self.jump_feedback_timer > 0.0:
+            self.jump_feedback_timer = max(0.0, self.jump_feedback_timer - dt)
 
     def render(self, surface: pygame.Surface, alpha: float) -> None:
         if not self.renderer or not self.camera or not self.player or not self.hud or not self.world:
@@ -151,6 +202,18 @@ class SandboxScene(Scene):
                         projectile_speed = weapon.projectile_speed
         if self.dradis:
             self.hud.draw(self.camera, self.player, target, self.dradis, projectile_speed, self.sim_dt, self.fps)
+        if self.map_open and self.map_view:
+            status = self.jump_feedback if self.jump_feedback_timer > 0.0 else None
+            self.map_view.draw(surface, self.world, self.player, status)
+        elif self.jump_feedback_timer > 0.0:
+            text = self.hud.font.render(self.jump_feedback, True, (255, 230, 120))
+            surface.blit(
+                text,
+                (
+                    surface.get_width() / 2 - text.get_width() / 2,
+                    surface.get_height() - 100,
+                ),
+            )
 
 
 __all__ = ["SandboxScene"]

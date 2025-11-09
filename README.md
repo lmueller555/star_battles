@@ -10,6 +10,7 @@ A minimalist, vector-rendered space combat sandbox inspired by arcade space dogf
 - Interceptor vs. assault target demo: throttle, boost, strafe, roll, and chase camera with FOV scaling.
 - Hitscan cannons, missile launcher with lock-on, soft target selection, PD interception.
 - DRADIS radar widget, HUD target panel, power/boost meters, debug overlay (F3).
+- Sector map overlay with light-year ranges, Tylium costs, and FTL charging/cooldowns.
 - Unit tests for combat formulas, FTL cost/charge helpers, and mining yield math.
 
 ## Quickstart
