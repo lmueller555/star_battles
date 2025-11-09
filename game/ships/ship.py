@@ -113,6 +113,9 @@ class Ship:
         self.modules_by_slot: Dict[str, list[ItemData]] = defaultdict(list)
         self._module_stat_cache: Dict[str, float] = defaultdict(float)
         self.countermeasure_cooldown: float = 0.0
+        self.auto_throttle_enabled: bool = False
+        self.auto_throttle_ratio: float = 0.0
+        self.auto_level_enabled: bool = True
         if modules:
             for module in modules:
                 self.equip_module(module)
@@ -132,6 +135,8 @@ class Ship:
             mount.cooldown = 0.0
             mount.lock_progress = 0.0
         self.countermeasure_cooldown = 0.0
+        self.auto_throttle_enabled = False
+        self.auto_throttle_ratio = 0.0
 
     def tick_cooldowns(self, dt: float) -> None:
         for mount in self.mounts:
@@ -177,6 +182,36 @@ class Ship:
     def iter_modules(self) -> Iterable[ItemData]:
         for modules in self.modules_by_slot.values():
             yield from modules
+
+    # Assist toggles ------------------------------------------------------
+
+    def enable_auto_throttle(self, hold_current_speed: bool = True) -> None:
+        """Lock throttle to the current forward speed ratio."""
+
+        if hold_current_speed:
+            forward = self.kinematics.forward()
+            current_speed = max(0.0, self.kinematics.velocity.dot(forward))
+            max_speed = max(1.0, self.stats.max_speed)
+            self.auto_throttle_ratio = max(0.0, min(1.0, current_speed / max_speed))
+        self.auto_throttle_enabled = True
+
+    def disable_auto_throttle(self) -> None:
+        self.auto_throttle_enabled = False
+        self.auto_throttle_ratio = 0.0
+
+    def toggle_auto_throttle(self) -> bool:
+        if self.auto_throttle_enabled:
+            self.disable_auto_throttle()
+            return False
+        self.enable_auto_throttle()
+        return True
+
+    def set_auto_level(self, enabled: bool) -> None:
+        self.auto_level_enabled = enabled
+
+    def toggle_auto_level(self) -> bool:
+        self.auto_level_enabled = not self.auto_level_enabled
+        return self.auto_level_enabled
 
 
 __all__ = [

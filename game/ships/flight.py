@@ -12,6 +12,8 @@ from .ship import Ship
 LOOK_SENSITIVITY = 0.12
 PASSIVE_DRAG = 0.12
 STRAFE_DAMPING = 4.0
+AUTO_LEVEL_RATE = 90.0
+AUTO_INPUT_DEADZONE = 0.05
 
 
 def _approach(current: float, target: float, rate: float) -> float:
@@ -40,7 +42,15 @@ def update_ship_flight(ship: Ship, dt: float, logger=None) -> None:
     up = forward.cross(right)
 
     current_speed = kin.velocity.dot(forward)
-    throttle_ratio = max(0.0, min(1.0, 0.5 + 0.5 * ctrl.throttle))
+    manual_input = ctrl.throttle
+    if ship.auto_throttle_enabled and abs(manual_input) <= AUTO_INPUT_DEADZONE and not ctrl.brake:
+        throttle_ratio = max(0.0, min(1.0, ship.auto_throttle_ratio))
+    else:
+        throttle_ratio = max(0.0, min(1.0, 0.5 + 0.5 * manual_input))
+        if ship.auto_throttle_enabled:
+            ship.auto_throttle_ratio = throttle_ratio
+    if ctrl.brake and ship.auto_throttle_enabled:
+        ship.disable_auto_throttle()
     target_speed = stats.max_speed * throttle_ratio
     if boost_target is not None:
         target_speed = boost_target
@@ -91,6 +101,13 @@ def update_ship_flight(ship: Ship, dt: float, logger=None) -> None:
     kin.rotation.x = max(-85.0, min(85.0, kin.rotation.x + kin.angular_velocity.x * dt))
     kin.rotation.y = (kin.rotation.y + kin.angular_velocity.y * dt) % 360.0
     kin.rotation.z = (kin.rotation.z + kin.angular_velocity.z * dt) % 360.0
+
+    if ship.auto_level_enabled and abs(ctrl.roll_input) <= AUTO_INPUT_DEADZONE:
+        roll = ((kin.rotation.z + 180.0) % 360.0) - 180.0
+        correction = max(-AUTO_LEVEL_RATE * dt, min(AUTO_LEVEL_RATE * dt, -roll))
+        roll += correction
+        kin.rotation.z = (roll + 360.0) % 360.0
+        kin.angular_velocity.z = _approach(kin.angular_velocity.z, 0.0, stats.turn_accel * dt)
 
     ship.tick_cooldowns(dt)
     if ship.hull_regen_cooldown > 0.0:

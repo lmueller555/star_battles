@@ -18,6 +18,10 @@ from game.combat.formulas import (
 from game.engine.logger import ChannelLogger
 
 
+MAGNETISM_ANGLE = 5.5
+MAGNETISM_STRENGTH = 0.45
+
+
 def _range_accuracy_modifier(distance: float, optimal: float, max_range: float) -> float:
     """Return a 0-1 multiplier for accuracy based on range bands."""
 
@@ -47,6 +51,16 @@ def _gimbal_accuracy_modifier(angle: float, gimbal_limit: float) -> float:
         return 1.0
     ratio = (angle - inner_cone) / max(1e-3, gimbal_limit - inner_cone)
     return max(0.0, 1.0 - ratio)
+
+
+def _apply_magnetism(angle: float) -> float:
+    """Reduce the effective miss angle slightly inside the magnetism cone."""
+
+    if angle <= 0.0 or angle > MAGNETISM_ANGLE:
+        return angle
+    blend = 1.0 - (angle / MAGNETISM_ANGLE)
+    reduction = MAGNETISM_STRENGTH * blend
+    return max(0.0, angle * (1.0 - reduction))
 
 
 @dataclass
@@ -141,6 +155,7 @@ def resolve_hitscan(
             angle_error = direction.angle_to(offset.normalize())
         else:
             angle_error = 0.0
+    angle_error = _apply_magnetism(angle_error)
     effective_gimbal = gimbal_limit if gimbal_limit is not None else weapon.gimbal
     gimbal_modifier = _gimbal_accuracy_modifier(angle_error, effective_gimbal)
     range_modifier = _range_accuracy_modifier(distance, weapon.optimal_range, weapon.max_range)

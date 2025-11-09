@@ -28,6 +28,8 @@ DEFAULT_BINDINGS = {
     "target_nearest": ["K_t"],
     "target_cycle": ["K_r"],
     "toggle_overlay": ["K_F3"],
+    "toggle_auto_throttle": ["K_x"],
+    "toggle_auto_level": ["K_l"],
     "open_map": ["K_m"],
     "commit_jump": ["K_j"],
     "activate_pd": ["K_g"],
