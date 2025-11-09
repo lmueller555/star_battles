@@ -9,6 +9,7 @@ from typing import Dict
 from game.combat.weapons import WeaponDatabase
 from game.ships.data import ShipDatabase
 from game.world.sector import SectorMap
+from game.world.station import StationDatabase
 
 
 @dataclass
@@ -59,12 +60,14 @@ class ContentManager:
         self.weapons = WeaponDatabase()
         self.items = ItemDatabase()
         self.sector = SectorMap()
+        self.stations = StationDatabase()
 
     def load(self) -> None:
         self.ships.load_directory(self.root / "data" / "ships")
         self.weapons.load_directory(self.root / "data" / "weapons")
         self.items.load_directory(self.root / "data" / "items")
         self.sector.load(self.root / "data" / "sector_map.json")
+        self.stations.load(self.root / "data" / "stations.json")
 
 
 __all__ = ["ContentManager", "ItemDatabase", "ItemData"]

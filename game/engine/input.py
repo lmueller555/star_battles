@@ -28,6 +28,7 @@ DEFAULT_BINDINGS = {
     "open_map": ["K_m"],
     "commit_jump": ["K_j"],
     "activate_pd": ["K_g"],
+    "open_hangar": ["K_h"],
 }
 
 MOUSE_BUTTONS = {

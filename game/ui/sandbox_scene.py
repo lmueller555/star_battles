@@ -15,7 +15,9 @@ from game.render.renderer import VectorRenderer
 from game.sensors.dradis import DradisSystem
 from game.ships.ship import Ship
 from game.world.space import SpaceWorld
+from game.world.station import DockingStation
 from game.ui.sector_map import SectorMapView
+from game.ui.hangar import HangarView
 
 
 class SandboxScene(Scene):
@@ -45,7 +47,7 @@ class SandboxScene(Scene):
         self.content = kwargs["content"]
         self.input = kwargs["input"]
         self.logger = kwargs["logger"]
-        self.world = SpaceWorld(self.content.weapons, self.content.sector, self.logger)
+        self.world = SpaceWorld(self.content.weapons, self.content.sector, self.content.stations, self.logger)
         player_frame = self.content.ships.get("interceptor_mk1")
         self.player = Ship(player_frame, team="player")
         if self.content:
@@ -79,6 +81,9 @@ class SandboxScene(Scene):
         self.jump_feedback_timer = 0.0
         self.freelook_active = False
         self.freelook_delta = (0.0, 0.0)
+        self.station_contact: tuple[DockingStation, float] | None = None
+        self.hangar_open = False
+        self.hangar_view = HangarView(surface)
         pygame.mouse.set_visible(False)
         pygame.event.set_grab(True)
 
@@ -103,6 +108,10 @@ class SandboxScene(Scene):
                 self.map_open = False
                 pygame.mouse.set_visible(False)
                 pygame.event.set_grab(True)
+            elif self.hangar_open:
+                self.hangar_open = False
+                pygame.mouse.set_visible(False)
+                pygame.event.set_grab(True)
             else:
                 self.manager.activate("title")
 
@@ -116,7 +125,17 @@ class SandboxScene(Scene):
             self.map_open = not self.map_open
             pygame.mouse.set_visible(self.map_open)
             pygame.event.set_grab(not self.map_open)
+            if self.map_open:
+                self.hangar_open = False
         if self.map_open:
+            self.player.control.look_delta = Vector3()
+            self.player.control.strafe = Vector3()
+            self.player.control.throttle = 0.0
+            self.player.control.boost = False
+            self.player.control.brake = False
+            self.player.control.roll_input = 0.0
+            self.freelook_active = False
+        elif self.hangar_open:
             self.player.control.look_delta = Vector3()
             self.player.control.strafe = Vector3()
             self.player.control.throttle = 0.0
@@ -191,6 +210,31 @@ class SandboxScene(Scene):
                 self.world.fire_mount(self.player, mount, target)
                 self.player.lock_progress = 0.0
 
+        station, distance = self.world.nearest_station(self.player)
+        if station:
+            self.station_contact = (station, distance)
+            if distance > station.docking_radius + 50.0 and self.hangar_open:
+                self.hangar_open = False
+                pygame.mouse.set_visible(False)
+                pygame.event.set_grab(True)
+        else:
+            self.station_contact = None
+            self.hangar_open = False
+        if self.station_contact and self.input.consume_action("open_hangar"):
+            station, distance = self.station_contact
+            if distance <= station.docking_radius:
+                self.hangar_open = not self.hangar_open
+                pygame.mouse.set_visible(self.hangar_open)
+                pygame.event.set_grab(not self.hangar_open)
+        if self.hangar_open:
+            self.player.control.look_delta = Vector3()
+            self.player.control.strafe = Vector3()
+            self.player.control.throttle = 0.0
+            self.player.control.boost = False
+            self.player.control.brake = False
+            self.player.control.roll_input = 0.0
+            self.freelook_active = False
+
         self.world.update(dt)
         self.dradis.update(self.world.ships, dt)
         if target and not target.is_alive():
@@ -223,11 +267,27 @@ class SandboxScene(Scene):
                     weapon = self.content.weapons.get(mount.weapon_id)
                     if weapon.wclass != "hitscan":
                         projectile_speed = weapon.projectile_speed
+        docking_prompt = None
+        if self.station_contact:
+            station, distance = self.station_contact
+            docking_prompt = (station.name, distance, station.docking_radius)
         if self.dradis:
-            self.hud.draw(self.camera, self.player, target, self.dradis, projectile_speed, self.sim_dt, self.fps)
+            self.hud.draw(
+                self.camera,
+                self.player,
+                target,
+                self.dradis,
+                projectile_speed,
+                self.sim_dt,
+                self.fps,
+                docking_prompt=docking_prompt if not self.hangar_open else None,
+            )
         if self.map_open and self.map_view:
             status = self.jump_feedback if self.jump_feedback_timer > 0.0 else None
             self.map_view.draw(surface, self.world, self.player, status)
+        elif self.hangar_open and self.hangar_view and self.station_contact:
+            station, distance = self.station_contact
+            self.hangar_view.draw(surface, self.player, station, distance)
         elif self.jump_feedback_timer > 0.0:
             text = self.hud.font.render(self.jump_feedback, True, (255, 230, 120))
             surface.blit(
