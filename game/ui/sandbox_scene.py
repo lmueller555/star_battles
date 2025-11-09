@@ -47,6 +47,9 @@ class SandboxScene(Scene):
         self.mining_state: MiningHUDState | None = None
         self.mining_feedback: str = ""
         self.mining_feedback_timer: float = 0.0
+        self.weapon_group_actions: dict[str, str] = {}
+        self.combat_feedback: str = ""
+        self.combat_feedback_timer: float = 0.0
 
     def on_enter(self, **kwargs) -> None:
         self.content = kwargs["content"]
@@ -64,6 +67,7 @@ class SandboxScene(Scene):
         if self.content:
             self.player.equip_module(self.content.items.get("point_defense_mk1"))
             self.player.equip_module(self.content.items.get("eccm_mk1"))
+            self.player.equip_module(self.content.items.get("flare_launcher_mk1"))
         self.player.assign_weapon("hp_light_1", "light_cannon_mk1")
         self.player.assign_weapon("hp_light_2", "light_cannon_mk1")
         self.player.assign_weapon("hp_missile", "missile_launcher_mk1")
@@ -99,12 +103,17 @@ class SandboxScene(Scene):
         self.mining_state = None
         self.mining_feedback = ""
         self.mining_feedback_timer = 0.0
+        self.weapon_group_actions.clear()
+        self._configure_weapon_groups()
+        self.combat_feedback = ""
+        self.combat_feedback_timer = 0.0
         pygame.mouse.set_visible(False)
         pygame.event.set_grab(True)
 
     def on_exit(self) -> None:
         pygame.mouse.set_visible(True)
         pygame.event.set_grab(False)
+        self.weapon_group_actions.clear()
 
     def handle_event(self, event: pygame.event.Event) -> None:
         if self.input:
@@ -226,17 +235,23 @@ class SandboxScene(Scene):
 
         target = next((s for s in self.world.ships if id(s) == self.player.target_id), None)
 
-        if self.input.action("fire_primary") and target and is_within_gimbal(self.player.mounts[0], self.player, target):
-            result = self.world.fire_mount(self.player, self.player.mounts[0], target)
-            if result and result.hit and self.camera:
-                self.camera.apply_recoil(0.4)
-        if self.input.action("fire_primary") and target and is_within_gimbal(self.player.mounts[1], self.player, target):
-            self.world.fire_mount(self.player, self.player.mounts[1], target)
-        if self.input.action("fire_secondary") and target and self.player.lock_progress >= 1.0:
-            mount = next((m for m in self.player.mounts if m.hardpoint.slot == "launcher"), None)
-            if mount:
-                self.world.fire_mount(self.player, mount, target)
-                self.player.lock_progress = 0.0
+        if (
+            self.input.consume_action("activate_pd")
+            and self.world
+            and self.player
+        ):
+            success, message = self.world.activate_countermeasure(self.player)
+            if message:
+                self._set_combat_feedback(message, duration=2.5 if success else 2.0)
+
+        if target and self.input.action("fire_primary"):
+            self._fire_group("primary", target)
+        if target and self.input.action("fire_secondary"):
+            self._fire_group("aux", target)
+        if target:
+            for action, group in self.weapon_group_actions.items():
+                if self.input.action(action):
+                    self._fire_group(group, target)
 
         station, distance = self.world.nearest_station(self.player)
         if station:
@@ -282,6 +297,8 @@ class SandboxScene(Scene):
             self.jump_feedback_timer = max(0.0, self.jump_feedback_timer - dt)
         if self.mining_feedback_timer > 0.0:
             self.mining_feedback_timer = max(0.0, self.mining_feedback_timer - dt)
+        if self.combat_feedback_timer > 0.0:
+            self.combat_feedback_timer = max(0.0, self.combat_feedback_timer - dt)
 
     def render(self, surface: pygame.Surface, alpha: float) -> None:
         if not self.renderer or not self.camera or not self.player or not self.hud or not self.world:
@@ -343,12 +360,64 @@ class SandboxScene(Scene):
             self._blit_feedback(surface, self.jump_feedback, offset=100)
         if self.mining_feedback_timer > 0.0:
             self._blit_feedback(surface, self.mining_feedback, offset=70)
+        if self.combat_feedback_timer > 0.0:
+            self._blit_feedback(surface, self.combat_feedback, offset=40)
 
     def _set_mining_feedback(self, message: str, duration: float = 2.0) -> None:
         if not message:
             return
         self.mining_feedback = message
         self.mining_feedback_timer = duration
+
+    def _set_combat_feedback(self, message: str, duration: float = 2.5) -> None:
+        if not message:
+            return
+        self.combat_feedback = message
+        self.combat_feedback_timer = duration
+
+    def _configure_weapon_groups(self) -> None:
+        if not self.player:
+            return
+        groups: list[str] = []
+        for mount in self.player.mounts:
+            group = getattr(mount.hardpoint, "group", "primary")
+            if group not in groups:
+                groups.append(group)
+        reserved = {"primary", "aux"}
+        extras = [group for group in groups if group not in reserved]
+        actions = ["fire_group_alpha", "fire_group_beta", "fire_group_gamma"]
+        self.weapon_group_actions = {
+            action: group for action, group in zip(actions, extras)
+        }
+
+    def _fire_group(self, group: str, target: Ship) -> bool:
+        if not self.world or not self.player or not target.is_alive():
+            return False
+        fired = False
+        recoil_applied = False
+        launcher_fired = False
+        for mount in self.player.mounts:
+            if getattr(mount.hardpoint, "group", "primary") != group:
+                continue
+            if not mount.weapon_id:
+                continue
+            weapon = self.content.weapons.get(mount.weapon_id) if self.content else None
+            slot_type = weapon.slot_type if weapon else mount.hardpoint.slot
+            requires_lock = slot_type == "launcher"
+            if requires_lock and self.player.lock_progress < 1.0:
+                continue
+            if not is_within_gimbal(mount, self.player, target):
+                continue
+            result = self.world.fire_mount(self.player, mount, target)
+            fired = True
+            if slot_type == "launcher":
+                launcher_fired = True
+            if result and result.hit and self.camera and not recoil_applied:
+                self.camera.apply_recoil(0.4)
+                recoil_applied = True
+        if launcher_fired:
+            self.player.lock_progress = 0.0
+        return fired
 
     def _blit_feedback(self, surface: pygame.Surface, message: str, offset: float) -> None:
         if not message:

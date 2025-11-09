@@ -34,7 +34,7 @@
       "hull": 2,
       "engine": 1,
       "computer": 1,
-      "utility": 1
+      "utility": 2
     },
     "hardpoints": [
       {
@@ -42,21 +42,24 @@
         "slot": "cannon",
         "position": [0.6, -0.2, 2.2],
         "gimbal": 18,
-        "tracking_speed": 240
+        "tracking_speed": 240,
+        "group": "primary"
       },
       {
         "id": "hp_light_2",
         "slot": "cannon",
         "position": [-0.6, -0.2, 2.2],
         "gimbal": 18,
-        "tracking_speed": 240
+        "tracking_speed": 240,
+        "group": "primary"
       },
       {
         "id": "hp_missile",
         "slot": "launcher",
         "position": [0, -0.4, 1.6],
         "gimbal": 30,
-        "tracking_speed": 180
+        "tracking_speed": 180,
+        "group": "aux"
       }
     ]
   },
@@ -103,14 +106,16 @@
         "slot": "cannon",
         "position": [1.2, 0.0, 2.5],
         "gimbal": 25,
-        "tracking_speed": 160
+        "tracking_speed": 160,
+        "group": "primary"
       },
       {
         "id": "hp_light_2",
         "slot": "cannon",
         "position": [-1.2, 0.0, 2.5],
         "gimbal": 25,
-        "tracking_speed": 160
+        "tracking_speed": 160,
+        "group": "primary"
       }
     ]
   }

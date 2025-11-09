@@ -18,6 +18,7 @@ class Hardpoint:
     position: Vector3
     gimbal: float
     tracking_speed: float
+    group: str = "primary"
 
 
 @dataclass
@@ -39,6 +40,7 @@ class ShipFrame:
                 position=Vector3(*item.get("position", [0.0, 0.0, 0.0])),
                 gimbal=float(item.get("gimbal", 20.0)),
                 tracking_speed=float(item.get("tracking_speed", 180.0)),
+                group=item.get("group", "primary"),
             )
             for item in data.get("hardpoints", [])
         ]

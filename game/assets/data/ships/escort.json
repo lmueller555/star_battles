@@ -42,28 +42,32 @@
         "slot": "cannon",
         "position": [0.9, -0.1, 2.4],
         "gimbal": 20,
-        "tracking_speed": 210
+        "tracking_speed": 210,
+        "group": "primary"
       },
       {
         "id": "hp_cannon_b",
         "slot": "cannon",
         "position": [-0.9, -0.1, 2.4],
         "gimbal": 20,
-        "tracking_speed": 210
+        "tracking_speed": 210,
+        "group": "primary"
       },
       {
         "id": "hp_cannon_c",
         "slot": "cannon",
         "position": [0.0, -0.25, 2.0],
         "gimbal": 24,
-        "tracking_speed": 200
+        "tracking_speed": 200,
+        "group": "heavy"
       },
       {
         "id": "hp_launcher",
         "slot": "launcher",
         "position": [0.0, -0.4, 1.6],
         "gimbal": 32,
-        "tracking_speed": 170
+        "tracking_speed": 170,
+        "group": "aux"
       }
     ]
   },
@@ -110,21 +114,24 @@
         "slot": "cannon",
         "position": [1.1, -0.15, 2.2],
         "gimbal": 24,
-        "tracking_speed": 180
+        "tracking_speed": 180,
+        "group": "primary"
       },
       {
         "id": "hp_command_r",
         "slot": "cannon",
         "position": [-1.1, -0.15, 2.2],
         "gimbal": 24,
-        "tracking_speed": 180
+        "tracking_speed": 180,
+        "group": "primary"
       },
       {
         "id": "hp_command_launcher",
         "slot": "launcher",
         "position": [0.0, -0.45, 1.5],
         "gimbal": 35,
-        "tracking_speed": 150
+        "tracking_speed": 150,
+        "group": "aux"
       }
     ]
   }

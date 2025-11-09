@@ -29,5 +29,17 @@
       "lock_bonus": 0.25,
       "sensor_strength": 0.3
     }
+  },
+  {
+    "id": "flare_launcher_mk1",
+    "name": "Helios Flare Launcher",
+    "slotType": "utility",
+    "tags": ["COUNTERMEASURE"],
+    "stats": {
+      "cm_radius": 520,
+      "cm_lock_break": 0.85,
+      "cm_power": 16,
+      "cm_cooldown": 8
+    }
   }
 ]
