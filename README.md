@@ -38,6 +38,7 @@ If Pygame requests additional system packages (SDL dependencies), install them v
 - **Ctrl**: Brake
 - **Left Mouse**: Primary cannons
 - **Right Mouse**: Missile launcher (requires lock)
+- **F**: Hold to freelook the camera without steering the ship
 - **T**: Target nearest hostile
 - **R**: Cycle targets
 - **G**: Toggle PD (auto in this milestone)

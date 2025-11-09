@@ -8,7 +8,17 @@ from pygame.math import Vector3
 from game.ships.ship import Ship
 
 
+def _approach(value: float, target: float, rate: float) -> float:
+    if value < target:
+        return min(target, value + rate)
+    if value > target:
+        return max(target, value - rate)
+    return value
+
+
 class ChaseCamera:
+    """Third-person chase camera with freelook and velocity look-ahead."""
+
     def __init__(self, fov_deg: float, aspect: float) -> None:
         self.base_fov = fov_deg
         self.fov = fov_deg
@@ -22,22 +32,102 @@ class ChaseCamera:
         self.shoulder = 1.6
         self.recoil = 0.0
         self.recoil_decay = 6.0
+        self.freelook_angles = Vector3(0.0, 0.0, 0.0)
+        self.freelook_sensitivity = 0.12
+        self.freelook_max_yaw = 28.0
+        self.freelook_max_pitch = 18.0
+        self.freelook_return = 80.0
+        self.look_ahead_distance = 0.0
+        self.look_ahead_direction = Vector3(0.0, 0.0, 1.0)
+        self.look_ahead_response = 4.0
+        self.look_ahead_factor = 0.08
+        self.look_ahead_max = 20.0
 
-    def update(self, ship: Ship, dt: float) -> None:
+    def update(
+        self,
+        ship: Ship,
+        dt: float,
+        freelook_active: bool = False,
+        freelook_delta: tuple[float, float] = (0.0, 0.0),
+    ) -> None:
         ship_forward = ship.kinematics.forward()
-        ship_up = ship_forward.cross(ship.kinematics.right()).normalize()
+        ship_right = ship.kinematics.right()
+        ship_up = ship_forward.cross(ship_right).normalize()
+
+        if freelook_active:
+            yaw_delta = freelook_delta[0] * self.freelook_sensitivity
+            pitch_delta = freelook_delta[1] * self.freelook_sensitivity
+            self.freelook_angles.y = max(
+                -self.freelook_max_yaw,
+                min(self.freelook_max_yaw, self.freelook_angles.y + yaw_delta),
+            )
+            self.freelook_angles.x = max(
+                -self.freelook_max_pitch,
+                min(self.freelook_max_pitch, self.freelook_angles.x + pitch_delta),
+            )
+        else:
+            self.freelook_angles.y = _approach(
+                self.freelook_angles.y,
+                0.0,
+                self.freelook_return * dt,
+            )
+            self.freelook_angles.x = _approach(
+                self.freelook_angles.x,
+                0.0,
+                self.freelook_return * dt,
+            )
+
+        focus_forward = ship_forward
+        focus_right = ship_right
+        focus_up = ship_up
+        if abs(self.freelook_angles.y) > 1e-3:
+            focus_forward = focus_forward.rotate(ship_up, -self.freelook_angles.y)
+            focus_right = focus_right.rotate(ship_up, -self.freelook_angles.y)
+        if abs(self.freelook_angles.x) > 1e-3:
+            focus_forward = focus_forward.rotate(focus_right, self.freelook_angles.x)
+            focus_up = focus_up.rotate(focus_right, self.freelook_angles.x)
+
+        focus_forward = focus_forward.normalize()
+        focus_right = focus_forward.cross(focus_up).normalize()
+        focus_up = focus_right.cross(focus_forward).normalize()
+
         target_pos = (
             ship.kinematics.position
-            - ship_forward * self.distance
-            + ship_up * self.height
-            + ship.kinematics.right() * self.shoulder
+            - focus_forward * self.distance
+            + focus_up * self.height
+            + focus_right * self.shoulder
         )
         self.position += (target_pos - self.position) * min(1.0, 5.0 * dt)
-        self.forward += (ship_forward - self.forward) * min(1.0, 6.0 * dt)
-        self.forward = self.forward.normalize()
-        self.right = self.forward.cross(ship_up).normalize()
-        self.up = self.right.cross(self.forward).normalize()
-        speed = ship.kinematics.velocity.length()
+
+        velocity = ship.kinematics.velocity
+        speed = velocity.length()
+        if speed > 1.0:
+            self.look_ahead_direction = velocity.normalize()
+        desired_look_ahead = min(self.look_ahead_max, speed * self.look_ahead_factor)
+        self.look_ahead_distance += (desired_look_ahead - self.look_ahead_distance) * min(
+            1.0, self.look_ahead_response * dt
+        )
+        focus_point = (
+            ship.kinematics.position
+            + focus_forward * (self.distance * 0.8)
+            + self.look_ahead_direction * self.look_ahead_distance
+        )
+
+        desired_forward = focus_point - self.position
+        if desired_forward.length_squared() > 1e-6:
+            desired_forward = desired_forward.normalize()
+            self.forward += (desired_forward - self.forward) * min(1.0, 6.0 * dt)
+            self.forward = self.forward.normalize()
+
+        desired_up = focus_up
+        self.up += (desired_up - self.up) * min(1.0, 5.0 * dt)
+        if self.up.length_squared() > 1e-6:
+            self.up = self.up.normalize()
+        self.right = self.forward.cross(self.up)
+        if self.right.length_squared() > 1e-6:
+            self.right = self.right.normalize()
+            self.up = self.right.cross(self.forward).normalize()
+
         self.fov = min(self.base_fov + speed * 0.12, self.base_fov + 25.0)
         if self.recoil > 0.0:
             self.position -= self.forward * self.recoil

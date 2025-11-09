@@ -38,6 +38,8 @@ class SandboxScene(Scene):
         self.armed_system_id: str | None = None
         self.jump_feedback: str = ""
         self.jump_feedback_timer: float = 0.0
+        self.freelook_active: bool = False
+        self.freelook_delta: tuple[float, float] = (0.0, 0.0)
 
     def on_enter(self, **kwargs) -> None:
         self.content = kwargs["content"]
@@ -75,6 +77,8 @@ class SandboxScene(Scene):
         self.armed_system_id = None
         self.jump_feedback = ""
         self.jump_feedback_timer = 0.0
+        self.freelook_active = False
+        self.freelook_delta = (0.0, 0.0)
         pygame.mouse.set_visible(False)
         pygame.event.set_grab(True)
 
@@ -107,6 +111,7 @@ class SandboxScene(Scene):
         if not self.input or not self.player or not self.world or not self.dradis:
             return
         self.input.update_axes()
+        self.freelook_delta = (0.0, 0.0)
         if self.input.consume_action("open_map"):
             self.map_open = not self.map_open
             pygame.mouse.set_visible(self.map_open)
@@ -118,9 +123,17 @@ class SandboxScene(Scene):
             self.player.control.boost = False
             self.player.control.brake = False
             self.player.control.roll_input = 0.0
+            self.freelook_active = False
         else:
             mouse_dx, mouse_dy = self.input.mouse()
-            self.player.control.look_delta = Vector3(mouse_dx, mouse_dy, 0.0)
+            freelook_held = self.input.action("freelook")
+            if freelook_held:
+                self.freelook_active = True
+                self.freelook_delta = (mouse_dx, mouse_dy)
+                self.player.control.look_delta = Vector3()
+            else:
+                self.freelook_active = False
+                self.player.control.look_delta = Vector3(mouse_dx, mouse_dy, 0.0)
             self.player.control.strafe = Vector3(
                 self.input.axis_state.get("strafe_x", 0.0),
                 self.input.axis_state.get("strafe_y", 0.0),
@@ -192,7 +205,12 @@ class SandboxScene(Scene):
         self.renderer.surface = surface
         self.hud.surface = surface
         self.renderer.clear()
-        self.camera.update(self.player, self.sim_dt)
+        self.camera.update(
+            self.player,
+            self.sim_dt,
+            freelook_active=self.freelook_active,
+            freelook_delta=self.freelook_delta,
+        )
         for ship in self.world.ships:
             if ship.is_alive():
                 self.renderer.draw_ship(self.camera, ship)
