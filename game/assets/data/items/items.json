@@ -1,0 +1,30 @@
+[
+  {
+    "id": "point_defense_mk1",
+    "name": "Aegis PD Grid",
+    "slotType": "utility",
+    "tags": ["PD"],
+    "stats": {
+      "pd_range": 450,
+      "power": 15
+    }
+  },
+  {
+    "id": "jammer_mk1",
+    "name": "Specter Jammer",
+    "slotType": "computer",
+    "tags": ["JAMMER"],
+    "stats": {
+      "lock_penalty": 0.25
+    }
+  },
+  {
+    "id": "eccm_mk1",
+    "name": "Pinpoint ECCM",
+    "slotType": "computer",
+    "tags": ["ECCM"],
+    "stats": {
+      "lock_bonus": 0.2
+    }
+  }
+]
