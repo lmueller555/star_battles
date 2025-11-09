@@ -14,6 +14,7 @@ from game.render.hud import HUD
 from game.render.renderer import VectorRenderer
 from game.sensors.dradis import DradisSystem
 from game.ships.ship import Ship
+from game.world.ai import create_ai_for_ship
 from game.world.space import SpaceWorld
 from game.world.mining import MiningHUDState
 from game.world.station import DockingStation
@@ -76,7 +77,8 @@ class SandboxScene(Scene):
         self.dummy.assign_weapon("hp_light_1", "heavy_cannon_mk1")
         self.dummy.kinematics.position = Vector3(0.0, 0.0, 800.0)
         self.dummy.kinematics.velocity = Vector3(0.0, 0.0, -10.0)
-        self.world.add_ship(self.dummy)
+        enemy_ai = create_ai_for_ship(self.dummy)
+        self.world.add_ship(self.dummy, ai=enemy_ai)
 
         self.dradis = DradisSystem(self.player)
         surface = pygame.display.get_surface()
