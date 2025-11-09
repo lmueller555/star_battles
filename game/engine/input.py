@@ -29,6 +29,9 @@ DEFAULT_BINDINGS = {
     "commit_jump": ["K_j"],
     "activate_pd": ["K_g"],
     "open_hangar": ["K_h"],
+    "scan_mining": ["K_v"],
+    "toggle_mining": ["K_b"],
+    "stabilize_mining": ["K_SPACE"],
 }
 
 MOUSE_BUTTONS = {

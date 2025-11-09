@@ -8,6 +8,7 @@ from pygame.math import Vector2
 
 from game.math.ballistics import compute_lead
 from game.sensors.dradis import DradisSystem
+from game.world.mining import MiningHUDState
 from game.ships.ship import Ship
 
 
@@ -142,6 +143,7 @@ class HUD:
         sim_dt: float,
         fps: float,
         docking_prompt: tuple[str, float, float] | None = None,
+        mining_state: MiningHUDState | None = None,
     ) -> None:
         self.draw_crosshair()
         self.draw_lead(camera, player, target, projectile_speed)
@@ -153,12 +155,71 @@ class HUD:
         if docking_prompt:
             name, distance, radius = docking_prompt
             self.draw_docking_prompt(name, distance, radius)
+        if mining_state:
+            self.draw_mining(mining_state)
 
     def draw_docking_prompt(self, name: str, distance: float, radius: float) -> None:
         text = self.font.render(f"Dock: {name} ({distance:.0f} m / {radius:.0f} m) - Press H", True, (255, 230, 140))
         x = self.surface.get_width() / 2 - text.get_width() / 2
         y = self.surface.get_height() - 140
         self.surface.blit(text, (x, y))
+
+    def draw_mining(self, state: MiningHUDState) -> None:
+        panel_width = 240
+        panel_height = 140
+        x = self.surface.get_width() - panel_width - 40
+        y = 40
+        panel_rect = pygame.Rect(x, y, panel_width, panel_height)
+        pygame.draw.rect(self.surface, (18, 32, 42), panel_rect)
+        pygame.draw.rect(self.surface, (80, 150, 180), panel_rect, 1)
+        title = self.font.render("Mining", True, (210, 240, 255))
+        self.surface.blit(title, (x + 12, y + 8))
+        if state.active_node:
+            node = state.active_node
+            resource = node.resource.title()
+            lines = [
+                f"{node.name}",
+                f"{resource} Grade {node.grade:.1f}",
+                f"Range: {node.distance:.0f} m",
+            ]
+            for i, line in enumerate(lines):
+                text = self.font.render(line, True, (200, 220, 255))
+                self.surface.blit(text, (x + 12, y + 32 + i * 18))
+            bar_rect = pygame.Rect(x + 12, y + 90, panel_width - 24, 12)
+            pygame.draw.rect(self.surface, (50, 70, 90), bar_rect, 1)
+            pygame.draw.rect(
+                self.surface,
+                (255, 200, 120),
+                (bar_rect.x, bar_rect.y, bar_rect.width * max(0.0, min(1.0, state.stability)), bar_rect.height),
+            )
+            stability_text = self.font.render(f"Stability {state.stability * 100:.0f}%", True, (255, 220, 140))
+            self.surface.blit(stability_text, (x + 12, y + 110))
+            if state.yield_rate > 0.0:
+                yield_text = self.font.render(f"Yield {state.yield_rate:.1f}/s", True, (180, 230, 180))
+                self.surface.blit(yield_text, (x + 12, y + 128))
+            else:
+                idle_text = self.font.render("Stabilise beam", True, (255, 180, 160))
+                self.surface.blit(idle_text, (x + 12, y + 128))
+        else:
+            text = self.font.render("No active beam", True, (180, 200, 220))
+            self.surface.blit(text, (x + 12, y + 40))
+            if state.scanning_active:
+                scanning_text = self.font.render("Scanning...", True, (200, 220, 255))
+                self.surface.blit(scanning_text, (x + 12, y + 62))
+        if state.status:
+            status_text = self.font.render(state.status, True, (255, 230, 160))
+            self.surface.blit(status_text, (x + 12, y + panel_height + 8))
+        if state.scanning_nodes:
+            list_y = y + panel_height + 28
+            for node in state.scanning_nodes[:3]:
+                progress = node.scan_progress * 100
+                label = f"{node.name}: {node.distance:.0f} m"
+                text = self.font.render(label, True, (160, 200, 220))
+                self.surface.blit(text, (x + 12, list_y))
+                status = "ID" if node.discovered else f"Scan {progress:.0f}%"
+                status_text = self.font.render(status, True, (140, 190, 210))
+                self.surface.blit(status_text, (x + panel_width - status_text.get_width() - 12, list_y))
+                list_y += 18
 
 
 __all__ = ["HUD", "format_distance"]

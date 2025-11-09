@@ -15,6 +15,7 @@ from game.render.renderer import VectorRenderer
 from game.sensors.dradis import DradisSystem
 from game.ships.ship import Ship
 from game.world.space import SpaceWorld
+from game.world.mining import MiningHUDState
 from game.world.station import DockingStation
 from game.ui.sector_map import SectorMapView
 from game.ui.hangar import HangarView
@@ -42,12 +43,21 @@ class SandboxScene(Scene):
         self.jump_feedback_timer: float = 0.0
         self.freelook_active: bool = False
         self.freelook_delta: tuple[float, float] = (0.0, 0.0)
+        self.mining_state: MiningHUDState | None = None
+        self.mining_feedback: str = ""
+        self.mining_feedback_timer: float = 0.0
 
     def on_enter(self, **kwargs) -> None:
         self.content = kwargs["content"]
         self.input = kwargs["input"]
         self.logger = kwargs["logger"]
-        self.world = SpaceWorld(self.content.weapons, self.content.sector, self.content.stations, self.logger)
+        self.world = SpaceWorld(
+            self.content.weapons,
+            self.content.sector,
+            self.content.stations,
+            self.content.mining,
+            self.logger,
+        )
         player_frame = self.content.ships.get("interceptor_mk1")
         self.player = Ship(player_frame, team="player")
         if self.content:
@@ -84,6 +94,9 @@ class SandboxScene(Scene):
         self.station_contact: tuple[DockingStation, float] | None = None
         self.hangar_open = False
         self.hangar_view = HangarView(surface)
+        self.mining_state = None
+        self.mining_feedback = ""
+        self.mining_feedback_timer = 0.0
         pygame.mouse.set_visible(False)
         pygame.event.set_grab(True)
 
@@ -121,6 +134,8 @@ class SandboxScene(Scene):
             return
         self.input.update_axes()
         self.freelook_delta = (0.0, 0.0)
+        scanning = False
+        stabilizing = False
         if self.input.consume_action("open_map"):
             self.map_open = not self.map_open
             pygame.mouse.set_visible(self.map_open)
@@ -143,6 +158,8 @@ class SandboxScene(Scene):
             self.player.control.brake = False
             self.player.control.roll_input = 0.0
             self.freelook_active = False
+            scanning = False
+            stabilizing = False
         else:
             mouse_dx, mouse_dy = self.input.mouse()
             freelook_held = self.input.action("freelook")
@@ -168,6 +185,15 @@ class SandboxScene(Scene):
             if pressed[pygame.K_c]:
                 roll_input += 1.0
             self.player.control.roll_input = roll_input
+            scanning = self.input.action("scan_mining")
+            stabilizing = self.input.action("stabilize_mining")
+            if self.input.consume_action("toggle_mining"):
+                if self.world.mining_active():
+                    self.world.stop_mining()
+                    self._set_mining_feedback("Mining disengaged")
+                else:
+                    success, message = self.world.start_mining(self.player)
+                    self._set_mining_feedback(message)
 
         if self.input.consume_action("toggle_overlay"):
             self.hud.toggle_overlay()
@@ -234,14 +260,26 @@ class SandboxScene(Scene):
             self.player.control.brake = False
             self.player.control.roll_input = 0.0
             self.freelook_active = False
+            scanning = False
+            stabilizing = False
 
         self.world.update(dt)
         self.dradis.update(self.world.ships, dt)
+        self.mining_state = self.world.step_mining(
+            self.player,
+            dt,
+            scanning=scanning and not (self.map_open or self.hangar_open),
+            stabilizing=stabilizing and not (self.map_open or self.hangar_open),
+        )
+        if self.mining_state and self.mining_state.status:
+            self._set_mining_feedback(self.mining_state.status, duration=3.0)
         if target and not target.is_alive():
             self.player.target_id = None
         self.fps = 0.9 * self.fps + 0.1 * (1.0 / dt)
         if self.jump_feedback_timer > 0.0:
             self.jump_feedback_timer = max(0.0, self.jump_feedback_timer - dt)
+        if self.mining_feedback_timer > 0.0:
+            self.mining_feedback_timer = max(0.0, self.mining_feedback_timer - dt)
 
     def render(self, surface: pygame.Surface, alpha: float) -> None:
         if not self.renderer or not self.camera or not self.player or not self.hud or not self.world:
@@ -281,6 +319,7 @@ class SandboxScene(Scene):
                 self.sim_dt,
                 self.fps,
                 docking_prompt=docking_prompt if not self.hangar_open else None,
+                mining_state=self.mining_state,
             )
         if self.map_open and self.map_view:
             status = self.jump_feedback if self.jump_feedback_timer > 0.0 else None
@@ -288,15 +327,28 @@ class SandboxScene(Scene):
         elif self.hangar_open and self.hangar_view and self.station_contact:
             station, distance = self.station_contact
             self.hangar_view.draw(surface, self.player, station, distance)
-        elif self.jump_feedback_timer > 0.0:
-            text = self.hud.font.render(self.jump_feedback, True, (255, 230, 120))
-            surface.blit(
-                text,
-                (
-                    surface.get_width() / 2 - text.get_width() / 2,
-                    surface.get_height() - 100,
-                ),
-            )
+        if self.jump_feedback_timer > 0.0:
+            self._blit_feedback(surface, self.jump_feedback, offset=100)
+        if self.mining_feedback_timer > 0.0:
+            self._blit_feedback(surface, self.mining_feedback, offset=70)
+
+    def _set_mining_feedback(self, message: str, duration: float = 2.0) -> None:
+        if not message:
+            return
+        self.mining_feedback = message
+        self.mining_feedback_timer = duration
+
+    def _blit_feedback(self, surface: pygame.Surface, message: str, offset: float) -> None:
+        if not message:
+            return
+        text = self.hud.font.render(message, True, (255, 230, 120))
+        surface.blit(
+            text,
+            (
+                surface.get_width() / 2 - text.get_width() / 2,
+                surface.get_height() - offset,
+            ),
+        )
 
 
 __all__ = ["SandboxScene"]
