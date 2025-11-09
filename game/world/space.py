@@ -72,16 +72,25 @@ class SpaceWorld:
                     desired = to_target.normalize() * projectile.weapon.projectile_speed
                     projectile.velocity += (desired - projectile.velocity) * min(1.0, 3.5 * dt)
 
-        # Simple PD: ships with PD module attempt to destroy missiles within 400m.
+        # Simple PD: ships with PD grid attempt to destroy missiles within module-defined range.
         for ship in self.ships:
-            if "pd" not in ship.modules:
+            pd_range = ship.module_stat_total("pd_range")
+            if pd_range <= 0.0:
                 continue
+            pd_accuracy = ship.module_stat_total("pd_accuracy") or 0.5
+            power_cost = ship.module_stat_total("power")
             for projectile in list(self.projectiles):
                 if projectile.weapon.wclass != "missile" or projectile.team == ship.team:
                     continue
                 distance = ship.kinematics.position.distance_to(projectile.position)
-                if distance < 400.0 and self.rng.random() < 0.6:
+                if distance > pd_range:
+                    continue
+                if power_cost > 0.0 and ship.power < power_cost:
+                    continue
+                if self.rng.random() < min(0.95, pd_accuracy):
                     self.projectiles.remove(projectile)
+                    if power_cost > 0.0:
+                        ship.power = max(0.0, ship.power - power_cost)
 
         if self.threat_timer > 0.0:
             self.threat_timer = max(0.0, self.threat_timer - dt)

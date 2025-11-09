@@ -1,0 +1,131 @@
+[
+  {
+    "id": "escort_mk1",
+    "name": "Raptor Pike",
+    "role": "Multi-role",
+    "size": "Escort",
+    "stats": {
+      "hull_hp": 2100,
+      "hull_regen": 5,
+      "armor": 140,
+      "durability": 280,
+      "avoidance": 0.11,
+      "crit_defense": 0.1,
+      "max_speed": 72,
+      "boost_speed": 125,
+      "acceleration": 52,
+      "strafe_accel": 32,
+      "strafe_cap": 22,
+      "turn_rate": 140,
+      "turn_accel": 220,
+      "inertia_comp": 0.7,
+      "boost_drain": 22,
+      "power_cap": 180,
+      "power_regen": 48,
+      "dradis_range": 2800,
+      "ftl_range": 11,
+      "ftl_charge": 18,
+      "ftl_threat_charge": 30,
+      "ftl_cost_per_ly": 24
+    },
+    "slots": {
+      "cannon": 3,
+      "launcher": 1,
+      "hull": 2,
+      "engine": 1,
+      "computer": 1,
+      "utility": 1
+    },
+    "hardpoints": [
+      {
+        "id": "hp_cannon_a",
+        "slot": "cannon",
+        "position": [0.9, -0.1, 2.4],
+        "gimbal": 20,
+        "tracking_speed": 210
+      },
+      {
+        "id": "hp_cannon_b",
+        "slot": "cannon",
+        "position": [-0.9, -0.1, 2.4],
+        "gimbal": 20,
+        "tracking_speed": 210
+      },
+      {
+        "id": "hp_cannon_c",
+        "slot": "cannon",
+        "position": [0.0, -0.25, 2.0],
+        "gimbal": 24,
+        "tracking_speed": 200
+      },
+      {
+        "id": "hp_launcher",
+        "slot": "launcher",
+        "position": [0.0, -0.4, 1.6],
+        "gimbal": 32,
+        "tracking_speed": 170
+      }
+    ]
+  },
+  {
+    "id": "command_escort",
+    "name": "Aegis Warden",
+    "role": "Command",
+    "size": "Escort",
+    "stats": {
+      "hull_hp": 2400,
+      "hull_regen": 6,
+      "armor": 160,
+      "durability": 320,
+      "avoidance": 0.09,
+      "crit_defense": 0.14,
+      "max_speed": 64,
+      "boost_speed": 110,
+      "acceleration": 46,
+      "strafe_accel": 26,
+      "strafe_cap": 18,
+      "turn_rate": 120,
+      "turn_accel": 190,
+      "inertia_comp": 0.6,
+      "boost_drain": 20,
+      "power_cap": 210,
+      "power_regen": 60,
+      "dradis_range": 3200,
+      "ftl_range": 12,
+      "ftl_charge": 20,
+      "ftl_threat_charge": 34,
+      "ftl_cost_per_ly": 26
+    },
+    "slots": {
+      "cannon": 2,
+      "launcher": 1,
+      "hull": 2,
+      "engine": 1,
+      "computer": 3,
+      "utility": 1
+    },
+    "hardpoints": [
+      {
+        "id": "hp_command_l",
+        "slot": "cannon",
+        "position": [1.1, -0.15, 2.2],
+        "gimbal": 24,
+        "tracking_speed": 180
+      },
+      {
+        "id": "hp_command_r",
+        "slot": "cannon",
+        "position": [-1.1, -0.15, 2.2],
+        "gimbal": 24,
+        "tracking_speed": 180
+      },
+      {
+        "id": "hp_command_launcher",
+        "slot": "launcher",
+        "position": [0.0, -0.45, 1.5],
+        "gimbal": 35,
+        "tracking_speed": 150
+      }
+    ]
+  }
+]
