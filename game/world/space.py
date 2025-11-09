@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import random
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
 from pygame.math import Vector3
 
@@ -16,6 +16,9 @@ from game.world.sector import SectorMap
 from game.world.station import DockingStation, StationDatabase
 from game.world.mining import MiningDatabase, MiningManager, MiningHUDState
 from game.ftl.utils import compute_ftl_charge, compute_ftl_cost
+
+if TYPE_CHECKING:
+    from game.world.ai import ShipAI
 
 
 class SpaceWorld:
@@ -45,14 +48,23 @@ class SpaceWorld:
         self._station_cache: dict[str, list[DockingStation]] = {}
         self.mining = MiningManager(mining)
         self.mining.enter_system(self.current_system_id)
+        self._ai: dict[int, "ShipAI"] = {}
 
-    def add_ship(self, ship: Ship) -> None:
+    def add_ship(self, ship: Ship, ai: "ShipAI | None" = None) -> None:
         self.ships.append(ship)
+        if ai:
+            self._ai[id(ship)] = ai
 
     def update(self, dt: float) -> None:
         physics_log = self.logger.channel("physics")
         weapons_log = self.logger.channel("weapons")
         ftl_log = self.logger.channel("ftl")
+
+        # Update any AI controllers before physics so they can steer.
+        for ship_id, controller in list(self._ai.items()):
+            if not controller.ship.is_alive():
+                continue
+            controller.update(self, dt)
 
         for ship in self.ships:
             if not ship.is_alive():
@@ -114,6 +126,12 @@ class SpaceWorld:
             self.jump_charge_remaining = max(0.0, self.jump_charge_remaining - dt)
             if self.jump_charge_remaining == 0.0 and self.pending_jump_id:
                 self._execute_jump(ftl_log)
+
+        # Allow AI controllers to react post-physics (weapon fire, state machines).
+        for ship_id, controller in list(self._ai.items()):
+            if not controller.ship.is_alive():
+                continue
+            controller.post_update(self, dt)
 
     def fire_mount(self, ship: Ship, mount: WeaponMount, target: Optional[Ship]) -> Optional[HitResult]:
         if not mount.weapon_id:
