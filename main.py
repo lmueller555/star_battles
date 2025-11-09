@@ -22,7 +22,7 @@ SETTINGS_PATH = Path("settings.json")
 def load_settings() -> Dict[str, Any]:
     if not SETTINGS_PATH.exists():
         return {
-            "resolution": [1280, 720],
+            "resolution": [1920, 1080],
             "simHz": 60,
             "maxFps": 120,
         }
