@@ -102,14 +102,19 @@ class HUD:
             text = self.font.render(label, True, (150, 180, 200))
             self.surface.blit(text, (center.x - 60, center.y - radius * tick - 10))
         for contact in dradis.contacts.values():
+            if not contact.detected and contact.time_since_seen > 1.0:
+                continue
             rel_pos = contact.ship.kinematics.position - dradis.owner.kinematics.position
             rel_flat = Vector2(rel_pos.x, rel_pos.z)
             if rel_flat.length_squared() == 0:
                 continue
             direction = rel_flat.normalize()
             projected = center + direction * radius * min(1.0, contact.distance / dradis.owner.stats.dradis_range)
-            color = (150, 255, 180) if contact.ship.team == dradis.owner.team else (255, 120, 140)
-            pygame.draw.circle(self.surface, color, (int(projected.x), int(projected.y)), 4, 1)
+            base_color = (150, 255, 180) if contact.ship.team == dradis.owner.team else (255, 120, 140)
+            intensity = max(0.3, min(1.0, contact.progress if contact.detected else contact.progress * 0.6))
+            color = tuple(int(c * intensity) for c in base_color)
+            size = 5 if contact.detected else 3
+            pygame.draw.circle(self.surface, color, (int(projected.x), int(projected.y)), size, 1)
 
     def draw_overlay(self, sim_dt: float, fps: float, player: Ship, target: Optional[Ship]) -> None:
         if not self.overlay_enabled:

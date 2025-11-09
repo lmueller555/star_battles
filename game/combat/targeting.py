@@ -43,20 +43,26 @@ def is_within_gimbal(mount: WeaponMount, ship: Ship, target: Ship) -> bool:
 
 
 def update_lock(ship: Ship, target: Optional[Ship], dt: float) -> None:
+    eccm_bonus = 1.0 + ship.module_stat_total("lock_bonus")
+    jammer_penalty = 1.0 + (target.module_stat_total("lock_penalty") if target else 0.0)
+    lock_rate = LOCK_RATE * eccm_bonus / jammer_penalty
+    decay_rate = LOCK_DECAY * jammer_penalty / max(0.5, eccm_bonus)
+
     if not target or not target.is_alive():
-        ship.lock_progress = max(0.0, ship.lock_progress - LOCK_DECAY * dt)
+        ship.lock_progress = max(0.0, ship.lock_progress - decay_rate * dt)
         return
     to_target = target.kinematics.position - ship.kinematics.position
     distance = to_target.length()
     if distance > ship.stats.dradis_range:
-        ship.lock_progress = max(0.0, ship.lock_progress - LOCK_DECAY * dt)
+        ship.lock_progress = max(0.0, ship.lock_progress - decay_rate * dt)
         return
     forward = ship.kinematics.forward()
     angle = radians(forward.angle_to(to_target.normalize()))
     if angle > radians(40.0):
-        ship.lock_progress = max(0.0, ship.lock_progress - LOCK_DECAY * dt)
+        penalty = decay_rate * (2.0 if jammer_penalty > eccm_bonus else 1.0)
+        ship.lock_progress = max(0.0, ship.lock_progress - penalty * dt)
         return
-    ship.lock_progress = min(1.0, ship.lock_progress + LOCK_RATE * dt)
+    ship.lock_progress = min(1.0, ship.lock_progress + lock_rate * dt)
 
 __all__ = [
     "pick_nearest_target",

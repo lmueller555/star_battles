@@ -9,9 +9,20 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from game.math.ballistics import compute_lead
 from game.combat.formulas import apply_armor, calculate_crit, calculate_hit_chance
+from game.combat.targeting import update_lock
+from game.assets.content import ContentManager
+from game.sensors.dradis import DradisSystem
+from game.ships.ship import Ship
 from game.ftl.utils import compute_ftl_charge, compute_ftl_cost
 from game.mining.formulas import compute_mining_yield
 from game.world.sector import SectorMap
+
+
+def load_content() -> ContentManager:
+    root = Path(__file__).resolve().parents[1]
+    content = ContentManager(root / "game" / "assets")
+    content.load()
+    return content
 
 
 def test_hit_chance_clamped() -> None:
@@ -80,3 +91,76 @@ def test_sector_map_reachability() -> None:
     assert distance > 0
     reachable = {system.id for system in sector.reachable(default.id, distance + 0.1)}
     assert "helios_beta" in reachable
+
+
+def test_ship_modules_apply_tags_and_stats() -> None:
+    content = load_content()
+    ship = Ship(content.ships.get("interceptor_mk1"))
+    pd = content.items.get("point_defense_mk1")
+    eccm = content.items.get("eccm_mk1")
+    assert ship.equip_module(pd)
+    assert ship.equip_module(eccm)
+    assert ship.has_module_tag("pd")
+    assert ship.module_stat_total("pd_range") == pd.stats["pd_range"]
+    assert ship.module_stat_total("sensor_strength") >= eccm.stats["sensor_strength"]
+
+
+def test_dradis_detection_impacted_by_jammer() -> None:
+    content = load_content()
+    owner = Ship(content.ships.get("interceptor_mk1"))
+    target_clean = Ship(content.ships.get("assault_dummy"))
+    target_clean.kinematics.position.z = 1500.0
+    dradis = DradisSystem(owner)
+    dt = 0.1
+    time_clean = 0.0
+    while True:
+        dradis.update([owner, target_clean], dt)
+        time_clean += dt
+        contact = dradis.contacts.get(id(target_clean))
+        if contact and contact.detected:
+            break
+        assert time_clean < 10.0
+
+    target_jammed = Ship(content.ships.get("assault_dummy"))
+    target_jammed.kinematics.position.z = 1500.0
+    target_jammed.equip_module(content.items.get("jammer_mk1"))
+    dradis = DradisSystem(owner)
+    time_jammed = 0.0
+    while True:
+        dradis.update([owner, target_jammed], dt)
+        time_jammed += dt
+        contact = dradis.contacts.get(id(target_jammed))
+        if contact and contact.detected:
+            break
+        assert time_jammed < 10.0
+    assert time_jammed > time_clean
+
+
+def test_eccm_recovers_lock_speed() -> None:
+    content = load_content()
+    attacker = Ship(content.ships.get("interceptor_mk1"))
+    target = Ship(content.ships.get("assault_dummy"))
+    target.kinematics.position.z = 800.0
+    dt = 0.1
+
+    def acquire(attacker_ship: Ship, target_ship: Ship) -> float:
+        attacker_ship.lock_progress = 0.0
+        elapsed = 0.0
+        while attacker_ship.lock_progress < 1.0:
+            update_lock(attacker_ship, target_ship, dt)
+            elapsed += dt
+            assert elapsed < 20.0
+        return elapsed
+
+    baseline = acquire(attacker, target)
+
+    target_jammed = Ship(content.ships.get("assault_dummy"))
+    target_jammed.kinematics.position.z = 800.0
+    target_jammed.equip_module(content.items.get("jammer_mk1"))
+    jammed_time = acquire(attacker, target_jammed)
+    assert jammed_time > baseline
+
+    attacker_eccm = Ship(content.ships.get("interceptor_mk1"), modules=[content.items.get("eccm_mk1")])
+    attacker_eccm.kinematics.position = attacker.kinematics.position
+    eccm_time = acquire(attacker_eccm, target_jammed)
+    assert eccm_time < jammed_time

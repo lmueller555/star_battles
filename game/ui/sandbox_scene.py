@@ -45,7 +45,10 @@ class SandboxScene(Scene):
         self.logger = kwargs["logger"]
         self.world = SpaceWorld(self.content.weapons, self.content.sector, self.logger)
         player_frame = self.content.ships.get("interceptor_mk1")
-        self.player = Ship(player_frame, team="player", modules=["pd"])
+        self.player = Ship(player_frame, team="player")
+        if self.content:
+            self.player.equip_module(self.content.items.get("point_defense_mk1"))
+            self.player.equip_module(self.content.items.get("eccm_mk1"))
         self.player.assign_weapon("hp_light_1", "light_cannon_mk1")
         self.player.assign_weapon("hp_light_2", "light_cannon_mk1")
         self.player.assign_weapon("hp_missile", "missile_launcher_mk1")
@@ -53,7 +56,9 @@ class SandboxScene(Scene):
         self.world.add_ship(self.player)
 
         dummy_frame = self.content.ships.get("assault_dummy")
-        self.dummy = Ship(dummy_frame, team="enemy", modules=["jammer"])
+        self.dummy = Ship(dummy_frame, team="enemy")
+        if self.content:
+            self.dummy.equip_module(self.content.items.get("jammer_mk1"))
         self.dummy.assign_weapon("hp_light_1", "heavy_cannon_mk1")
         self.dummy.kinematics.position = Vector3(0.0, 0.0, 800.0)
         self.dummy.kinematics.velocity = Vector3(0.0, 0.0, -10.0)

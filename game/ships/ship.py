@@ -1,11 +1,13 @@
 """Ship entity implementation."""
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Dict, Iterable, List, Optional
 
 from pygame.math import Vector3
 
+from game.assets.content import ItemData
 from .data import Hardpoint, ShipFrame
 from .stats import ShipStats
 
@@ -81,10 +83,14 @@ class WeaponMount:
 class Ship:
     """Runtime ship instance."""
 
-    def __init__(self, frame: ShipFrame, team: str = "player", modules: Optional[list[str]] = None) -> None:
+    def __init__(
+        self,
+        frame: ShipFrame,
+        team: str = "player",
+        modules: Optional[Iterable[ItemData]] = None,
+    ) -> None:
         self.frame = frame
         self.team = team
-        self.modules = set(modules or [])
         self.stats: ShipStats = frame.stats
         self.kinematics = ShipKinematics(
             position=Vector3(0.0, 0.0, 0.0),
@@ -104,6 +110,11 @@ class Ship:
         self.lock_decay_delay: float = 0.5
         self.lock_timer: float = 0.0
         self.resources = ShipResources(tylium=320.0, titanium=180.0, water=40.0)
+        self.modules_by_slot: Dict[str, list[ItemData]] = defaultdict(list)
+        self._module_stat_cache: Dict[str, float] = defaultdict(float)
+        if modules:
+            for module in modules:
+                self.equip_module(module)
 
     def is_alive(self) -> bool:
         return self.hull > 0
@@ -131,6 +142,37 @@ class Ship:
                 mount.weapon_id = weapon_id
                 return
         raise KeyError(f"No hardpoint {hardpoint_id}")
+
+    # Module helpers -----------------------------------------------------
+
+    def equip_module(self, module: ItemData) -> bool:
+        """Equip a module if slot capacity allows."""
+
+        capacity = getattr(self.frame.slots, module.slot_type, None)
+        if capacity is None:
+            raise ValueError(f"Unknown slot type {module.slot_type}")
+        installed = self.modules_by_slot[module.slot_type]
+        if len(installed) >= capacity:
+            return False
+        installed.append(module)
+        for key, value in module.stats.items():
+            self._module_stat_cache[key] += float(value)
+        return True
+
+    def module_stat_total(self, key: str) -> float:
+        return self._module_stat_cache.get(key, 0.0)
+
+    def has_module_tag(self, tag: str) -> bool:
+        tag_upper = tag.upper()
+        for modules in self.modules_by_slot.values():
+            for module in modules:
+                if tag_upper in (t.upper() for t in module.tags):
+                    return True
+        return False
+
+    def iter_modules(self) -> Iterable[ItemData]:
+        for modules in self.modules_by_slot.values():
+            yield from modules
 
 
 __all__ = [
