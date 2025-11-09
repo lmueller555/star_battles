@@ -1,0 +1,23 @@
+[
+  {
+    "id": "alpha_yard",
+    "name": "Scorpion Shipyards",
+    "system": "helios_alpha",
+    "position": [0.0, 0.0, 900.0],
+    "dockingRadius": 950
+  },
+  {
+    "id": "beta_refuel",
+    "name": "Tylium Depot", 
+    "system": "helios_beta",
+    "position": [420.0, 0.0, -300.0],
+    "dockingRadius": 900
+  },
+  {
+    "id": "gamma_outpost",
+    "name": "Veil Listening Post",
+    "system": "helios_gamma",
+    "position": [-350.0, 0.0, 1250.0],
+    "dockingRadius": 1000
+  }
+]

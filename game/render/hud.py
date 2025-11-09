@@ -132,7 +132,17 @@ class HUD:
             text = self.font.render(line, True, (200, 220, 255))
             self.surface.blit(text, (20, 140 + i * 18))
 
-    def draw(self, camera, player: Ship, target: Optional[Ship], dradis: DradisSystem, projectile_speed: float, sim_dt: float, fps: float) -> None:
+    def draw(
+        self,
+        camera,
+        player: Ship,
+        target: Optional[Ship],
+        dradis: DradisSystem,
+        projectile_speed: float,
+        sim_dt: float,
+        fps: float,
+        docking_prompt: tuple[str, float, float] | None = None,
+    ) -> None:
         self.draw_crosshair()
         self.draw_lead(camera, player, target, projectile_speed)
         self.draw_target_panel(camera, player, target)
@@ -140,6 +150,15 @@ class HUD:
         self.draw_lock_ring(camera, player, target)
         self.draw_dradis(dradis)
         self.draw_overlay(sim_dt, fps, player, target)
+        if docking_prompt:
+            name, distance, radius = docking_prompt
+            self.draw_docking_prompt(name, distance, radius)
+
+    def draw_docking_prompt(self, name: str, distance: float, radius: float) -> None:
+        text = self.font.render(f"Dock: {name} ({distance:.0f} m / {radius:.0f} m) - Press H", True, (255, 230, 140))
+        x = self.surface.get_width() / 2 - text.get_width() / 2
+        y = self.surface.get_height() - 140
+        self.surface.blit(text, (x, y))
 
 
 __all__ = ["HUD", "format_distance"]

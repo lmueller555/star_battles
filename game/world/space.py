@@ -12,13 +12,21 @@ from game.engine.logger import ChannelLogger, GameLogger
 from game.ships.flight import update_ship_flight
 from game.ships.ship import Ship, WeaponMount
 from game.world.sector import SectorMap
+from game.world.station import DockingStation, StationDatabase
 from game.ftl.utils import compute_ftl_charge, compute_ftl_cost
 
 
 class SpaceWorld:
-    def __init__(self, weapons: WeaponDatabase, sector: SectorMap, logger: GameLogger) -> None:
+    def __init__(
+        self,
+        weapons: WeaponDatabase,
+        sector: SectorMap,
+        stations: StationDatabase,
+        logger: GameLogger,
+    ) -> None:
         self.weapons = weapons
         self.sector = sector
+        self.stations = stations
         self.logger = logger
         self.ships: List[Ship] = []
         self.projectiles: List[Projectile] = []
@@ -31,6 +39,7 @@ class SpaceWorld:
         self.jump_ship: Optional[Ship] = None
         self.ftl_cooldown: float = 0.0
         self.threat_timer: float = 0.0
+        self._station_cache: dict[str, list[DockingStation]] = {}
 
     def add_ship(self, ship: Ship) -> None:
         self.ships.append(ship)
@@ -214,6 +223,26 @@ class SpaceWorld:
         self.ftl_cooldown = 8.0
         if logger:
             logger.info("FTL jump complete to %s", destination)
+
+    def stations_in_current_system(self) -> list[DockingStation]:
+        if self.current_system_id is None:
+            return []
+        if self.current_system_id not in self._station_cache:
+            stations = list(self.stations.in_system(self.current_system_id))
+            self._station_cache[self.current_system_id] = stations
+        return self._station_cache[self.current_system_id]
+
+    def nearest_station(self, ship: Ship) -> tuple[Optional[DockingStation], float]:
+        position = ship.kinematics.position
+        best_station = None
+        best_distance = float("inf")
+        for station in self.stations_in_current_system():
+            station_pos = Vector3(*station.position)
+            distance = position.distance_to(station_pos)
+            if distance < best_distance:
+                best_distance = distance
+                best_station = station
+        return best_station, best_distance
 
 
 __all__ = ["SpaceWorld"]
