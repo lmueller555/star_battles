@@ -72,7 +72,14 @@ class HUD:
 
         draw_bar("Power", player.power, player.stats.power_cap, (120, 200, 255), 0)
         draw_bar("Boost", player.boost_meter, player.stats.power_cap, (255, 160, 80), 24)
-        draw_bar("Fuel", player.stats.ftl_range * 10, player.stats.ftl_range * 10, (160, 255, 180), 48)
+        resources = [
+            f"Tylium: {player.resources.tylium:.0f}",
+            f"Titanium: {player.resources.titanium:.0f}",
+            f"Water: {player.resources.water:.0f}",
+        ]
+        for i, text in enumerate(resources):
+            label = self.font.render(text, True, (170, 220, 180))
+            self.surface.blit(label, (x, base_y + 48 + i * 18))
 
     def draw_lock_ring(self, camera, player: Ship, target: Optional[Ship]) -> None:
         if not target or player.lock_progress <= 0.0:

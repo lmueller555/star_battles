@@ -1,0 +1,38 @@
+[
+  {
+    "id": "helios_alpha",
+    "name": "Helios Alpha",
+    "position": [0.0, 0.0],
+    "threat": false
+  },
+  {
+    "id": "helios_beta",
+    "name": "Helios Beta",
+    "position": [4.2, 1.5],
+    "threat": false
+  },
+  {
+    "id": "helios_gamma",
+    "name": "Helios Gamma",
+    "position": [-3.8, 2.1],
+    "threat": true
+  },
+  {
+    "id": "helios_delta",
+    "name": "Helios Delta",
+    "position": [7.6, -2.4],
+    "threat": false
+  },
+  {
+    "id": "equinox",
+    "name": "Equinox Field",
+    "position": [-6.5, -3.6],
+    "threat": false
+  },
+  {
+    "id": "perseus",
+    "name": "Perseus Reach",
+    "position": [1.2, 6.8],
+    "threat": true
+  }
+]

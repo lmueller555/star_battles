@@ -2,12 +2,29 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from pygame.math import Vector3
 
 from .data import Hardpoint, ShipFrame
 from .stats import ShipStats
+
+
+@dataclass
+class ShipResources:
+    tylium: float = 0.0
+    titanium: float = 0.0
+    water: float = 0.0
+
+    def spend(self, resource: str, amount: float) -> bool:
+        current = getattr(self, resource)
+        if current < amount:
+            return False
+        setattr(self, resource, current - amount)
+        return True
+
+    def add(self, resource: str, amount: float) -> None:
+        setattr(self, resource, getattr(self, resource) + amount)
 
 
 @dataclass
@@ -86,6 +103,7 @@ class Ship:
         self.lock_progress: float = 0.0
         self.lock_decay_delay: float = 0.5
         self.lock_timer: float = 0.0
+        self.resources = ShipResources(tylium=320.0, titanium=180.0, water=40.0)
 
     def is_alive(self) -> bool:
         return self.hull > 0
@@ -120,4 +138,5 @@ __all__ = [
     "ShipControlState",
     "ShipKinematics",
     "WeaponMount",
+    "ShipResources",
 ]
