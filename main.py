@@ -30,7 +30,7 @@ def load_settings() -> Dict[str, Any]:
         return json.loads(SETTINGS_PATH.read_text())
     except json.JSONDecodeError:
         return {
-            "resolution": [1280, 720],
+            "resolution": [1920, 1080],
             "simHz": 60,
             "maxFps": 120,
         }
