@@ -11,6 +11,7 @@ A minimalist, vector-rendered space combat sandbox inspired by arcade space dogf
 - Hitscan cannons, missile launcher with lock-on, soft target selection, PD interception.
 - DRADIS radar widget, HUD target panel, power/boost meters, debug overlay (F3).
 - Sector map overlay with light-year ranges, Tylium costs, and FTL charging/cooldowns.
+- Mining nodes with scan-to-reveal, beam stability mini-game, and Tylium/Titanium/Water payouts.
 - Unit tests for combat formulas, FTL cost/charge helpers, and mining yield math.
 
 ## Quickstart
@@ -43,6 +44,9 @@ If Pygame requests additional system packages (SDL dependencies), install them v
 - **R**: Cycle targets
 - **G**: Toggle PD (auto in this milestone)
 - **F3**: Debug overlay
+- **V**: Hold to scan for nearby mining nodes
+- **B**: Toggle mining beam when near a discovered node
+- **Space**: Stabilize mining beam (prevents instability, boosts yield)
 - **Esc**: Return to title
 
 Distances are displayed in metres (km for large ranges); velocities in metres per second. DRADIS rings label metre/km scales.

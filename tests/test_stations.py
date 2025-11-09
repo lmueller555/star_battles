@@ -6,6 +6,7 @@ from game.combat.weapons import WeaponDatabase
 from game.engine.logger import GameLogger, LoggerConfig
 from game.world.sector import SectorMap
 from game.world.space import SpaceWorld
+from game.world.mining import MiningDatabase
 from game.world.station import StationDatabase
 
 
@@ -47,7 +48,13 @@ def test_space_world_nearest_station(tmp_path):
 
     weapons = WeaponDatabase()
     logger = make_logger()
-    world = SpaceWorld(weapons=weapons, sector=sector, stations=stations, logger=logger)
+    world = SpaceWorld(
+        weapons=weapons,
+        sector=sector,
+        stations=stations,
+        mining=MiningDatabase(),
+        logger=logger,
+    )
 
     # Player ship positioned within the docking radius
     dummy_ship = type("DummyShip", (), {"kinematics": type("Kin", (), {"position": Vector3(0, 0, 520)})()})()

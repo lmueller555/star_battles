@@ -10,6 +10,7 @@ from game.combat.weapons import WeaponDatabase
 from game.ships.data import ShipDatabase
 from game.world.sector import SectorMap
 from game.world.station import StationDatabase
+from game.world.mining import MiningDatabase
 
 
 @dataclass
@@ -61,6 +62,7 @@ class ContentManager:
         self.items = ItemDatabase()
         self.sector = SectorMap()
         self.stations = StationDatabase()
+        self.mining = MiningDatabase()
 
     def load(self) -> None:
         self.ships.load_directory(self.root / "data" / "ships")
@@ -68,6 +70,7 @@ class ContentManager:
         self.items.load_directory(self.root / "data" / "items")
         self.sector.load(self.root / "data" / "sector_map.json")
         self.stations.load(self.root / "data" / "stations.json")
+        self.mining.load(self.root / "data" / "mining_nodes.json")
 
 
 __all__ = ["ContentManager", "ItemDatabase", "ItemData"]

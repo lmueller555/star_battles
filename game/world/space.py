@@ -13,6 +13,7 @@ from game.ships.flight import update_ship_flight
 from game.ships.ship import Ship, WeaponMount
 from game.world.sector import SectorMap
 from game.world.station import DockingStation, StationDatabase
+from game.world.mining import MiningDatabase, MiningManager, MiningHUDState
 from game.ftl.utils import compute_ftl_charge, compute_ftl_cost
 
 
@@ -22,6 +23,7 @@ class SpaceWorld:
         weapons: WeaponDatabase,
         sector: SectorMap,
         stations: StationDatabase,
+        mining: MiningDatabase,
         logger: GameLogger,
     ) -> None:
         self.weapons = weapons
@@ -40,6 +42,8 @@ class SpaceWorld:
         self.ftl_cooldown: float = 0.0
         self.threat_timer: float = 0.0
         self._station_cache: dict[str, list[DockingStation]] = {}
+        self.mining = MiningManager(mining)
+        self.mining.enter_system(self.current_system_id)
 
     def add_ship(self, ship: Ship) -> None:
         self.ships.append(ship)
@@ -217,6 +221,7 @@ class SpaceWorld:
         ship.kinematics.velocity = Vector3(0.0, 0.0, 0.0)
         ship.kinematics.angular_velocity = Vector3(0.0, 0.0, 0.0)
         self.current_system_id = destination
+        self.mining.enter_system(destination)
         self.pending_jump_id = None
         self.pending_jump_cost = 0.0
         self.jump_ship = None
@@ -243,6 +248,48 @@ class SpaceWorld:
                 best_distance = distance
                 best_station = station
         return best_station, best_distance
+
+    def start_mining(self, ship: Ship) -> tuple[bool, str]:
+        mining_log = self.logger.channel("mining")
+        success, message = self.mining.start_mining(ship)
+        if mining_log.enabled:
+            if success:
+                mining_log.info("Mining engaged: %s", message)
+            else:
+                mining_log.info("Mining failed: %s", message)
+        return success, message
+
+    def stop_mining(self) -> None:
+        if self.mining.active_node():
+            mining_log = self.logger.channel("mining")
+            self.mining.stop_mining()
+            if mining_log.enabled:
+                mining_log.info("Mining disengaged by pilot")
+
+    def mining_active(self) -> bool:
+        node = self.mining.active_node()
+        return bool(node and node.active)
+
+    def step_mining(
+        self,
+        ship: Ship,
+        dt: float,
+        scanning: bool,
+        stabilizing: bool,
+    ) -> MiningHUDState:
+        if scanning:
+            self.mining.scan_step(ship, dt)
+        mining_log = self.logger.channel("mining")
+        state = self.mining.step(
+            ship,
+            dt,
+            stabilizing=stabilizing,
+            scanning_active=scanning,
+            logger=mining_log,
+        )
+        if state.alert_triggered:
+            self.threat_timer = max(self.threat_timer, 12.0)
+        return state
 
 
 __all__ = ["SpaceWorld"]

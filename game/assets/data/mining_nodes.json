@@ -1,0 +1,57 @@
+[
+  {
+    "id": "alpha_tylium_ridge",
+    "name": "Tylium Ridge",
+    "system": "helios_alpha",
+    "resource": "tylium",
+    "grade": 1.1,
+    "baseYield": 6.0,
+    "position": [320.0, -40.0, 680.0],
+    "scanTime": 2.5,
+    "stabilityDecay": 0.22
+  },
+  {
+    "id": "alpha_water_crust",
+    "name": "Crystalline Flats",
+    "system": "helios_alpha",
+    "resource": "water",
+    "grade": 0.8,
+    "baseYield": 4.5,
+    "position": [-460.0, 20.0, -540.0],
+    "scanTime": 3.0,
+    "stabilityDecay": 0.18
+  },
+  {
+    "id": "beta_titanium_field",
+    "name": "Titanium Field",
+    "system": "helios_beta",
+    "resource": "titanium",
+    "grade": 1.4,
+    "baseYield": 5.5,
+    "position": [520.0, -60.0, -320.0],
+    "scanTime": 2.2,
+    "stabilityDecay": 0.25
+  },
+  {
+    "id": "gamma_tylium_nodes",
+    "name": "Veil Nodes",
+    "system": "helios_gamma",
+    "resource": "tylium",
+    "grade": 1.7,
+    "baseYield": 7.0,
+    "position": [-380.0, 40.0, 1180.0],
+    "scanTime": 3.4,
+    "stabilityDecay": 0.3
+  },
+  {
+    "id": "delta_water_spires",
+    "name": "Perihelion Spires",
+    "system": "helios_delta",
+    "resource": "water",
+    "grade": 1.2,
+    "baseYield": 4.0,
+    "position": [760.0, -30.0, -260.0],
+    "scanTime": 2.8,
+    "stabilityDecay": 0.2
+  }
+]
