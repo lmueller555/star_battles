@@ -1,0 +1,6 @@
+{
+  "armor_penetration_floor": 0.15,
+  "lock_rate": 1.2,
+  "lock_decay": 1.0,
+  "passive_drag": 0.12
+}

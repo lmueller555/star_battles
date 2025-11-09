@@ -1,0 +1,13 @@
+{
+  "resolution": [1280, 720],
+  "simHz": 60,
+  "maxFps": 120,
+  "logLevel": "INFO",
+  "logChannels": {
+    "physics": false,
+    "weapons": false,
+    "ftl": false,
+    "mining": false
+  },
+  "bindings": {}
+}
