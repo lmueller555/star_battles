@@ -1,6 +1,7 @@
 """Heads-up display drawing."""
 from __future__ import annotations
 
+from math import radians, tan
 from typing import Optional
 
 import pygame
@@ -10,6 +11,31 @@ from game.math.ballistics import compute_lead
 from game.sensors.dradis import DradisSystem
 from game.world.mining import MiningHUDState
 from game.ships.ship import Ship
+
+
+def _gimbal_radius(
+    angle_deg: float,
+    fov_deg: float,
+    aspect: float,
+    screen_size: tuple[int, int],
+) -> float:
+    """Return the radius in pixels for the edge of a gimbal cone."""
+
+    if angle_deg <= 0.0 or fov_deg <= 0.0:
+        return 0.0
+    width, height = screen_size
+    if width <= 0 or height <= 0:
+        return 0.0
+    half_vertical = max(1e-5, radians(fov_deg) / 2.0)
+    tan_half_vertical = max(1e-5, tan(half_vertical))
+    tan_half_horizontal = max(1e-5, tan_half_vertical * max(1e-5, aspect))
+    tan_angle = tan(radians(angle_deg))
+    radius_h = (width * 0.5) * tan_angle / tan_half_horizontal
+    radius_v = (height * 0.5) * tan_angle / tan_half_vertical
+    radius = min(radius_h, radius_v)
+    if not radius or radius < 0.0:
+        return 0.0
+    return float(radius)
 
 
 def format_distance(distance_m: float) -> str:
@@ -28,10 +54,57 @@ class HUD:
     def toggle_overlay(self) -> None:
         self.overlay_enabled = not self.overlay_enabled
 
-    def draw_crosshair(self) -> None:
+    def draw_crosshair(self, camera, player: Ship) -> None:
         center = Vector2(self.surface.get_width() / 2, self.surface.get_height() / 2)
         pygame.draw.line(self.surface, (180, 220, 255), center + Vector2(-12, 0), center + Vector2(12, 0), 1)
         pygame.draw.line(self.surface, (180, 220, 255), center + Vector2(0, -12), center + Vector2(0, 12), 1)
+        self.draw_gimbal_arcs(camera, player, center)
+
+    def draw_gimbal_arcs(self, camera, player: Ship, center: Vector2) -> None:
+        if not player or not camera:
+            return
+        surface_size = self.surface.get_size()
+        gimbals: dict[str, list[float]] = {}
+        for mount in getattr(player, "mounts", []):
+            if not getattr(mount, "weapon_id", None):
+                continue
+            group = getattr(mount.hardpoint, "group", "primary")
+            gimbals.setdefault(group, []).append(float(mount.hardpoint.gimbal))
+        if not gimbals:
+            return
+        palette = {
+            "primary": (120, 200, 255),
+            "aux": (255, 190, 140),
+        }
+        fallback = (200, 210, 220)
+        for index, group in enumerate(sorted(gimbals.keys())):
+            angles = gimbals[group]
+            max_angle = max(angles)
+            radius = _gimbal_radius(max_angle, camera.fov, camera.aspect, surface_size)
+            if radius <= 0.0:
+                continue
+            color = palette.get(group, fallback)
+            pygame.draw.circle(
+                self.surface,
+                color,
+                (int(center.x), int(center.y)),
+                int(radius),
+                1,
+            )
+            min_angle = min(angles)
+            if min_angle < max_angle - 1.5:
+                inner_radius = _gimbal_radius(min_angle, camera.fov, camera.aspect, surface_size)
+                if inner_radius > 4.0:
+                    pygame.draw.circle(
+                        self.surface,
+                        color,
+                        (int(center.x), int(center.y)),
+                        int(inner_radius),
+                        1,
+                    )
+            if index >= 2:
+                # Avoid overcrowding the reticle if many auxiliary groups exist.
+                break
 
     def draw_lead(self, camera, player: Ship, target: Optional[Ship], projectile_speed: float) -> None:
         if not target or projectile_speed <= 0.0:
@@ -145,7 +218,7 @@ class HUD:
         docking_prompt: tuple[str, float, float] | None = None,
         mining_state: MiningHUDState | None = None,
     ) -> None:
-        self.draw_crosshair()
+        self.draw_crosshair(camera, player)
         self.draw_lead(camera, player, target, projectile_speed)
         self.draw_target_panel(camera, player, target)
         self.draw_meters(player)
