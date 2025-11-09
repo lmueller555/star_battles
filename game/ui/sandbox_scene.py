@@ -208,6 +208,14 @@ class SandboxScene(Scene):
 
         if self.input.consume_action("toggle_overlay"):
             self.hud.toggle_overlay()
+        if self.input.consume_action("toggle_auto_throttle") and self.player:
+            enabled = self.player.toggle_auto_throttle()
+            message = "Auto-throttle engaged" if enabled else "Auto-throttle disengaged"
+            self._set_combat_feedback(message, duration=2.0)
+        if self.input.consume_action("toggle_auto_level") and self.player:
+            enabled = self.player.toggle_auto_level()
+            message = "Auto-level on" if enabled else "Auto-level off"
+            self._set_combat_feedback(message, duration=2.0)
         if self.input.consume_action("target_nearest"):
             target = pick_nearest_target(self.player, self.world.ships)
             if target:
