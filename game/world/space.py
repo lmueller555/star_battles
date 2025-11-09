@@ -9,6 +9,7 @@ from pygame.math import Vector3
 from game.combat.targeting import update_lock
 from game.combat.weapons import HitResult, Projectile, WeaponDatabase, resolve_hitscan
 from game.engine.logger import ChannelLogger, GameLogger
+from game.math.ballistics import compute_lead
 from game.ships.flight import update_ship_flight
 from game.ships.ship import Ship, WeaponMount
 from game.world.sector import SectorMap
@@ -125,6 +126,19 @@ class SpaceWorld:
         ship.power -= weapon.power_per_shot
         mount.cooldown = weapon.cooldown
         forward = ship.kinematics.forward()
+        to_target = None
+        distance = 0.0
+        angle_error = 0.0
+        effective_gimbal = weapon.gimbal
+        if mount.hardpoint:
+            effective_gimbal = min(effective_gimbal, mount.hardpoint.gimbal)
+        if target:
+            to_target = target.kinematics.position - ship.kinematics.position
+            distance = to_target.length()
+            if distance > 0.0:
+                angle_error = forward.angle_to(to_target.normalize())
+            if angle_error > effective_gimbal:
+                return None
         if weapon.wclass == "hitscan" and target:
             result = resolve_hitscan(
                 ship.kinematics.position,
@@ -132,10 +146,15 @@ class SpaceWorld:
                 weapon,
                 target.kinematics.position,
                 target.kinematics.velocity,
-                target.stats.avoidance,
-                target.stats.crit_defense,
-                target.stats.armor,
+                target.stats.avoidance + target.module_stat_total("avoidance"),
+                target.stats.crit_defense + target.module_stat_total("crit_defense"),
+                target.stats.armor + target.module_stat_total("armor"),
                 self.rng,
+                distance=distance,
+                angle_error=angle_error,
+                gimbal_limit=effective_gimbal,
+                accuracy_bonus=ship.module_stat_total("weapon_accuracy"),
+                crit_bonus=ship.module_stat_total("weapon_crit"),
             )
             if result.hit:
                 self._apply_damage(target, result.damage)
@@ -143,10 +162,23 @@ class SpaceWorld:
                     self.threat_timer = max(self.threat_timer, 12.0)
             return result
         else:
-            velocity = forward * weapon.projectile_speed + ship.kinematics.velocity
+            launch_direction = forward
+            if target and weapon.projectile_speed > 0.0:
+                lead_point = compute_lead(
+                    ship.kinematics.position,
+                    target.kinematics.position,
+                    target.kinematics.velocity,
+                    weapon.projectile_speed,
+                )
+                to_lead = lead_point - ship.kinematics.position
+                if to_lead.length_squared() > 0:
+                    launch_direction = to_lead.normalize()
+            if target and angle_error > effective_gimbal:
+                return None
+            velocity = launch_direction * weapon.projectile_speed + ship.kinematics.velocity
             projectile = Projectile(
                 weapon=weapon,
-                position=ship.kinematics.position + forward * 3.0,
+                position=ship.kinematics.position + launch_direction * 3.0,
                 velocity=velocity,
                 target_id=id(target) if target else None,
                 ttl=weapon.max_range / max(1.0, weapon.projectile_speed),

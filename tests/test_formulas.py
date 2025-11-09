@@ -1,14 +1,18 @@
 """Unit tests for deterministic formulas."""
 from __future__ import annotations
 
-from math import isclose
+from math import cos, isclose, radians, sin
 from pathlib import Path
 import sys
+import random
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
+from pygame.math import Vector3
+
 from game.math.ballistics import compute_lead
 from game.combat.formulas import apply_armor, calculate_crit, calculate_hit_chance
+from game.combat.weapons import resolve_hitscan
 from game.combat.targeting import update_lock
 from game.assets.content import ContentManager
 from game.sensors.dradis import DradisSystem
@@ -79,6 +83,67 @@ def test_ftl_cost_and_charge() -> None:
 def test_mining_yield() -> None:
     yield_rate = compute_mining_yield(10.0, 1.5, 0.2, 0.8)
     assert isclose(yield_rate, 14.4)
+
+
+def test_hitscan_range_and_gimbal_modifiers() -> None:
+    content = load_content()
+    weapon = content.weapons.get("light_cannon_mk1")
+    origin = Vector3(0.0, 0.0, 0.0)
+    direction = Vector3(0.0, 0.0, 1.0)
+    rng = random.Random(42)
+
+    # Far outside maximum range should clamp hit chance to zero.
+    far_target = Vector3(0.0, 0.0, weapon.max_range + 100.0)
+    far_result = resolve_hitscan(
+        origin,
+        direction,
+        weapon,
+        far_target,
+        Vector3(),
+        0.0,
+        0.0,
+        0.0,
+        rng,
+        distance=far_target.length(),
+        gimbal_limit=weapon.gimbal,
+    )
+    assert far_result.final_hit_chance == 0.0
+
+    # Near the centre of the cone retains baseline accuracy.
+    close_target = Vector3(0.0, 0.0, weapon.optimal_range)
+    close_result = resolve_hitscan(
+        origin,
+        direction,
+        weapon,
+        close_target,
+        Vector3(),
+        0.0,
+        0.0,
+        0.0,
+        rng,
+        distance=close_target.length(),
+        gimbal_limit=weapon.gimbal,
+    )
+    angle = weapon.gimbal * 0.9
+    offset = Vector3(
+        sin(radians(angle)) * weapon.optimal_range,
+        0.0,
+        cos(radians(angle)) * weapon.optimal_range,
+    )
+    edge_result = resolve_hitscan(
+        origin,
+        direction,
+        weapon,
+        offset,
+        Vector3(),
+        0.0,
+        0.0,
+        0.0,
+        rng,
+        distance=offset.length(),
+        gimbal_limit=weapon.gimbal,
+    )
+    assert 0.0 < edge_result.final_hit_chance < close_result.final_hit_chance
 
 
 def test_sector_map_reachability() -> None:
