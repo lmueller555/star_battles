@@ -133,6 +133,46 @@ class SpaceWorld:
                 continue
             controller.post_update(self, dt)
 
+    def activate_countermeasure(self, ship: Ship) -> tuple[bool, str]:
+        if ship.countermeasure_cooldown > 0.0:
+            return False, "Countermeasures recharging"
+        radius = ship.module_stat_total("cm_radius")
+        if radius <= 0.0:
+            radius = ship.module_stat_total("pd_range")
+        if radius <= 0.0:
+            radius = 420.0
+        lock_break = ship.module_stat_total("cm_lock_break")
+        if lock_break <= 0.0:
+            lock_break = 0.6
+        power_cost = ship.module_stat_total("cm_power")
+        if power_cost <= 0.0:
+            power_cost = 18.0
+        cooldown = ship.module_stat_total("cm_cooldown")
+        if cooldown <= 0.0:
+            cooldown = 9.0
+        if ship.power < power_cost:
+            return False, "Insufficient power"
+        ship.power = max(0.0, ship.power - power_cost)
+        missiles_removed = 0
+        for projectile in list(self.projectiles):
+            if projectile.weapon.wclass != "missile" or projectile.team == ship.team:
+                continue
+            distance = ship.kinematics.position.distance_to(projectile.position)
+            if distance <= radius:
+                self.projectiles.remove(projectile)
+                missiles_removed += 1
+        previous_lock = ship.lock_progress
+        if lock_break > 0.0:
+            ship.lock_progress = max(0.0, ship.lock_progress - lock_break)
+        ship.countermeasure_cooldown = cooldown
+        if missiles_removed and ship.lock_progress < previous_lock:
+            return True, f"Countermeasures intercepted {missiles_removed} missiles and broke locks"
+        if missiles_removed:
+            return True, f"Countermeasures intercepted {missiles_removed} missiles"
+        if ship.lock_progress < previous_lock:
+            return True, "Countermeasures disrupted hostile locks"
+        return True, "Countermeasures deployed"
+
     def fire_mount(self, ship: Ship, mount: WeaponMount, target: Optional[Ship]) -> Optional[HitResult]:
         if not mount.weapon_id:
             return None

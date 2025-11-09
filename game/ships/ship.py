@@ -112,6 +112,7 @@ class Ship:
         self.resources = ShipResources(tylium=320.0, titanium=180.0, water=40.0)
         self.modules_by_slot: Dict[str, list[ItemData]] = defaultdict(list)
         self._module_stat_cache: Dict[str, float] = defaultdict(float)
+        self.countermeasure_cooldown: float = 0.0
         if modules:
             for module in modules:
                 self.equip_module(module)
@@ -130,11 +131,14 @@ class Ship:
         for mount in self.mounts:
             mount.cooldown = 0.0
             mount.lock_progress = 0.0
+        self.countermeasure_cooldown = 0.0
 
     def tick_cooldowns(self, dt: float) -> None:
         for mount in self.mounts:
             if mount.cooldown > 0.0:
                 mount.cooldown = max(0.0, mount.cooldown - dt)
+        if self.countermeasure_cooldown > 0.0:
+            self.countermeasure_cooldown = max(0.0, self.countermeasure_cooldown - dt)
 
     def assign_weapon(self, hardpoint_id: str, weapon_id: str) -> None:
         for mount in self.mounts:
