@@ -18,6 +18,37 @@ from game.combat.formulas import (
 from game.engine.logger import ChannelLogger
 
 
+def _range_accuracy_modifier(distance: float, optimal: float, max_range: float) -> float:
+    """Return a 0-1 multiplier for accuracy based on range bands."""
+
+    if distance <= 0.0:
+        return 1.0
+    if distance <= optimal:
+        return 1.0
+    if max_range <= optimal:
+        return 0.0 if distance > optimal else 1.0
+    if distance >= max_range:
+        return 0.0
+    falloff = (distance - optimal) / (max_range - optimal)
+    return max(0.0, 1.0 - falloff)
+
+
+def _gimbal_accuracy_modifier(angle: float, gimbal_limit: float) -> float:
+    """Return a 0-1 multiplier that softens aim near the gimbal edge."""
+
+    if gimbal_limit <= 0.0:
+        return 0.0
+    if angle <= 0.0:
+        return 1.0
+    if angle >= gimbal_limit:
+        return 0.0
+    inner_cone = gimbal_limit * 0.5
+    if angle <= inner_cone:
+        return 1.0
+    ratio = (angle - inner_cone) / max(1e-3, gimbal_limit - inner_cone)
+    return max(0.0, 1.0 - ratio)
+
+
 @dataclass
 class WeaponData:
     id: str
@@ -95,17 +126,35 @@ def resolve_hitscan(
     target_crit_def: float,
     armor: float,
     rng,
+    *,
+    distance: Optional[float] = None,
+    angle_error: Optional[float] = None,
+    gimbal_limit: Optional[float] = None,
+    accuracy_bonus: float = 0.0,
+    crit_bonus: float = 0.0,
 ) -> HitResult:
-    angle_error = direction.angle_to((target_position - origin).normalize()) if direction.length_squared() > 0 else 0.0
-    hit_chance = calculate_hit_chance(weapon.base_accuracy, radians(angle_error), target_avoidance)
-    hit_roll = rng.random()
-    hit = hit_roll <= hit_chance
+    offset = target_position - origin
+    if distance is None:
+        distance = offset.length()
+    if angle_error is None:
+        if direction.length_squared() > 0 and offset.length_squared() > 0:
+            angle_error = direction.angle_to(offset.normalize())
+        else:
+            angle_error = 0.0
+    effective_gimbal = gimbal_limit if gimbal_limit is not None else weapon.gimbal
+    gimbal_modifier = _gimbal_accuracy_modifier(angle_error, effective_gimbal)
+    range_modifier = _range_accuracy_modifier(distance, weapon.optimal_range, weapon.max_range)
+    if gimbal_modifier <= 0.0 or range_modifier <= 0.0:
+        return HitResult(False, False, 0.0, 0.0, 0.0)
+    base_accuracy = weapon.base_accuracy * gimbal_modifier * range_modifier
+    hit_chance = calculate_hit_chance(base_accuracy, radians(angle_error), target_avoidance, accuracy_bonus=accuracy_bonus)
+    hit_chance = max(0.0, min(1.0, hit_chance))
+    crit_chance = calculate_crit(weapon.crit_chance, crit_bonus, target_crit_def)
+    hit = rng.random() <= hit_chance
     crit = False
     damage = 0.0
-    crit_chance = calculate_crit(weapon.crit_chance, 0.0, target_crit_def)
     if hit:
-        crit_roll = rng.random()
-        crit = crit_roll <= crit_chance
+        crit = rng.random() <= crit_chance
         damage = weapon.base_damage * (weapon.crit_multiplier if crit else 1.0)
         damage = apply_armor(damage, armor)
     return HitResult(hit, crit, damage, hit_chance, crit_chance)
