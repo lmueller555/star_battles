@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from math import radians, tan
+from typing import Optional
 
 from pygame.math import Vector3
 
@@ -16,8 +17,14 @@ def _approach(value: float, target: float, rate: float) -> float:
     return value
 
 
+def _lerp_vector(a: Vector3, b: Vector3, t: float) -> Vector3:
+    """Linear interpolate between two vectors with clamped factor."""
+    t = max(0.0, min(1.0, t))
+    return a + (b - a) * t
+
+
 class ChaseCamera:
-    """Third-person chase camera with freelook and velocity look-ahead."""
+    """Third-person chase camera with freelook, look-ahead, and lock framing."""
 
     def __init__(self, fov_deg: float, aspect: float) -> None:
         self.base_fov = fov_deg
@@ -42,6 +49,16 @@ class ChaseCamera:
         self.look_ahead_response = 4.0
         self.look_ahead_factor = 0.08
         self.look_ahead_max = 20.0
+        self.lock_blend = 0.0
+        self.lock_response = 4.0
+        self.lock_side_offset = 3.0
+        self.lock_back_offset = 4.5
+        self.lock_up_offset = 1.4
+        self.lock_zoom_min = max(15.0, fov_deg - 6.0)
+        self.lock_zoom_max = fov_deg + 18.0
+        self.lock_zoom_rate = 5.0
+        self._lock_direction = Vector3(0.0, 0.0, 1.0)
+        self._lock_distance = 0.0
 
     def update(
         self,
@@ -49,6 +66,8 @@ class ChaseCamera:
         dt: float,
         freelook_active: bool = False,
         freelook_delta: tuple[float, float] = (0.0, 0.0),
+        target: Optional[Ship] = None,
+        lock_mode: bool = False,
     ) -> None:
         ship_forward = ship.kinematics.forward()
         ship_right = ship.kinematics.right()
@@ -91,12 +110,44 @@ class ChaseCamera:
         focus_right = focus_forward.cross(focus_up).normalize()
         focus_up = focus_right.cross(focus_forward).normalize()
 
-        target_pos = (
+        lock_direction = self._lock_direction
+        lock_distance = self._lock_distance
+        lock_active = bool(lock_mode and target is not None and target.is_alive())
+        if lock_active:
+            to_target = target.kinematics.position - ship.kinematics.position
+            lock_distance = to_target.length()
+            if lock_distance > 1e-3:
+                lock_direction = to_target.normalize()
+            else:
+                lock_distance = 0.0
+                lock_direction = focus_forward
+            self._lock_direction = lock_direction
+            self._lock_distance = lock_distance
+        else:
+            lock_distance = _approach(lock_distance, 0.0, self.lock_response * dt)
+            self._lock_distance = lock_distance
+
+        self.lock_blend = _approach(self.lock_blend, 1.0 if lock_active else 0.0, self.lock_response * dt)
+
+        base_target_pos = (
             ship.kinematics.position
             - focus_forward * self.distance
             + focus_up * self.height
             + focus_right * self.shoulder
         )
+        lock_target_pos = base_target_pos
+        if lock_distance > 0.0:
+            side_sign = 1.0 if focus_right.dot(lock_direction) >= 0 else -1.0
+            lateral_scale = min(1.0, lock_distance / 900.0)
+            back_scale = min(1.0, lock_distance / 600.0)
+            height_scale = min(1.0, lock_distance / 800.0)
+            lock_target_pos = (
+                base_target_pos
+                + focus_right * (self.lock_side_offset * lateral_scale * side_sign)
+                - focus_forward * (self.lock_back_offset * back_scale)
+                + focus_up * (self.lock_up_offset * 0.5 * height_scale)
+            )
+        target_pos = _lerp_vector(base_target_pos, lock_target_pos, self.lock_blend)
         self.position += (target_pos - self.position) * min(1.0, 5.0 * dt)
 
         velocity = ship.kinematics.velocity
@@ -107,11 +158,18 @@ class ChaseCamera:
         self.look_ahead_distance += (desired_look_ahead - self.look_ahead_distance) * min(
             1.0, self.look_ahead_response * dt
         )
-        focus_point = (
+        base_focus_point = (
             ship.kinematics.position
             + focus_forward * (self.distance * 0.8)
             + self.look_ahead_direction * self.look_ahead_distance
         )
+        lock_focus_point = base_focus_point
+        if lock_distance > 0.0:
+            midpoint = ship.kinematics.position + lock_direction * (lock_distance * 0.5)
+            lock_focus_point = midpoint + focus_up * self.lock_up_offset
+            lock_focus_point += lock_direction * min(6.0, lock_distance * 0.3)
+            lock_focus_point += self.look_ahead_direction * (self.look_ahead_distance * 0.4)
+        focus_point = _lerp_vector(base_focus_point, lock_focus_point, self.lock_blend)
 
         desired_forward = focus_point - self.position
         if desired_forward.length_squared() > 1e-6:
@@ -128,7 +186,14 @@ class ChaseCamera:
             self.right = self.right.normalize()
             self.up = self.right.cross(self.forward).normalize()
 
-        self.fov = min(self.base_fov + speed * 0.12, self.base_fov + 25.0)
+        base_fov = min(self.base_fov + speed * 0.12, self.base_fov + 25.0)
+        desired_fov = base_fov
+        if lock_distance > 0.0:
+            distance_ratio = min(1.0, lock_distance / 1200.0)
+            lock_fov_target = self.lock_zoom_min + (self.lock_zoom_max - self.lock_zoom_min) * distance_ratio
+            desired_fov = base_fov * (1.0 - self.lock_blend) + lock_fov_target * self.lock_blend
+        self.fov += (desired_fov - self.fov) * min(1.0, self.lock_zoom_rate * dt)
+
         if self.recoil > 0.0:
             self.position -= self.forward * self.recoil
             self.recoil = max(0.0, self.recoil - self.recoil_decay * dt)

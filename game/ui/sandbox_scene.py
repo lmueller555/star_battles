@@ -287,17 +287,27 @@ class SandboxScene(Scene):
         self.renderer.surface = surface
         self.hud.surface = surface
         self.renderer.clear()
+        target = next(
+            (
+                s
+                for s in self.world.ships
+                if id(s) == self.player.target_id and s.is_alive()
+            ),
+            None,
+        )
+        lock_mode = bool(target and self.player.lock_progress >= 1.0)
         self.camera.update(
             self.player,
             self.sim_dt,
             freelook_active=self.freelook_active,
             freelook_delta=self.freelook_delta,
+            target=target,
+            lock_mode=lock_mode,
         )
         for ship in self.world.ships:
             if ship.is_alive():
                 self.renderer.draw_ship(self.camera, ship)
         self.renderer.draw_projectiles(self.camera, self.world.projectiles)
-        target = next((s for s in self.world.ships if id(s) == self.player.target_id), None)
         projectile_speed = 0.0
         if target and self.content:
             for mount in self.player.mounts:

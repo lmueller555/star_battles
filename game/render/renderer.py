@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from math import cos, radians, sin
-from typing import Iterable, Sequence
+from typing import Iterable, List, Sequence
 
 import pygame
 from pygame.math import Vector3
