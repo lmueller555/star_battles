@@ -1,0 +1,334 @@
+Ship Classes, Roles, Specs, and Implementation Rules
+1) Taxonomy & Identity
+1.1 Size Classes
+
+Strike (Light): small silhouette, high agility, low armor/hull.
+
+Escort (Medium): balanced mobility/survivability, more hardpoints.
+
+Line (Heavy): tanky, slow turn/accel, heavy weapon arrays.
+
+Capital (XL): carriers/battlestars; special slot families (guns, launchers, defensive weapons), logistics/respawn roles.
+
+1.2 Combat Roles
+
+Interceptor: speed/agility specialists. More engine slots (and even more when upgraded).
+
+Assault: frontline brawler/tank. More hull slots (and even more when upgraded).
+
+Command: electronic warfare/support. More computer slots (and even more when upgraded) + higher base energy than Interceptor/Assault of comparable size.
+
+Multi-Role: flexible baseline; balanced slots/stats.
+
+Upgrade principle: Each base frame has an Advanced version with (a) modestly improved core stats, (b) +1–2 relevant slots based on role rule above, and (c) slightly higher energy (all roles), with Command receiving the highest energy uplift.
+
+2) Spec Model (what every ship must define)
+
+Identity
+
+Class (Strike/Escort/Line/Capital), Role, Level requirement, Faction counterpart, Upgrade path.
+
+Economy
+
+Purchase cost (currency: e.g., cubits or tylium; include merits if applicable).
+
+Upgrade cost (to Advanced): currency + gated level.
+
+Operating costs: boost drain (Tyl/s), FTL cost (Tyl/LY).
+
+Equipment Slots (by family)
+
+Weapons (or Gun/Launcher/Defensive for Capitals), Hull, Engine, Computer, optional Utility.
+
+Hull Systems (survivability)
+
+Hull Points, Hull Recovery (/s), Durability, Armor, Critical Defense.
+
+Engine Systems (mobility)
+
+Avoidance, Turning Speed (deg/s), Turning Acceleration (deg/s²), Inertial Compensation (m/s), Linear Acceleration (m/s²), Cruise Speed (m/s), Boost Speed (m/s), Boost Cost (Tyl/s).
+
+FTL Systems
+
+Range (LY), Charge (s), Threat Charge (optional, s), Cost (Tyl/LY).
+
+Computer Systems (energy/sensors)
+
+Power (capacity), Power Recharge (/s), Firewall Rating (defensive EW), Emitter Rating (offensive EW), DRADIS Range (m), Visual Range (m).
+
+Notes
+
+Firing-arc characteristics (e.g., nearly 360° arrays on certain escorts), weak-spot coverage, role bonuses (e.g., command bonus to FTL transponder power cost).
+
+3) How Specs Behave In-Game (implementation formulas & behaviors)
+
+Textual formulas only—express them clearly for the LLM to implement.
+
+3.1 Survivability & Damage
+
+Hit resolution: Attacker Accuracy − Defender Avoidance → clamp to [0,1] as hit chance.
+
+Crit: (Base Crit + Attacker bonus − Defender Critical Defense) → on hit, apply Crit Multiplier.
+
+Armor: Reduce incoming damage by Armor value but enforce a penetration floor (e.g., at least 15% of pre-armor damage always goes through) to prevent total nullification.
+
+Hull Recovery: Regenerates per second; pause briefly after taking damage unless a module overrides.
+
+Durability: Long-term integrity; heavy collision and sustained hits reduce Durability alongside hull.
+
+3.2 Movement
+
+Throttle/Boost: Target speed is Cruise or Boost; approach using Acceleration.
+
+Turning: Apply Turning Speed as cap, Turning Acceleration as responsiveness.
+
+Inertial Compensation: Gradually realign actual velocity vector with ship forward; lower values = more drift.
+
+Strafing (if supported): Cap lateral/vertical speed; scale to size class.
+
+3.3 Energy Economy
+
+Power Capacity/Recharge feed all energy-using actions (weapons, PD, ECM/ECCM, boost if designed that way).
+
+Command ships: higher baselines; Advanced variants add a further margin.
+
+3.4 Sensors & Targeting
+
+DRADIS Range determines detection radius; Visual Range gates close-in identification.
+
+Lock-on advances when target remains in arc, range, and LOS; decays when broken.
+
+EW: Firewall defends vs. jams/hacks; Emitter increases offensive EW; Command frames get bonuses.
+
+3.5 Weapons & Arcs
+
+Gimbal limits per hardpoint define firing cone; outside cone, mount cannot track.
+
+Hitscan: roll accuracy vs avoidance;
+
+Projectile/Missile: compute lead solution; missiles require/benefit from target lock; PD/defensive weapons can intercept.
+
+Heavy escorts/lines may mount side/ dorsal batteries to widen coverage; Glaive-like escorts can approach near-360° coverage via head/circumferential mounts (documented as a frame trait).
+
+3.6 FTL
+
+Jump allowed if distance ≤ Range and ship pays Cost = (Tyl/LY) × distance;
+
+Charge time applies (use “Threat Charge” when recently in combat);
+
+Transponder/Command bonus: reduce transponder power cost on Command frames; Advanced Command reduces further.
+
+4) Role-Based Slot & Energy Rules (applies to base → Advanced)
+
+Interceptor (any size):
+
+Base: +1 Engine slot relative to role-neutral baseline for that size.
+
+Advanced: +1 additional Engine slot (total +2 vs baseline).
+
+Energy: +small upgrade (enough to sustain extra engine/boost modules).
+
+Assault:
+
+Base: +1 Hull slot vs baseline.
+
+Advanced: +1 additional Hull slot (total +2 vs baseline).
+
+Energy: +small-to-moderate upgrade (support heavier armor/regen modules).
+
+Command:
+
+Base: +2 Computer slots vs baseline (Escorts) or +1 vs baseline (Lines), choose consistent policy and apply across sizes.
+
+Advanced: +1 additional Computer slot (aggregate advantage persists).
+
+Energy: highest baseline within class; Advanced adds the largest energy uplift.
+
+(You can tune the exact deltas, but keep the relationship consistent so identity is clear.)
+
+5) Economy & Progression
+
+Currencies: Cubits (premium), Tylium (fuel/soft currency), Merits (rank/rep).
+
+Costs:
+
+Purchase Cost per frame (can be cubits or tylium; capitals may need both + merits).
+
+Upgrade Cost to Advanced (same currency family, scaled 1.3–1.8× plus level gate).
+
+Operating: Boost Cost (Tyl/s), FTL Cost (Tyl/LY).
+
+Pre-installed Systems: Ship may spawn with starter weapons (e.g., 2 light autocannons on Viper Mk VII).
+
+Role Bonuses: e.g., Command reduces FTL transponder power cost; Advanced Command increases the reduction.
+
+6) Implementation Workflow (data-driven—no code required here)
+
+Author a canonical spec sheet per ship with all fields in §2.
+
+Validate units (m, m/s, s, LY) and currencies.
+
+Derive role-based slot counts & energy from the class baseline using §4.
+
+Define weapon arcs: per hardpoint gimbal; note special traits (e.g., Glaive’s near-360° coverage).
+
+Attach economy: purchase/upgrade/operating costs; pre-installed starter items.
+
+QA checklist:
+
+Time-to-kill within target bands vs peers.
+
+Boost/energy sustainability (≥8–10 s under typical loadouts).
+
+FTL range/cost feels right for its tier.
+
+Sensors/lock and PD feel fair relative to role.
+
+Advanced frames provide clear, not runaway, improvements.
+
+7) Class Playbooks (how to “code” the feel)
+7.1 Strike / Multi-Role (Viper Mk VII exemplar)
+
+Identity: agile, balanced strike fighter; Multi-Role.
+
+Typical spec shape (based on your example):
+
+Slots: Weapons 4; Hull 3; Engine 3; Computer 3.
+
+Survivability: Hull 585; Regen 4.5/s; Durability 9,000; Armor 5; Crit Def 80.
+
+Mobility: Avoid 510; Turn 50 deg/s; Turn Accel 55 deg/s²; Inertial Comp 100 m/s; Accel 12 m/s²; Speed 55; Boost 85; Boost Cost 0.75 Tyl/s.
+
+FTL: Range 4.5 LY; Charge 15 s; Cost 30 Tyl/LY.
+
+Energy/Sensors: Power 150; Recharge 5/s; Firewall 100; Emitter 100; DRADIS 2,000 m; Visual 200 m.
+
+Advanced upgrade: +1 weapon (to 5) or maintain 4 weapons but add +1 engine if you classify Viper as Interceptor; modest boosts to Power/Recharge to sustain extra module/weapon.
+
+Play: excels in burst/angles; survivability depends on avoidance and discipline.
+
+7.2 Escort / Command (Glaive exemplar)
+
+Identity: medium hull with Command role (EW/support), high computer slot count.
+
+Spec shape (your example):
+
+Slots: Weapons 6; Hull 2; Engine 2; Computer 5.
+
+Survivability: Hull 1,700; Regen 15/s; Durability 30,000; Armor 25; Crit Def 100.
+
+Mobility: Avoid 270; Turn 22.5; Turn Accel 22.5; Inertial Comp 50; Accel 5; Speed 37.5; Boost 57.5; Boost Cost 1.8 Tyl/s.
+
+FTL: Range 8.25 LY; Charge 20 s; Cost 80 Tyl/LY.
+
+Energy/Sensors: Power 330; Recharge 12/s; Firewall 200; Emitter 200; DRADIS 3,500 m; Visual 750 m.
+
+Trait: near-360° firing coverage via head + circumferential mounts; underside exposure—mitigate with roll.
+
+Advanced upgrade: +1 Computer slot (to 6) and slight Power/Recharge bump; optional +1 Weapon if you want a late-tier variant.
+
+Play: holds angles, buffs allies, suppresses with broad arcs; needs escort vs fast strikes.
+
+7.3 Line / Command (Vanir exemplar)
+
+Identity: heavy command line ship; mobile base flavor.
+
+Spec shape (your example):
+
+Slots: Weapons 6; Hull 2; Engine 2; Computer 4.
+
+Survivability: Hull 3,500; Regen 19/s; Durability 35,000; Armor 40; Crit Def 100.
+
+Mobility: Avoid 50; Turn 9; Turn Accel 9; Inertial Comp 50; Accel 2; Speed 27.5; Boost 42.5; Boost Cost 5.4 Tyl/s.
+
+FTL: Range 11 LY; Charge 25 s; Cost 250 Tyl/LY.
+
+Energy/Sensors: Power 650; Recharge 28/s; Firewall 200; Emitter 200; DRADIS 4,000 m; Visual 1,000 m.
+
+Advanced upgrade: +1 Computer slot (to 5) and significant Power/Recharge bump; optionally +1 Weapon if you want a missile-boat flavor.
+
+Play: anchor and area control; relies on escorts; excels at EW and sustained volleys.
+
+7.4 Capital / Carrier (Brimir exemplar)
+
+Identity: faction carrier; logistics/respawn/area buffs; special weapon families.
+
+Spec shape (your example):
+
+Slots: Guns 4; Launchers 2; Defensive 4; Hull 2; Engine 3; Computer 3.
+
+Survivability: Hull 8,000; Regen 40/s; Durability 100,000; Armor 40; Crit Def 150.
+
+Mobility: Avoid 20; Turn 8; Turn Accel 9; Inertial Comp 44; Accel 3; Speed 18; Boost 30; Boost Cost 18 Tyl/s.
+
+FTL: Range 12.5 LY; Charge 30 s; Cost 600 Tyl/LY.
+
+Energy/Sensors: Power 1,000; Recharge 40/s; Firewall 240; Emitter 240; DRADIS 4,500 m; Visual 1,750 m.
+
+Role abilities: Outpost Mode (immobile fortress + jump beacon), faction-wide jump-to-carrier, area buffs, repair/rearm aura, strike docking.
+
+Advanced upgrade: modest increases across survivability/energy; possibly +1 defensive slot or improved role auras.
+
+Play: mobile base and objective pivot; never solo—operates with fleet screen.
+
+8) Example Data Sheets (how to author them—textual)
+
+For each ship, capture exactly these sections so your LLM can serialize them into data later.
+
+Header: Name; Level Req; Class; Role; Counterpart; Purchase Cost; Upgrade To.
+
+Slots: list counts by family (and weapon subfamilies for Capitals).
+
+Hull Systems: HP, Regen/s, Durability, Armor, Critical Defense.
+
+Engine Systems: Avoidance; Turn; Turn Accel; Inertial Comp; Accel; Speed; Boost; Boost Cost.
+
+FTL Systems: Range; Charge; (Threat Charge if used); Cost per LY.
+
+Computer Systems: Power; Recharge; Firewall; Emitter; DRADIS Range; Visual Range.
+
+Role Bonuses & Traits: e.g., command transponder discount; near-360° arcs; weak spots.
+
+Pre-installed Systems: specify starter weapons/modules.
+
+Economy Notes: where to purchase; currency mix; upgrade gate.
+
+(Populate the four exemplars with the exact values you provided.)
+
+9) Balance Guardrails
+
+TTK targets: 8–14 s for equal-tier duels (Strike vs Strike, Escort vs Escort, etc.).
+
+Energy: baseline build must sustain continuous fire + maneuver for ≥8 s; Advanced +15–25%.
+
+Mobility ladders: Strike > Escort > Line > Capital; never let an Escort turn faster than your fastest Strike.
+
+Sensor ladders: Line/Capital DRADIS ≥ Escort ≥ Strike; Visual increases with size only slightly.
+
+FTL ladders: larger hulls tend to longer range and steeper cost; Command gets transponder discounts.
+
+Slot identity: Enforce role slot deltas rigorously so identity is unmistakable.
+
+10) Feature Notes Specific to Your Examples (to encode as traits)
+
+Viper Mk VII (Strike/Multi-Role): balanced slot spread for a strike; common fleet pick; PD/missile denial competency when built for it.
+
+Glaive (Escort/Command): 5 computer slots base; near-360° coverage from its head ring; underside vulnerability; rolling to defend belly; high power & recharge for an Escort.
+
+Vanir (Line/Command): heavy command with high energy and computer count; missile-boat viable with energy builds; unique twin-hull silhouette is cosmetic (collision like other Lines).
+
+Brimir (Capital/Carrier): distinct weapon slot families; Outpost Mode, jump beacon, strike docking (up to a squad size); repair/rearm aura; large energy pool.
+
+11) QA & Acceptance Checklist (per ship)
+
+Spec sheet is complete and consistent with class/role rules.
+
+Arcs/gimbals match the frame’s intended coverage.
+
+Economy numbers align with tier (purchase, upgrade, operating).
+
+Role bonus (if any) is active and visible (e.g., Command transponder discount).
+
+Pre-installs appear correctly on first spawn.
+
+Advanced variant: added slots and stat upticks adhere to §4 (Engine/Hull/Computer by role) and energy increases accordingly.
