@@ -540,6 +540,20 @@ class SandboxScene(Scene):
         if not surface:
             return pos
         surface_width, surface_height = surface.get_size()
+        if surface_width <= 0 or surface_height <= 0:
+            return pos
+
+        # When using the SCALED display flag (our default window mode), pygame
+        # already reports mouse positions in the logical surface coordinate
+        # system.  Applying our own scaling in that situation would skew the
+        # coordinates and make the HUD widgets impossible to click.  Clamp the
+        # position to the surface bounds so the caller always receives values in
+        # the same coordinate space that the HUD uses for rendering.
+        if surface.get_flags() & pygame.SCALED:
+            clamped_x = max(0.0, min(float(surface_width), float(pos[0])))
+            clamped_y = max(0.0, min(float(surface_height), float(pos[1])))
+            return int(round(clamped_x)), int(round(clamped_y))
+
         window_width, window_height = pygame.display.get_window_size()
         if window_width <= 0 or window_height <= 0:
             return pos
