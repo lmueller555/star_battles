@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from math import ceil, floor
+import math
+import random
 from typing import Iterable
 
 import pygame
@@ -19,6 +21,22 @@ SHIP_COLOR = (120, 220, 255)
 ENEMY_COLOR = (255, 80, 100)
 PROJECTILE_COLOR = (255, 200, 80)
 MISSILE_COLOR = (255, 140, 60)
+
+
+def _blend(color_a: tuple[int, int, int], color_b: tuple[int, int, int], amount: float) -> tuple[int, int, int]:
+    amount = max(0.0, min(1.0, amount))
+    return tuple(
+        int(round(a + (b - a) * amount))
+        for a, b in zip(color_a, color_b)
+    )
+
+
+def _darken(color: tuple[int, int, int], amount: float) -> tuple[int, int, int]:
+    return _blend(color, (0, 0, 0), amount)
+
+
+def _lighten(color: tuple[int, int, int], amount: float) -> tuple[int, int, int]:
+    return _blend(color, (255, 255, 255), amount)
 
 
 def _ship_axes(ship: Ship) -> tuple[Vector3, Vector3, Vector3]:
@@ -122,33 +140,87 @@ class VectorRenderer:
             center, visible = camera.project(asteroid.position, screen_size)
             if not visible:
                 continue
+
             radius_vectors = [
                 asteroid.position + camera.up * asteroid.radius,
-                asteroid.position + camera.right * asteroid.radius,
                 asteroid.position - camera.up * asteroid.radius,
+                asteroid.position + camera.right * asteroid.radius,
                 asteroid.position - camera.right * asteroid.radius,
             ]
             radii = [
                 _screen_radius(center, vector)
                 for vector in radius_vectors
             ]
-            radius = max(radii)
-            if radius <= 0:
-                radius = 2
+            radius_vertical = max(radii[0], radii[1])
+            radius_horizontal = max(radii[2], radii[3])
+            if radius_vertical <= 0 and radius_horizontal <= 0:
+                radius_vertical = radius_horizontal = 2
+            radius_vertical = max(2, radius_vertical)
+            radius_horizontal = max(2, radius_horizontal)
+
             color = asteroid.display_color
-            pygame.draw.circle(
-                self.surface,
-                color,
-                (int(center.x), int(center.y)),
-                radius,
-            )
-            pygame.draw.circle(
-                self.surface,
-                (60, 40, 24),
-                (int(center.x), int(center.y)),
-                radius,
-                1,
-            )
+            rng = random.Random(asteroid.id)
+            point_count = rng.randint(8, 14)
+            jaggedness = 0.45
+            points: list[tuple[int, int]] = []
+            angle_step = (2.0 * math.pi) / point_count
+            distortion = 0.75
+            for i in range(point_count):
+                angle = i * angle_step
+                offset = 1.0 - jaggedness + rng.random() * jaggedness * 2.0
+                horizontal = radius_horizontal * (distortion + rng.random() * (1.0 - distortion))
+                vertical = radius_vertical * (distortion + rng.random() * (1.0 - distortion))
+                x = center.x + math.cos(angle) * horizontal * offset
+                y = center.y + math.sin(angle) * vertical * offset
+                points.append((int(round(x)), int(round(y))))
+
+            if len(points) >= 3:
+                pygame.draw.polygon(self.surface, color, points)
+
+                outline_color = _darken(color, 0.45)
+                pygame.draw.polygon(self.surface, outline_color, points, 1)
+
+                if radius_horizontal > 3 or radius_vertical > 3:
+                    highlight_color = _lighten(color, 0.5)
+                    shadow_color = _darken(color, 0.6)
+
+                    accent_count = rng.randint(3, 6)
+                    for _ in range(accent_count):
+                        angle = rng.uniform(0.0, 2.0 * math.pi)
+                        distance = rng.uniform(0.1, 0.8)
+                        accent_radius = max(1, int(round((radius_horizontal + radius_vertical) * 0.05)))
+                        px = center.x + math.cos(angle) * radius_horizontal * distance * rng.uniform(0.6, 1.0)
+                        py = center.y + math.sin(angle) * radius_vertical * distance * rng.uniform(0.6, 1.0)
+                        color_choice = highlight_color if rng.random() > 0.5 else shadow_color
+                        pygame.draw.circle(
+                            self.surface,
+                            color_choice,
+                            (int(round(px)), int(round(py))),
+                            accent_radius,
+                        )
+
+                    crater_count = rng.randint(2, 4)
+                    crater_fill = _darken(color, 0.55)
+                    crater_rim = _lighten(color, 0.2)
+                    for _ in range(crater_count):
+                        angle = rng.uniform(0.0, 2.0 * math.pi)
+                        distance = rng.uniform(0.15, 0.65)
+                        crater_radius = max(1, int(round((radius_horizontal + radius_vertical) * rng.uniform(0.04, 0.12))))
+                        px = center.x + math.cos(angle) * radius_horizontal * distance
+                        py = center.y + math.sin(angle) * radius_vertical * distance
+                        pygame.draw.circle(
+                            self.surface,
+                            crater_fill,
+                            (int(round(px)), int(round(py))),
+                            crater_radius,
+                        )
+                        pygame.draw.circle(
+                            self.surface,
+                            crater_rim,
+                            (int(round(px)), int(round(py))),
+                            crater_radius,
+                            1,
+                        )
 
     def draw_ship(self, camera: ChaseCamera, ship: Ship) -> None:
         right, up, forward = _ship_axes(ship)
