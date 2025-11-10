@@ -22,7 +22,7 @@ SETTINGS_PATH = Path("settings.json")
 def load_settings() -> Dict[str, Any]:
     if not SETTINGS_PATH.exists():
         return {
-            "resolution": [1920, 1080],
+            "resolution": [0, 0],
             "simHz": 60,
             "maxFps": 120,
         }
@@ -30,7 +30,7 @@ def load_settings() -> Dict[str, Any]:
         return json.loads(SETTINGS_PATH.read_text())
     except json.JSONDecodeError:
         return {
-            "resolution": [1920, 1080],
+            "resolution": [0, 0],
             "simHz": 60,
             "maxFps": 120,
         }
@@ -40,7 +40,12 @@ def main() -> None:
     settings = load_settings()
     pygame.init()
     resolution = settings.get("resolution", [1920, 1080])
-    screen = pygame.display.set_mode(resolution, pygame.SCALED | pygame.RESIZABLE)
+
+    display_flags = pygame.SCALED | pygame.FULLSCREEN
+    if resolution == [0, 0] or resolution == (0, 0):
+        screen = pygame.display.set_mode((0, 0), display_flags)
+    else:
+        screen = pygame.display.set_mode(resolution, display_flags)
     pygame.display.set_caption("Star Battles Prototype")
     clock = pygame.time.Clock()
 
