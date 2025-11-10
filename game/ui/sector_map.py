@@ -1,6 +1,8 @@
 """Overlay visualisation for the sector FTL map."""
 from __future__ import annotations
 
+import math
+import random
 from dataclasses import dataclass
 from typing import Dict, Optional
 
@@ -44,6 +46,23 @@ class SectorMapView:
         self._rect = pygame.Rect(0, 0, 0, 0)
         self._grid_padding = Vector2()
         self._grid_usable = Vector2()
+        self._galaxy_points = self._generate_galaxy_points()
+
+    def _generate_galaxy_points(self) -> list[tuple[float, float, float, float]]:
+        rng = random.Random(48151623)
+        points: list[tuple[float, float, float, float]] = []
+        arms = 3
+        steps = 90
+        for arm in range(arms):
+            base_angle = arm * (2.0 * math.pi / arms)
+            for i in range(steps):
+                t = i / steps
+                radius = 0.1 + t * 0.9 + rng.uniform(-0.02, 0.02)
+                angle = base_angle + t * 2.6 + rng.uniform(-0.12, 0.12)
+                brightness = rng.uniform(0.3, 1.0)
+                size = rng.uniform(0.5, 1.2)
+                points.append((radius, angle, brightness, size))
+        return points
 
     def _compute_layout(self, surface_size: tuple[int, int]) -> None:
         self._rect = map_display_rect(surface_size)
@@ -121,6 +140,49 @@ class SectorMapView:
         )
         pygame.draw.rect(surface, (90, 130, 170), edge_rect, 2)
 
+    def _draw_galaxy_background(self, surface: pygame.Surface) -> None:
+        width, height = surface.get_size()
+        if width <= 0 or height <= 0:
+            return
+        center = Vector2(width / 2.0, height / 2.0)
+        max_radius = min(width, height) * 0.48
+
+        for i in range(6, 0, -1):
+            ratio = i / 6.0
+            color = (
+                20,
+                40 + int(35 * ratio),
+                70 + int(90 * ratio),
+                int(25 + 30 * ratio),
+            )
+            pygame.draw.circle(
+                surface,
+                color,
+                (int(center.x), int(center.y)),
+                max(1, int(max_radius * ratio)),
+            )
+
+        pygame.draw.circle(
+            surface,
+            (220, 230, 255, 140),
+            (int(center.x), int(center.y)),
+            max(2, int(max_radius * 0.18)),
+        )
+
+        for radius, angle, brightness, size in self._galaxy_points:
+            r = radius * max_radius
+            direction = Vector2(math.cos(angle), math.sin(angle))
+            pos = center + direction * r
+            intensity = 150 + int(90 * brightness)
+            alpha = 80 + int(100 * brightness)
+            color = (intensity, intensity, 255, alpha)
+            pygame.draw.circle(
+                surface,
+                color,
+                (int(pos.x), int(pos.y)),
+                max(1, int(round(size * 2.0))),
+            )
+
     def draw(
         self,
         surface: pygame.Surface,
@@ -130,7 +192,8 @@ class SectorMapView:
     ) -> None:
         self._compute_layout(surface.get_size())
         overlay = pygame.Surface(self._rect.size, pygame.SRCALPHA)
-        overlay.fill((12, 18, 30, 220))
+        overlay.fill((8, 12, 20, 230))
+        self._draw_galaxy_background(overlay)
         self._draw_grid(overlay)
         surface.blit(overlay, self._rect.topleft)
 

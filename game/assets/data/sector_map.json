@@ -1,38 +1,164 @@
 [
   {
-    "id": "helios_alpha",
-    "name": "Helios Alpha",
-    "position": [0.0, 0.0],
+    "id": "atlas_anchor",
+    "name": "Atlas Anchor",
+    "position": [
+      6.1,
+      3.3
+    ],
     "threat": false
   },
   {
-    "id": "helios_beta",
-    "name": "Helios Beta",
-    "position": [4.2, 1.5],
+    "id": "aurora_shelf",
+    "name": "Aurora Shelf",
+    "position": [
+      -1.1,
+      3.7
+    ],
     "threat": false
   },
   {
-    "id": "helios_gamma",
-    "name": "Helios Gamma",
-    "position": [-3.8, 2.1],
+    "id": "celestis_march",
+    "name": "Celestis March",
+    "position": [
+      5.8,
+      0.3
+    ],
     "threat": true
   },
   {
-    "id": "helios_delta",
-    "name": "Helios Delta",
-    "position": [7.6, -2.4],
+    "id": "eclipse_array",
+    "name": "Eclipse Array",
+    "position": [
+      -6.1,
+      -3.4
+    ],
     "threat": false
   },
   {
     "id": "equinox",
     "name": "Equinox Field",
-    "position": [-6.5, -3.6],
+    "position": [
+      -4.9,
+      -1.7
+    ],
+    "threat": false
+  },
+  {
+    "id": "helios_alpha",
+    "name": "Helios Alpha",
+    "position": [
+      1.8,
+      1.1
+    ],
+    "threat": false
+  },
+  {
+    "id": "helios_beta",
+    "name": "Helios Beta",
+    "position": [
+      3.5,
+      2.2
+    ],
+    "threat": false
+  },
+  {
+    "id": "helios_gamma",
+    "name": "Helios Gamma",
+    "position": [
+      -3.5,
+      2.6
+    ],
+    "threat": true
+  },
+  {
+    "id": "helios_delta",
+    "name": "Helios Delta",
+    "position": [
+      5.0,
+      -1.1
+    ],
+    "threat": false
+  },
+  {
+    "id": "icarus_well",
+    "name": "Icarus Well",
+    "position": [
+      -3.7,
+      0.3
+    ],
+    "threat": true
+  },
+  {
+    "id": "lyra_gate",
+    "name": "Lyra Gate",
+    "position": [
+      -2.3,
+      -4.6
+    ],
+    "threat": false
+  },
+  {
+    "id": "meridian_rift",
+    "name": "Meridian Rift",
+    "position": [
+      -5.3,
+      0.9
+    ],
+    "threat": true
+  },
+  {
+    "id": "orion_spur",
+    "name": "Orion Spur",
+    "position": [
+      2.7,
+      -2.7
+    ],
     "threat": false
   },
   {
     "id": "perseus",
     "name": "Perseus Reach",
-    "position": [1.2, 6.8],
+    "position": [
+      1.0,
+      4.5
+    ],
     "threat": true
+  },
+  {
+    "id": "sable_run",
+    "name": "Sable Run",
+    "position": [
+      0.9,
+      -3.8
+    ],
+    "threat": false
+  },
+  {
+    "id": "talos_frontier",
+    "name": "Talos Frontier",
+    "position": [
+      3.2,
+      -5.1
+    ],
+    "threat": true
+  },
+  {
+    "id": "the_void",
+    "name": "The Void",
+    "position": [
+      0.0,
+      0.0
+    ],
+    "threat": true
+  },
+  {
+    "id": "zephyr_arc",
+    "name": "Zephyr Arc",
+    "position": [
+      3.9,
+      4.5
+    ],
+    "threat": false
   }
 ]
