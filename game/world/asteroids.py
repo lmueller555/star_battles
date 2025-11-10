@@ -12,7 +12,7 @@ if TYPE_CHECKING:  # pragma: no cover - only used for typing
     from game.ships.ship import Ship
 
 
-BROWN = (150, 110, 80)
+BROWN = (130, 132, 138)
 SCAN_GLOW = (255, 240, 200)
 RESOURCE_COLORS: Dict[str, Tuple[int, int, int]] = {
     "none": (210, 60, 60),  # Red
