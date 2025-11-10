@@ -55,7 +55,7 @@ class SandboxScene(Scene):
         self.weapon_group_actions: dict[str, str] = {}
         self.combat_feedback: str = ""
         self.combat_feedback_timer: float = 0.0
-        self.flank_slider_ratio: float = 0.6
+        self.flank_slider_ratio: float = 0.0
         self.flank_slider_dragging: bool = False
         self.cursor_pos = Vector2()
         self.cursor_indicator_visible = False
@@ -68,6 +68,7 @@ class SandboxScene(Scene):
         self.content = kwargs["content"]
         self.input = kwargs["input"]
         self.logger = kwargs["logger"]
+        self.flank_slider_ratio = 0.0
         self.world = SpaceWorld(
             self.content.weapons,
             self.content.sector,
@@ -80,6 +81,7 @@ class SandboxScene(Scene):
         if self.content:
             self.player.apply_default_loadout(self.content)
         self.player.kinematics.position = Vector3(0.0, 0.0, 0.0)
+        self.player.set_flank_speed_ratio(self.flank_slider_ratio)
         self.world.add_ship(self.player)
 
         dummy_frame = self.content.ships.get("vanir_command")
