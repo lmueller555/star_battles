@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import pygame
-from pygame.math import Vector3
+from pygame.math import Vector2, Vector3
 
 from game.assets.content import ContentManager
 from game.combat.targeting import is_within_gimbal, pick_nearest_target
@@ -52,6 +52,8 @@ class SandboxScene(Scene):
         self.combat_feedback_timer: float = 0.0
         self.flank_slider_ratio: float = 0.6
         self.flank_slider_dragging: bool = False
+        self.cursor_pos = Vector2()
+        self.cursor_indicator_visible = False
 
     def on_enter(self, **kwargs) -> None:
         self.content = kwargs["content"]
@@ -109,14 +111,12 @@ class SandboxScene(Scene):
         self._configure_weapon_groups()
         self.combat_feedback = ""
         self.combat_feedback_timer = 0.0
-        pygame.mouse.set_visible(False)
-        pygame.event.set_grab(True)
+        self._enter_game_cursor()
         if self.player:
             self.player.set_flank_speed_ratio(self.flank_slider_ratio)
 
     def on_exit(self) -> None:
-        pygame.mouse.set_visible(True)
-        pygame.event.set_grab(False)
+        self._enter_ui_cursor()
         self.weapon_group_actions.clear()
 
     def handle_event(self, event: pygame.event.Event) -> None:
@@ -146,12 +146,10 @@ class SandboxScene(Scene):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             if self.map_open:
                 self.map_open = False
-                pygame.mouse.set_visible(False)
-                pygame.event.set_grab(True)
+                self._enter_game_cursor()
             elif self.hangar_open:
                 self.hangar_open = False
-                pygame.mouse.set_visible(False)
-                pygame.event.set_grab(True)
+                self._enter_game_cursor()
             else:
                 self.manager.activate("title")
 
@@ -166,8 +164,10 @@ class SandboxScene(Scene):
         self.player.set_flank_speed_ratio(self.flank_slider_ratio)
         if self.input.consume_action("open_map"):
             self.map_open = not self.map_open
-            pygame.mouse.set_visible(self.map_open)
-            pygame.event.set_grab(not self.map_open)
+            if self.map_open:
+                self._enter_ui_cursor()
+            else:
+                self._enter_game_cursor()
             if self.map_open:
                 self.hangar_open = False
                 self.flank_slider_dragging = False
@@ -223,6 +223,10 @@ class SandboxScene(Scene):
                 else:
                     success, message = self.world.start_mining(self.player)
                     self._set_mining_feedback(message)
+            if self.cursor_indicator_visible and self.hud:
+                width, height = self.hud.surface.get_size()
+                self.cursor_pos.x = max(0.0, min(width, self.cursor_pos.x + mouse_dx))
+                self.cursor_pos.y = max(0.0, min(height, self.cursor_pos.y + mouse_dy))
 
         if self.input.consume_action("toggle_overlay"):
             self.hud.toggle_overlay()
@@ -253,8 +257,7 @@ class SandboxScene(Scene):
             self.jump_feedback_timer = 4.0
             if success:
                 self.map_open = False
-                pygame.mouse.set_visible(False)
-                pygame.event.set_grab(True)
+                self._enter_game_cursor()
                 if self.map_view:
                     self.map_view.selection.armed_id = None
                 self.armed_system_id = None
@@ -284,8 +287,7 @@ class SandboxScene(Scene):
             self.station_contact = (station, distance)
             if distance > station.docking_radius + 50.0 and self.hangar_open:
                 self.hangar_open = False
-                pygame.mouse.set_visible(False)
-                pygame.event.set_grab(True)
+                self._enter_game_cursor()
         else:
             self.station_contact = None
             self.hangar_open = False
@@ -293,8 +295,10 @@ class SandboxScene(Scene):
             station, distance = self.station_contact
             if distance <= station.docking_radius:
                 self.hangar_open = not self.hangar_open
-                pygame.mouse.set_visible(self.hangar_open)
-                pygame.event.set_grab(not self.hangar_open)
+                if self.hangar_open:
+                    self._enter_ui_cursor()
+                else:
+                    self._enter_game_cursor()
                 if self.hangar_open:
                     self.flank_slider_dragging = False
         if self.hangar_open:
@@ -395,6 +399,8 @@ class SandboxScene(Scene):
             self._blit_feedback(surface, self.mining_feedback, offset=70)
         if self.combat_feedback_timer > 0.0:
             self._blit_feedback(surface, self.combat_feedback, offset=40)
+        if self.hud:
+            self.hud.draw_cursor_indicator(self.cursor_pos, self.cursor_indicator_visible)
 
     def _update_flank_slider_from_mouse(self, mouse_x: int) -> None:
         if not self.player or not self.hud:
@@ -474,6 +480,24 @@ class SandboxScene(Scene):
                 surface.get_height() - offset,
             ),
         )
+
+    def _enter_game_cursor(self) -> None:
+        pygame.mouse.set_visible(False)
+        pygame.event.set_grab(True)
+        self.cursor_indicator_visible = True
+        self._reset_cursor_to_center()
+
+    def _enter_ui_cursor(self) -> None:
+        pygame.mouse.set_visible(True)
+        pygame.event.set_grab(False)
+        self.cursor_indicator_visible = False
+
+    def _reset_cursor_to_center(self) -> None:
+        surface = pygame.display.get_surface()
+        if not surface:
+            return
+        width, height = surface.get_size()
+        self.cursor_pos.update(width / 2, height / 2)
 
 
 __all__ = ["SandboxScene"]

@@ -123,6 +123,13 @@ class HUD:
                 # Avoid overcrowding the reticle if many auxiliary groups exist.
                 break
 
+    def draw_cursor_indicator(self, position: Vector2 | tuple[float, float], visible: bool) -> None:
+        if not visible:
+            return
+        x, y = int(position[0]), int(position[1])
+        pygame.draw.circle(self.surface, (255, 255, 255), (x, y), 4, 1)
+        pygame.draw.circle(self.surface, (255, 255, 255), (x, y), 1)
+
     def draw_lead(self, camera, player: Ship, target: Optional[Ship], projectile_speed: float) -> None:
         if not target or projectile_speed <= 0.0:
             return
