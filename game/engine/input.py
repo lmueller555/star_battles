@@ -78,6 +78,8 @@ class InputMapper:
             "strafe_y": 0.0,
             "strafe_z": 0.0,
             "throttle": 0.0,
+            "look_x": 0.0,
+            "look_y": 0.0,
         }
         self.action_state: Dict[str, bool] = {action: False for action in self.bindings.actions}
         self.mouse_delta = (0.0, 0.0)
@@ -111,6 +113,8 @@ class InputMapper:
         self.axis_state["strafe_y"] = 0.0
         self.axis_state["strafe_z"] = 0.0
         self.axis_state["throttle"] = 0.0
+        self.axis_state["look_x"] = 0.0
+        self.axis_state["look_y"] = 0.0
         if pressed[pygame.K_a]:
             self.axis_state["strafe_x"] -= 1.0
         if pressed[pygame.K_d]:
@@ -123,6 +127,14 @@ class InputMapper:
             self.axis_state["throttle"] += 1.0
         if pressed[pygame.K_s]:
             self.axis_state["throttle"] -= 1.0
+        if pressed[pygame.K_LEFT]:
+            self.axis_state["look_x"] -= 1.0
+        if pressed[pygame.K_RIGHT]:
+            self.axis_state["look_x"] += 1.0
+        if pressed[pygame.K_UP]:
+            self.axis_state["look_y"] -= 1.0
+        if pressed[pygame.K_DOWN]:
+            self.axis_state["look_y"] += 1.0
 
     def action(self, name: str) -> bool:
         return self.action_state.get(name, False)

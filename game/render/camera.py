@@ -44,6 +44,7 @@ class ChaseCamera:
         self.freelook_max_yaw = 28.0
         self.freelook_max_pitch = 18.0
         self.freelook_return = 80.0
+        self.freelook_snap_delay = 3.0
         self.look_ahead_distance = 0.0
         self.look_ahead_direction = Vector3(0.0, 0.0, 1.0)
         self.look_ahead_response = 4.0
@@ -59,6 +60,7 @@ class ChaseCamera:
         self.lock_zoom_rate = 5.0
         self._lock_direction = Vector3(0.0, 0.0, 1.0)
         self._lock_distance = 0.0
+        self._freelook_idle_time = 0.0
 
     def update(
         self,
@@ -76,6 +78,7 @@ class ChaseCamera:
         if freelook_active:
             yaw_delta = freelook_delta[0] * self.freelook_sensitivity
             pitch_delta = freelook_delta[1] * self.freelook_sensitivity
+            self._freelook_idle_time = 0.0
             self.freelook_angles.y = max(
                 -self.freelook_max_yaw,
                 min(self.freelook_max_yaw, self.freelook_angles.y + yaw_delta),
@@ -85,6 +88,13 @@ class ChaseCamera:
                 min(self.freelook_max_pitch, self.freelook_angles.x + pitch_delta),
             )
         else:
+            self._freelook_idle_time += dt
+            if (
+                self._freelook_idle_time >= self.freelook_snap_delay
+                and (abs(self.freelook_angles.x) > 1e-3 or abs(self.freelook_angles.y) > 1e-3)
+            ):
+                self.freelook_angles.x = 0.0
+                self.freelook_angles.y = 0.0
             self.freelook_angles.y = _approach(
                 self.freelook_angles.y,
                 0.0,
@@ -95,6 +105,8 @@ class ChaseCamera:
                 0.0,
                 self.freelook_return * dt,
             )
+            if abs(self.freelook_angles.x) <= 1e-3 and abs(self.freelook_angles.y) <= 1e-3:
+                self._freelook_idle_time = 0.0
 
         focus_forward = ship_forward
         focus_right = ship_right
