@@ -4,6 +4,8 @@ from __future__ import annotations
 from math import radians, tan
 from typing import Optional
 
+from dataclasses import dataclass
+
 import pygame
 from pygame.math import Vector2
 
@@ -73,6 +75,18 @@ def format_distance(distance_m: float) -> str:
     return f"{distance_m:.0f} m"
 
 
+@dataclass
+class TargetOverlay:
+    """Visual data required to render the focused target indicator."""
+
+    rect: pygame.Rect
+    name: str
+    current_health: float
+    max_health: float | None
+    distance_m: float
+    color: tuple[int, int, int]
+
+
 class HUD:
     def __init__(self, surface: pygame.Surface) -> None:
         self.surface = surface
@@ -82,15 +96,6 @@ class HUD:
 
     def toggle_overlay(self) -> None:
         self.overlay_enabled = not self.overlay_enabled
-
-    def draw_crosshair(self, camera, player: Ship) -> None:
-        center = Vector2(self.surface.get_width() / 2, self.surface.get_height() / 2)
-        pygame.draw.line(self.surface, (180, 220, 255), center + Vector2(-12, 0), center + Vector2(12, 0), 1)
-        pygame.draw.line(self.surface, (180, 220, 255), center + Vector2(0, -12), center + Vector2(0, 12), 1)
-        # The concentric gimbal rings were visually distracting and did not convey
-        # actionable information to the player.  We keep the helper around for
-        # potential future use, but intentionally skip drawing the arcs during
-        # normal gameplay.
 
     def draw_gimbal_arcs(self, camera, player: Ship, center: Vector2) -> None:
         if not player or not camera:
@@ -170,6 +175,35 @@ class HUD:
         for i, line in enumerate(lines):
             text = self.font.render(line, True, (200, 220, 255))
             self.surface.blit(text, (20, 20 + i * 18))
+
+    def draw_target_overlay(self, overlay: TargetOverlay | None) -> None:
+        if not overlay:
+            return
+
+        rect = overlay.rect
+        if rect.width <= 0 or rect.height <= 0:
+            return
+
+        color = overlay.color
+        pygame.draw.rect(self.surface, color, rect, 1)
+
+        health_text = f"{overlay.current_health:.0f}"
+        if overlay.max_health is not None and overlay.max_health > 0.0:
+            health_text = f"{overlay.current_health:.0f}/{overlay.max_health:.0f}"
+        label = f"{overlay.name} - {health_text}"
+        text = self.font.render(label, True, color)
+        text_pos = (
+            rect.left,
+            max(0, rect.top - text.get_height() - 6),
+        )
+        self.surface.blit(text, text_pos)
+
+        distance_text = self.font.render(f"{overlay.distance_m:.0f} m", True, color)
+        distance_pos = (
+            rect.left,
+            min(self.surface.get_height() - distance_text.get_height(), rect.bottom + 4),
+        )
+        self.surface.blit(distance_text, distance_pos)
 
     def draw_meters(self, player: Ship) -> None:
         width = 220
@@ -259,10 +293,11 @@ class HUD:
         *,
         ship_info_open: bool = False,
         ship_button_hovered: bool = False,
+        target_overlay: TargetOverlay | None = None,
     ) -> None:
-        self.draw_crosshair(camera, player)
         self.draw_lead(camera, player, target, projectile_speed)
         self.draw_target_panel(camera, player, target)
+        self.draw_target_overlay(target_overlay)
         self.draw_meters(player)
         self.draw_lock_ring(camera, player, target)
         self.draw_dradis(dradis)
@@ -426,4 +461,10 @@ class HUD:
         )
 
 
-__all__ = ["HUD", "format_distance", "flank_slider_rect", "ship_info_button_rect"]
+__all__ = [
+    "HUD",
+    "TargetOverlay",
+    "format_distance",
+    "flank_slider_rect",
+    "ship_info_button_rect",
+]

@@ -10,12 +10,13 @@ from game.engine.input import InputMapper
 from game.engine.logger import GameLogger
 from game.engine.scene import Scene
 from game.render.camera import ChaseCamera
-from game.render.hud import HUD, flank_slider_rect, ship_info_button_rect
+from game.render.hud import HUD, TargetOverlay, flank_slider_rect, ship_info_button_rect
 from game.render.renderer import VectorRenderer
 from game.sensors.dradis import DradisSystem
 from game.ships.ship import Ship
 from game.world.ai import create_ai_for_ship
-from game.world.space import SpaceWorld
+from game.world.asteroids import Asteroid
+from game.world.space import COLLISION_RADII, SpaceWorld
 from game.world.mining import MiningHUDState
 from game.world.station import DockingStation
 from game.ui.sector_map import SectorMapView
@@ -61,6 +62,7 @@ class SandboxScene(Scene):
         self.ship_info_panel: ShipInfoPanel | None = None
         self.ship_info_open: bool = False
         self._ship_button_hovered: bool = False
+        self.selected_object: Ship | Asteroid | None = None
 
     def on_enter(self, **kwargs) -> None:
         self.content = kwargs["content"]
@@ -124,6 +126,7 @@ class SandboxScene(Scene):
         self.freelook_active = False
         self.freelook_delta = (0.0, 0.0)
         self.station_contact: tuple[DockingStation, float] | None = None
+        self.selected_object = None
         self.hangar_open = False
         self.hangar_view = HangarView(surface)
         self.mining_state = None
@@ -214,6 +217,19 @@ class SandboxScene(Scene):
                 and mouse_pos is not None
             ):
                 self._update_flank_slider_from_mouse(mouse_pos)
+            if (
+                event.type == pygame.MOUSEBUTTONUP
+                and event.button == 1
+                and mouse_pos is not None
+                and self.camera
+            ):
+                slider_rect = flank_slider_rect(self.hud.surface.get_size())
+                if slider_rect.width > 0 and slider_rect.height > 0 and slider_rect.inflate(12, 12).collidepoint(mouse_pos):
+                    pass
+                else:
+                    picked = self._pick_target_at(mouse_pos)
+                    if picked:
+                        self._set_selected_object(picked)
         if (
             event.type in (pygame.MOUSEBUTTONUP, pygame.MOUSEBUTTONDOWN)
             and not (self.player and self.hud)
@@ -352,14 +368,18 @@ class SandboxScene(Scene):
             target = pick_nearest_target(self.player, self.world.ships)
             if target:
                 self.player.target_id = id(target)
+                self.selected_object = target
         if self.input.consume_action("target_cycle"):
             enemies = [s for s in self.world.ships if s.team != self.player.team and s.is_alive()]
             if enemies:
                 if self.player.target_id is None:
                     self.player.target_id = id(enemies[0])
+                    self.selected_object = enemies[0]
                 else:
                     idx = next((i for i, s in enumerate(enemies) if id(s) == self.player.target_id), -1)
-                    self.player.target_id = id(enemies[(idx + 1) % len(enemies)])
+                    next_enemy = enemies[(idx + 1) % len(enemies)]
+                    self.player.target_id = id(next_enemy)
+                    self.selected_object = next_enemy
 
         if self.input.consume_action("commit_jump") and self.armed_system_id and self.world and self.player:
             success, message = self.world.begin_jump(self.player, self.armed_system_id)
@@ -373,6 +393,10 @@ class SandboxScene(Scene):
                 self.armed_system_id = None
 
         target = next((s for s in self.world.ships if id(s) == self.player.target_id), None)
+        if target:
+            self.selected_object = target
+        elif isinstance(self.selected_object, Ship):
+            self.selected_object = None
 
         if (
             self.input.consume_action("activate_pd")
@@ -440,6 +464,8 @@ class SandboxScene(Scene):
         if self.mining_state and self.mining_state.status:
             self._set_mining_feedback(self.mining_state.status, duration=3.0)
         if target and not target.is_alive():
+            if self.selected_object is target:
+                self.selected_object = None
             self.player.target_id = None
         self.fps = 0.9 * self.fps + 0.1 * (1.0 / dt)
         if self.jump_feedback_timer > 0.0:
@@ -456,9 +482,10 @@ class SandboxScene(Scene):
         self.hud.surface = surface
         self.renderer.clear()
         self.renderer.draw_grid(self.camera, self.player.kinematics.position)
+        asteroids = self.world.asteroids_in_current_system()
         self.renderer.draw_asteroids(
             self.camera,
-            self.world.asteroids_in_current_system(),
+            asteroids,
         )
         target = next(
             (
@@ -492,6 +519,15 @@ class SandboxScene(Scene):
         if self.station_contact:
             station, distance = self.station_contact
             docking_prompt = (station.name, distance, station.docking_radius)
+        overlay_object = self.selected_object
+        if isinstance(overlay_object, Ship) and not overlay_object.is_alive():
+            overlay_object = None
+        if isinstance(overlay_object, Asteroid) and overlay_object not in asteroids:
+            overlay_object = None
+        if overlay_object is None and target:
+            overlay_object = target
+        target_overlay = self._build_target_overlay(overlay_object)
+
         if self.dradis:
             self.hud.draw(
                 self.camera,
@@ -505,6 +541,7 @@ class SandboxScene(Scene):
                 mining_state=self.mining_state,
                 ship_info_open=self.ship_info_open,
                 ship_button_hovered=self._ship_button_hovered,
+                target_overlay=target_overlay,
             )
         if self.map_open and self.map_view:
             status = self.jump_feedback if self.jump_feedback_timer > 0.0 else None
@@ -567,6 +604,127 @@ class SandboxScene(Scene):
         x = (pos[0] - offset_x) / scale
         y = (pos[1] - offset_y) / scale
         return int(round(x)), int(round(y))
+
+    def _project_target_rect(self, position: Vector3, radius: float) -> tuple[pygame.Rect, float] | None:
+        if not self.camera or not self.hud:
+            return None
+        if radius <= 0.0:
+            return None
+        screen_size = self.hud.surface.get_size()
+        center, visible = self.camera.project(position, screen_size)
+        if not visible:
+            return None
+        offsets = [
+            self.camera.right * radius,
+            -self.camera.right * radius,
+            self.camera.up * radius,
+            -self.camera.up * radius,
+        ]
+        xs = [center.x]
+        ys = [center.y]
+        for offset in offsets:
+            point, vis = self.camera.project(position + offset, screen_size)
+            if vis:
+                xs.append(point.x)
+                ys.append(point.y)
+        min_x, max_x = min(xs), max(xs)
+        min_y, max_y = min(ys), max(ys)
+        width = max(max_x - min_x, 18.0)
+        height = max(max_y - min_y, 18.0)
+        center_x = (min_x + max_x) * 0.5
+        center_y = (min_y + max_y) * 0.5
+        rect = pygame.Rect(0, 0, int(round(width)), int(round(height)))
+        rect.center = (
+            int(round(center_x)),
+            int(round(center_y)),
+        )
+        rect = rect.inflate(16, 16)
+        bounds = pygame.Rect(0, 0, screen_size[0], screen_size[1])
+        rect.clamp_ip(bounds)
+        return rect, center.z
+
+    def _ship_pick_radius(self, ship: Ship) -> float:
+        return COLLISION_RADII.get(ship.frame.size, 12.0)
+
+    def _pick_target_at(self, mouse_pos: tuple[int, int]) -> Ship | Asteroid | None:
+        if not (self.world and self.player and self.camera and self.hud):
+            return None
+        best: Ship | Asteroid | None = None
+        best_depth = float("inf")
+        surface_size = self.hud.surface.get_size()
+        if surface_size[0] <= 0 or surface_size[1] <= 0:
+            return None
+
+        for ship in self.world.ships:
+            if ship is self.player or not ship.is_alive():
+                continue
+            projected = self._project_target_rect(ship.kinematics.position, self._ship_pick_radius(ship))
+            if not projected:
+                continue
+            rect, depth = projected
+            if rect.inflate(12, 12).collidepoint(mouse_pos) and depth < best_depth:
+                best = ship
+                best_depth = depth
+
+        for asteroid in self.world.asteroids_in_current_system():
+            projected = self._project_target_rect(asteroid.position, max(asteroid.radius, 6.0))
+            if not projected:
+                continue
+            rect, depth = projected
+            if rect.inflate(8, 8).collidepoint(mouse_pos) and depth < best_depth:
+                best = asteroid
+                best_depth = depth
+
+        return best
+
+    def _set_selected_object(self, obj: Ship | Asteroid | None) -> None:
+        if not self.player:
+            return
+        previous = self.selected_object
+        self.selected_object = obj
+        if isinstance(obj, Ship):
+            self.player.target_id = id(obj)
+        elif obj is None:
+            if isinstance(previous, Ship):
+                self.player.target_id = None
+        else:
+            self.player.target_id = None
+
+    def _build_target_overlay(self, obj: Ship | Asteroid | None) -> TargetOverlay | None:
+        if not obj or not self.player or not self.camera or not self.hud:
+            return None
+        if isinstance(obj, Ship):
+            if not obj.is_alive():
+                return None
+            radius = self._ship_pick_radius(obj)
+            position = obj.kinematics.position
+            max_health = obj.stats.hull_hp
+            name = obj.frame.name
+            color = (255, 80, 100) if obj.team != self.player.team else (150, 220, 255)
+            current_health = obj.hull
+        elif isinstance(obj, Asteroid):
+            radius = max(obj.radius, 6.0)
+            position = obj.position
+            max_health = obj.MAX_HEALTH
+            name = f"{obj.resource.title()} Asteroid" if obj.resource else "Asteroid"
+            color = (210, 190, 150)
+            current_health = obj.health
+        else:
+            return None
+
+        projected = self._project_target_rect(position, radius)
+        if not projected:
+            return None
+        rect, _ = projected
+        distance = position.distance_to(self.player.kinematics.position)
+        return TargetOverlay(
+            rect=rect,
+            name=name,
+            current_health=current_health,
+            max_health=max_health,
+            distance_m=distance,
+            color=color,
+        )
 
     def _set_mining_feedback(self, message: str, duration: float = 2.0) -> None:
         if not message:
