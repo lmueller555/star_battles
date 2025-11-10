@@ -26,6 +26,8 @@ class SectorMapView:
         self.selection = MapSelection()
         self._positions: Dict[str, Vector2] = {}
         self._rect = pygame.Rect(0, 0, 0, 0)
+        self._grid_padding = Vector2()
+        self._grid_usable = Vector2()
 
     def _compute_layout(self, surface_size: tuple[int, int]) -> None:
         width = min(surface_size[0] - 160, 720)
@@ -41,6 +43,8 @@ class SectorMapView:
         span_y = max(1.0, max_y - min_y)
         padding = Vector2(60, 60)
         usable = Vector2(width, height) - padding * 2
+        self._grid_padding = padding
+        self._grid_usable = usable
         self._positions.clear()
         for system in self.sector.all_systems():
             norm_x = (system.position[0] - min_x) / span_x
@@ -64,6 +68,45 @@ class SectorMapView:
                 closest_dist = dist
         return closest
 
+    def _draw_grid(self, surface: pygame.Surface) -> None:
+        if self._grid_usable.x <= 0 or self._grid_usable.y <= 0:
+            return
+        divisions = 6
+        origin_x = float(self._grid_padding.x)
+        origin_y = float(self._grid_padding.y)
+        width = float(self._grid_usable.x)
+        height = float(self._grid_usable.y)
+        if width <= 0.0 or height <= 0.0:
+            return
+        step_x = width / divisions
+        step_y = height / divisions
+        grid_color = (48, 72, 100)
+        for i in range(1, divisions):
+            y = origin_y + step_y * i
+            pygame.draw.line(
+                surface,
+                grid_color,
+                (int(round(origin_x)), int(round(y))),
+                (int(round(origin_x + width)), int(round(y))),
+                1,
+            )
+        for i in range(1, divisions):
+            x = origin_x + step_x * i
+            pygame.draw.line(
+                surface,
+                grid_color,
+                (int(round(x)), int(round(origin_y))),
+                (int(round(x)), int(round(origin_y + height))),
+                1,
+            )
+        edge_rect = pygame.Rect(
+            int(round(origin_x)),
+            int(round(origin_y)),
+            max(1, int(round(width))),
+            max(1, int(round(height))),
+        )
+        pygame.draw.rect(surface, (90, 130, 170), edge_rect, 2)
+
     def draw(
         self,
         surface: pygame.Surface,
@@ -74,6 +117,7 @@ class SectorMapView:
         self._compute_layout(surface.get_size())
         overlay = pygame.Surface(self._rect.size, pygame.SRCALPHA)
         overlay.fill((12, 18, 30, 220))
+        self._draw_grid(overlay)
         surface.blit(overlay, self._rect.topleft)
 
         pygame.draw.rect(surface, (80, 110, 140), self._rect, 2)

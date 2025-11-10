@@ -86,7 +86,10 @@ class HUD:
         center = Vector2(self.surface.get_width() / 2, self.surface.get_height() / 2)
         pygame.draw.line(self.surface, (180, 220, 255), center + Vector2(-12, 0), center + Vector2(12, 0), 1)
         pygame.draw.line(self.surface, (180, 220, 255), center + Vector2(0, -12), center + Vector2(0, 12), 1)
-        self.draw_gimbal_arcs(camera, player, center)
+        # The concentric gimbal rings were visually distracting and did not convey
+        # actionable information to the player.  We keep the helper around for
+        # potential future use, but intentionally skip drawing the arcs during
+        # normal gameplay.
 
     def draw_gimbal_arcs(self, camera, player: Ship, center: Vector2) -> None:
         if not player or not camera:
