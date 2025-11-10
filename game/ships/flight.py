@@ -91,7 +91,7 @@ def update_ship_flight(ship: Ship, dt: float, logger=None) -> None:
 
     # Orientation updates from mouse deltas.
     desired_yaw_rate = ctrl.look_delta.x * LOOK_SENSITIVITY * stats.turn_rate
-    desired_pitch_rate = ctrl.look_delta.y * LOOK_SENSITIVITY * stats.turn_rate
+    desired_pitch_rate = -ctrl.look_delta.y * LOOK_SENSITIVITY * stats.turn_rate
     desired_roll_rate = ctrl.roll_input * stats.turn_rate * 0.5
 
     kin.angular_velocity.x = _approach(kin.angular_velocity.x, desired_pitch_rate, stats.turn_accel * dt)

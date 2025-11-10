@@ -35,7 +35,7 @@ If Pygame requests additional system packages (SDL dependencies), install them v
 - **A/D**: Horizontal strafe
 - **Q/E**: Vertical strafe
 - **Z/C**: Roll
-- **Space**: Boost (drains power)
+- **Shift**: Boost (drains power)
 - **Ctrl**: Brake
 - **Left Mouse**: Primary cannons
 - **Right Mouse**: Missile launcher (requires lock)
@@ -46,7 +46,7 @@ If Pygame requests additional system packages (SDL dependencies), install them v
 - **F3**: Debug overlay
 - **V**: Hold to scan for nearby mining nodes
 - **B**: Toggle mining beam when near a discovered node
-- **Shift**: Stabilize mining beam (prevents instability, boosts yield)
+- **Space**: Stabilize mining beam (prevents instability, boosts yield)
 - **Esc**: Return to title
 
 Distances are displayed in metres (km for large ranges); velocities in metres per second. DRADIS rings label metre/km scales.
