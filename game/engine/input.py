@@ -46,11 +46,25 @@ MOUSE_BUTTONS = {
 }
 
 
+def _normalize_key(key: str) -> str:
+    """Return a canonical representation for a binding token."""
+
+    if key.startswith("K_") and len(key) > 2:
+        return f"K_{key[2:].upper()}"
+    return key
+
+
 @dataclass
 class InputBindings:
     """Runtime structure representing current bindings."""
 
     actions: Dict[str, list[str]] = field(default_factory=lambda: DEFAULT_BINDINGS.copy())
+
+    def __post_init__(self) -> None:
+        self.actions = {
+            action: [_normalize_key(binding) for binding in bindings]
+            for action, bindings in self.actions.items()
+        }
 
     @classmethod
     def load(cls, path: Path) -> "InputBindings":
