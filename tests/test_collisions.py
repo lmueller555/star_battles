@@ -26,9 +26,11 @@ def test_ship_collisions_reduce_durability_and_trigger_recoil() -> None:
     logger = _quiet_logger()
     world = SpaceWorld(content.weapons, content.sector, content.stations, content.mining, logger)
 
-    frame = content.ships.get("interceptor_mk1")
+    frame = content.ships.get("viper_mk_vii")
     ship_a = Ship(frame, team="player")
     ship_b = Ship(frame, team="enemy")
+    ship_a.stats.inertia_comp = 0.0
+    ship_b.stats.inertia_comp = 0.0
 
     ship_a.kinematics.position = Vector3(0.0, 0.0, 0.0)
     ship_b.kinematics.position = Vector3(10.0, 0.0, 0.0)

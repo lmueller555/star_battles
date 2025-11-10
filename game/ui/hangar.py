@@ -29,17 +29,22 @@ class HangarView:
         surface.blit(range_text, (panel_rect.x + 24, panel_rect.y + 48))
 
         slot_y = panel_rect.y + 84
+        weapon_entries: list[tuple[str, int, int]] = []
+        for slot_type, capacity in ship.frame.slots.weapon_families.items():
+            label = self._format_slot_label(slot_type)
+            used = self._hardpoint_count(ship, slot_type)
+            weapon_entries.append((label, capacity, used))
+        if not weapon_entries:
+            weapon_entries.append(("Weapons", 0, 0))
+        support_entries = [
+            ("Hull", ship.frame.slots.hull, len(ship.modules_by_slot.get("hull", []))),
+            ("Engine", ship.frame.slots.engine, len(ship.modules_by_slot.get("engine", []))),
+            ("Computer", ship.frame.slots.computer, len(ship.modules_by_slot.get("computer", []))),
+            ("Utility", ship.frame.slots.utility, len(ship.modules_by_slot.get("utility", []))),
+        ]
         slot_columns = [
-            ("Weapon Slots", [
-                ("Cannons", ship.frame.slots.cannon, self._hardpoint_count(ship, "cannon")),
-                ("Launchers", ship.frame.slots.launcher, self._hardpoint_count(ship, "launcher")),
-            ]),
-            ("Support Slots", [
-                ("Hull", ship.frame.slots.hull, len(ship.modules_by_slot.get("hull", []))),
-                ("Engine", ship.frame.slots.engine, len(ship.modules_by_slot.get("engine", []))),
-                ("Computer", ship.frame.slots.computer, len(ship.modules_by_slot.get("computer", []))),
-                ("Utility", ship.frame.slots.utility, len(ship.modules_by_slot.get("utility", []))),
-            ]),
+            ("Weapon Slots", weapon_entries),
+            ("Support Slots", support_entries),
         ]
 
         column_width = panel_width // len(slot_columns)
@@ -76,10 +81,27 @@ class HangarView:
 
     def _hardpoint_count(self, ship: Ship, slot_type: str) -> int:
         count = 0
+        normalized = slot_type.lower()
+        aliases = {normalized}
+        if normalized == "guns":
+            aliases.add("gun")
+        elif normalized == "gun":
+            aliases.add("guns")
         for mount in ship.mounts:
-            if mount.hardpoint.slot == slot_type and mount.weapon_id:
+            if mount.weapon_id and mount.hardpoint.slot.lower() in aliases:
                 count += 1
         return count
+
+    def _format_slot_label(self, slot_type: str) -> str:
+        normalized = slot_type.lower()
+        mapping = {
+            "cannon": "Cannons",
+            "launcher": "Launchers",
+            "guns": "Guns",
+            "gun": "Guns",
+            "defensive": "Defensive",
+        }
+        return mapping.get(normalized, normalized.replace("_", " ").title())
 
 
 __all__ = ["HangarView"]

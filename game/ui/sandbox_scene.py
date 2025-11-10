@@ -10,7 +10,7 @@ from game.engine.input import InputMapper
 from game.engine.logger import GameLogger
 from game.engine.scene import Scene
 from game.render.camera import ChaseCamera
-from game.render.hud import HUD, flank_slider_rect
+from game.render.hud import HUD, flank_slider_rect, ship_info_button_rect
 from game.render.renderer import VectorRenderer
 from game.sensors.dradis import DradisSystem
 from game.ships.ship import Ship
@@ -20,6 +20,7 @@ from game.world.mining import MiningHUDState
 from game.world.station import DockingStation
 from game.ui.sector_map import SectorMapView
 from game.ui.hangar import HangarView
+from game.ui.ship_info import ShipInfoPanel
 
 
 class SandboxScene(Scene):
@@ -54,6 +55,9 @@ class SandboxScene(Scene):
         self.flank_slider_dragging: bool = False
         self.cursor_pos = Vector2()
         self.cursor_indicator_visible = False
+        self.ship_info_panel: ShipInfoPanel | None = None
+        self.ship_info_open: bool = False
+        self._ship_button_hovered: bool = False
 
     def on_enter(self, **kwargs) -> None:
         self.content = kwargs["content"]
@@ -66,57 +70,37 @@ class SandboxScene(Scene):
             self.content.mining,
             self.logger,
         )
-        player_frame = self.content.ships.get("interceptor_mk1")
+        player_frame = self.content.ships.get("viper_mk_vii")
         self.player = Ship(player_frame, team="player")
         if self.content:
-            self.player.equip_module(self.content.items.get("point_defense_mk1"))
-            self.player.equip_module(self.content.items.get("eccm_mk1"))
-            self.player.equip_module(self.content.items.get("flare_launcher_mk1"))
-        self.player.assign_weapon("hp_light_1", "light_cannon_mk1")
-        self.player.assign_weapon("hp_light_2", "light_cannon_mk1")
-        self.player.assign_weapon("hp_missile", "missile_launcher_mk1")
+            self.player.apply_default_loadout(self.content)
         self.player.kinematics.position = Vector3(0.0, 0.0, 0.0)
         self.world.add_ship(self.player)
 
-        dummy_frame = self.content.ships.get("assault_dummy")
+        dummy_frame = self.content.ships.get("vanir_command")
         self.dummy = Ship(dummy_frame, team="enemy")
         if self.content:
-            self.dummy.equip_module(self.content.items.get("jammer_mk1"))
-        self.dummy.assign_weapon("hp_light_1", "heavy_cannon_mk1")
-        self.dummy.kinematics.position = Vector3(0.0, 0.0, 800.0)
-        self.dummy.kinematics.velocity = Vector3(0.0, 0.0, -10.0)
+            self.dummy.apply_default_loadout(self.content)
+        self.dummy.kinematics.position = Vector3(0.0, 0.0, 820.0)
+        self.dummy.kinematics.velocity = Vector3(0.0, 0.0, -8.0)
         enemy_ai = create_ai_for_ship(self.dummy)
         self.world.add_ship(self.dummy, ai=enemy_ai)
 
         if self.content:
             additional_spawns: list[tuple[str, str, Vector3, Vector3]] = [
-                ("player", "escort_mk1", Vector3(-320.0, -40.0, -180.0), Vector3(0.0, 0.0, 0.0)),
-                ("player", "command_escort", Vector3(280.0, -20.0, -260.0), Vector3(0.0, 0.0, 0.0)),
-                ("enemy", "interceptor_mk1", Vector3(420.0, 60.0, 680.0), Vector3(-5.0, 0.0, -22.0)),
-                ("enemy", "interceptor_mk1", Vector3(-460.0, 40.0, 760.0), Vector3(8.0, 0.0, -18.0)),
-                ("enemy", "escort_mk1", Vector3(60.0, -30.0, 920.0), Vector3(0.0, 0.0, -14.0)),
+                ("player", "glaive_command", Vector3(-340.0, -32.0, -210.0), Vector3(0.0, 0.0, 0.0)),
+                ("player", "vanir_command", Vector3(280.0, -24.0, -300.0), Vector3(0.0, 0.0, 0.0)),
+                ("enemy", "viper_mk_vii", Vector3(420.0, 60.0, 700.0), Vector3(-6.0, 0.0, -20.0)),
+                ("enemy", "viper_mk_vii", Vector3(-460.0, 48.0, 780.0), Vector3(7.0, 0.0, -18.0)),
+                ("enemy", "glaive_command", Vector3(60.0, -36.0, 940.0), Vector3(0.0, 0.0, -14.0)),
+                ("enemy", "brimir_carrier", Vector3(0.0, -80.0, 1280.0), Vector3(0.0, 0.0, -6.0)),
             ]
             for team, frame_id, position, velocity in additional_spawns:
                 frame = self.content.ships.get(frame_id)
                 ship = Ship(frame, team=team)
                 ship.kinematics.position = position
                 ship.kinematics.velocity = velocity
-                if frame_id == "escort_mk1":
-                    ship.assign_weapon("hp_cannon_a", "light_cannon_mk1")
-                    ship.assign_weapon("hp_cannon_b", "light_cannon_mk1")
-                    ship.assign_weapon(
-                        "hp_cannon_c",
-                        "heavy_cannon_mk1" if team == "player" else "light_cannon_mk1",
-                    )
-                    ship.assign_weapon("hp_launcher", "missile_launcher_mk1")
-                elif frame_id == "command_escort":
-                    ship.assign_weapon("hp_command_l", "light_cannon_mk1")
-                    ship.assign_weapon("hp_command_r", "light_cannon_mk1")
-                    ship.assign_weapon("hp_command_launcher", "missile_launcher_mk1")
-                elif frame_id == "interceptor_mk1":
-                    ship.assign_weapon("hp_light_1", "light_cannon_mk1")
-                    ship.assign_weapon("hp_light_2", "light_cannon_mk1")
-                    ship.assign_weapon("hp_missile", "missile_launcher_mk1")
+                ship.apply_default_loadout(self.content)
                 ai = create_ai_for_ship(ship)
                 self.world.add_ship(ship, ai=ai)
 
@@ -126,6 +110,9 @@ class SandboxScene(Scene):
         self.camera = ChaseCamera(70.0, aspect)
         self.renderer = VectorRenderer(surface)
         self.hud = HUD(surface)
+        self.ship_info_panel = ShipInfoPanel(surface, self.content)
+        self.ship_info_open = False
+        self._ship_button_hovered = False
         self.map_view = SectorMapView(self.content.sector)
         self.map_open = False
         self.armed_system_id = None
@@ -150,11 +137,39 @@ class SandboxScene(Scene):
     def on_exit(self) -> None:
         self._enter_ui_cursor()
         self.weapon_group_actions.clear()
+        if self.ship_info_panel:
+            self.ship_info_panel.close()
+        self.ship_info_open = False
 
     def handle_event(self, event: pygame.event.Event) -> None:
         if self.input:
             self.input.handle_event(event)
-        if self.player and self.hud and not (self.map_open or self.hangar_open):
+        if self.map_open or self.hangar_open or self.ship_info_open:
+            self._ship_button_hovered = False
+        if self.ship_info_open and self.ship_info_panel:
+            consumed = self.ship_info_panel.handle_event(event)
+            if consumed:
+                return
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if not self.ship_info_panel.panel_rect.collidepoint(event.pos):
+                    self._close_ship_info_panel()
+                    return
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                self._close_ship_info_panel()
+                return
+        if self.hud:
+            button_rect = ship_info_button_rect(self.hud.surface.get_size())
+            if event.type == pygame.MOUSEMOTION:
+                self._ship_button_hovered = (
+                    button_rect.collidepoint(event.pos)
+                    and not (self.map_open or self.hangar_open or self.ship_info_open)
+                )
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if not (self.map_open or self.hangar_open):
+                    if button_rect.collidepoint(event.pos):
+                        self._toggle_ship_info_panel()
+                        return
+        if self.player and self.hud and not (self.map_open or self.hangar_open or self.ship_info_open):
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 rect = flank_slider_rect(self.hud.surface.get_size()).inflate(12, 12)
                 if rect.collidepoint(event.pos):
@@ -176,7 +191,9 @@ class SandboxScene(Scene):
                     self.jump_feedback = f"Jump armed: {system.name} (press J to commit)"
                     self.jump_feedback_timer = 4.0
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            if self.map_open:
+            if self.ship_info_open:
+                self._close_ship_info_panel()
+            elif self.map_open:
                 self.map_open = False
                 self._enter_game_cursor()
             elif self.hangar_open:
@@ -195,6 +212,8 @@ class SandboxScene(Scene):
         stabilizing = False
         self.player.set_flank_speed_ratio(self.flank_slider_ratio)
         if self.input.consume_action("open_map"):
+            if self.ship_info_open:
+                self._close_ship_info_panel()
             self.map_open = not self.map_open
             if self.map_open:
                 self._enter_ui_cursor()
@@ -212,6 +231,16 @@ class SandboxScene(Scene):
             self.player.control.roll_input = 0.0
             self.freelook_active = False
         elif self.hangar_open:
+            self.player.control.look_delta = Vector3()
+            self.player.control.strafe = Vector3()
+            self.player.control.throttle = 0.0
+            self.player.control.boost = False
+            self.player.control.brake = False
+            self.player.control.roll_input = 0.0
+            self.freelook_active = False
+            scanning = False
+            stabilizing = False
+        elif self.ship_info_open:
             self.player.control.look_delta = Vector3()
             self.player.control.strafe = Vector3()
             self.player.control.throttle = 0.0
@@ -326,6 +355,8 @@ class SandboxScene(Scene):
         if self.station_contact and self.input.consume_action("open_hangar"):
             station, distance = self.station_contact
             if distance <= station.docking_radius:
+                if self.ship_info_open:
+                    self._close_ship_info_panel()
                 self.hangar_open = not self.hangar_open
                 if self.hangar_open:
                     self._enter_ui_cursor()
@@ -419,6 +450,8 @@ class SandboxScene(Scene):
                 self.fps,
                 docking_prompt=docking_prompt if not self.hangar_open else None,
                 mining_state=self.mining_state,
+                ship_info_open=self.ship_info_open,
+                ship_button_hovered=self._ship_button_hovered,
             )
         if self.map_open and self.map_view:
             status = self.jump_feedback if self.jump_feedback_timer > 0.0 else None
@@ -426,6 +459,8 @@ class SandboxScene(Scene):
         elif self.hangar_open and self.hangar_view and self.station_contact:
             station, distance = self.station_contact
             self.hangar_view.draw(surface, self.player, station, distance)
+        if self.ship_info_open and self.ship_info_panel:
+            self.ship_info_panel.draw()
         if self.jump_feedback_timer > 0.0:
             self._blit_feedback(surface, self.jump_feedback, offset=100)
         if self.mining_feedback_timer > 0.0:
@@ -513,6 +548,28 @@ class SandboxScene(Scene):
                 surface.get_height() - offset,
             ),
         )
+
+    def _toggle_ship_info_panel(self) -> None:
+        if not self.player or not self.ship_info_panel:
+            return
+        if self.ship_info_open:
+            self._close_ship_info_panel()
+            return
+        self.ship_info_panel.open_for(self.player)
+        self.ship_info_open = True
+        self.flank_slider_dragging = False
+        self._ship_button_hovered = False
+        self._enter_ui_cursor()
+
+    def _close_ship_info_panel(self) -> None:
+        if not self.ship_info_open:
+            return
+        if self.ship_info_panel:
+            self.ship_info_panel.close()
+        self.ship_info_open = False
+        self._ship_button_hovered = False
+        if not (self.map_open or self.hangar_open):
+            self._enter_game_cursor()
 
     def _enter_game_cursor(self) -> None:
         pygame.mouse.set_visible(False)

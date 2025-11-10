@@ -2,14 +2,18 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Optional
+from dataclasses import dataclass, field, replace
+from typing import Dict, Iterable, List, Optional, TYPE_CHECKING
 
 from pygame.math import Vector3
 
 from game.assets.content import ItemData
 from .data import Hardpoint, ShipFrame
 from .stats import ShipStats
+
+
+if TYPE_CHECKING:
+    from game.assets.content import ContentManager
 
 
 @dataclass
@@ -91,7 +95,7 @@ class Ship:
     ) -> None:
         self.frame = frame
         self.team = team
-        self.stats: ShipStats = frame.stats
+        self.stats: ShipStats = replace(frame.stats)
         self.kinematics = ShipKinematics(
             position=Vector3(0.0, 0.0, 0.0),
             velocity=Vector3(0.0, 0.0, 0.0),
@@ -175,6 +179,26 @@ class Ship:
         for key, value in module.stats.items():
             self._module_stat_cache[key] += float(value)
         return True
+
+    def apply_default_loadout(self, content: "ContentManager") -> None:
+        """Equip the frame's default modules and weapons when available."""
+
+        for slot_type, item_ids in self.frame.default_modules.items():
+            for item_id in item_ids:
+                try:
+                    module = content.items.get(item_id)
+                except KeyError:
+                    continue
+                self.equip_module(module)
+        for hardpoint_id, weapon_id in self.frame.default_weapons.items():
+            try:
+                content.weapons.get(weapon_id)
+            except KeyError:
+                continue
+            try:
+                self.assign_weapon(hardpoint_id, weapon_id)
+            except KeyError:
+                continue
 
     def module_stat_total(self, key: str) -> float:
         return self._module_stat_cache.get(key, 0.0)
