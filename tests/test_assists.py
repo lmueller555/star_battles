@@ -22,6 +22,7 @@ def _make_test_ship() -> Ship:
         armor=100.0,
         durability=200.0,
         avoidance=0.05,
+        avoidance_rating=50.0,
         crit_defense=0.05,
         max_speed=80.0,
         boost_speed=140.0,
@@ -34,13 +35,16 @@ def _make_test_ship() -> Ship:
         boost_drain=15.0,
         power_cap=150.0,
         power_regen=40.0,
+        firewall=120.0,
+        emitter=120.0,
         dradis_range=3000.0,
+        visual_range=800.0,
         ftl_range=10.0,
         ftl_charge=15.0,
         ftl_threat_charge=25.0,
         ftl_cost_per_ly=20.0,
     )
-    slots = ShipSlotLayout(cannon=0, launcher=0, hull=0, engine=0, computer=0, utility=0)
+    slots = ShipSlotLayout(weapon_families={}, hull=0, engine=0, computer=0, utility=0)
     frame = ShipFrame(
         id="test_frame",
         name="Test Frame",

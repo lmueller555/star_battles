@@ -160,7 +160,7 @@ def test_sector_map_reachability() -> None:
 
 def test_ship_modules_apply_tags_and_stats() -> None:
     content = load_content()
-    ship = Ship(content.ships.get("interceptor_mk1"))
+    ship = Ship(content.ships.get("viper_mk_vii"))
     pd = content.items.get("point_defense_mk1")
     eccm = content.items.get("eccm_mk1")
     assert ship.equip_module(pd)
@@ -172,8 +172,8 @@ def test_ship_modules_apply_tags_and_stats() -> None:
 
 def test_dradis_detection_impacted_by_jammer() -> None:
     content = load_content()
-    owner = Ship(content.ships.get("interceptor_mk1"))
-    target_clean = Ship(content.ships.get("assault_dummy"))
+    owner = Ship(content.ships.get("viper_mk_vii"))
+    target_clean = Ship(content.ships.get("vanir_command"))
     target_clean.kinematics.position.z = 1500.0
     dradis = DradisSystem(owner)
     dt = 0.1
@@ -186,7 +186,7 @@ def test_dradis_detection_impacted_by_jammer() -> None:
             break
         assert time_clean < 10.0
 
-    target_jammed = Ship(content.ships.get("assault_dummy"))
+    target_jammed = Ship(content.ships.get("vanir_command"))
     target_jammed.kinematics.position.z = 1500.0
     target_jammed.equip_module(content.items.get("jammer_mk1"))
     dradis = DradisSystem(owner)
@@ -203,8 +203,8 @@ def test_dradis_detection_impacted_by_jammer() -> None:
 
 def test_eccm_recovers_lock_speed() -> None:
     content = load_content()
-    attacker = Ship(content.ships.get("interceptor_mk1"))
-    target = Ship(content.ships.get("assault_dummy"))
+    attacker = Ship(content.ships.get("viper_mk_vii"))
+    target = Ship(content.ships.get("vanir_command"))
     target.kinematics.position.z = 800.0
     dt = 0.1
 
@@ -219,13 +219,13 @@ def test_eccm_recovers_lock_speed() -> None:
 
     baseline = acquire(attacker, target)
 
-    target_jammed = Ship(content.ships.get("assault_dummy"))
+    target_jammed = Ship(content.ships.get("vanir_command"))
     target_jammed.kinematics.position.z = 800.0
     target_jammed.equip_module(content.items.get("jammer_mk1"))
     jammed_time = acquire(attacker, target_jammed)
     assert jammed_time > baseline
 
-    attacker_eccm = Ship(content.ships.get("interceptor_mk1"), modules=[content.items.get("eccm_mk1")])
+    attacker_eccm = Ship(content.ships.get("viper_mk_vii"), modules=[content.items.get("eccm_mk1")])
     attacker_eccm.kinematics.position = attacker.kinematics.position
     eccm_time = acquire(attacker_eccm, target_jammed)
     assert eccm_time < jammed_time

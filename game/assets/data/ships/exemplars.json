@@ -1,0 +1,307 @@
+[
+  {
+    "id": "viper_mk_vii",
+    "name": "Viper Mk VII",
+    "role": "Multi-Role",
+    "size": "Strike",
+    "level_requirement": 8,
+    "faction": "Colonial Fleet",
+    "counterpart": "Cylon Raider",
+    "upgrade_to": null,
+    "stats": {
+      "hull_hp": 585,
+      "hull_regen": 4.5,
+      "armor": 5,
+      "durability": 9000,
+      "avoidance": 510,
+      "crit_defense": 80,
+      "max_speed": 55,
+      "boost_speed": 85,
+      "acceleration": 12,
+      "turn_rate": 50,
+      "turn_accel": 55,
+      "inertia_comp": 100,
+      "boost_drain": 0.75,
+      "power_cap": 150,
+      "power_regen": 5,
+      "firewall": 100,
+      "emitter": 100,
+      "dradis_range": 2000,
+      "visual_range": 200,
+      "ftl_range": 4.5,
+      "ftl_charge": 15,
+      "ftl_threat_charge": 22,
+      "ftl_cost_per_ly": 30
+    },
+    "slots": {
+      "weapons": {"cannon": 3, "launcher": 1},
+      "hull": 3,
+      "engine": 3,
+      "computer": 3,
+      "utility": 2
+    },
+    "hardpoints": [
+      {"id": "hp_viper_port", "slot": "cannon", "position": [-0.8, -0.12, 2.4], "gimbal": 24, "tracking_speed": 240, "group": "primary"},
+      {"id": "hp_viper_starboard", "slot": "cannon", "position": [0.8, -0.12, 2.4], "gimbal": 24, "tracking_speed": 240, "group": "primary"},
+      {"id": "hp_viper_center", "slot": "cannon", "position": [0.0, -0.18, 2.6], "gimbal": 28, "tracking_speed": 220, "group": "primary"},
+      {"id": "hp_viper_missile", "slot": "launcher", "position": [0.0, -0.4, 1.5], "gimbal": 36, "tracking_speed": 200, "group": "aux"}
+    ],
+    "economy": {
+      "purchase": {"tylium": 6800},
+      "upgrade": {"tylium": 8800, "level": 12},
+      "operating": {"boost": 0.75, "ftl": 30}
+    },
+    "equipment": {
+      "modules": {
+        "computer": ["eccm_mk1"],
+        "utility": ["point_defense_mk1", "flare_launcher_mk1"]
+      },
+      "weapons": {
+        "hp_viper_port": "light_cannon_mk1",
+        "hp_viper_starboard": "light_cannon_mk1",
+        "hp_viper_center": "light_cannon_mk1",
+        "hp_viper_missile": "missile_launcher_mk1"
+      }
+    },
+    "role_bonuses": [
+      "Flexible strike package supports missile or PD conversions."
+    ],
+    "traits": [
+      "High avoidance and responsive handling reward precise flying."
+    ],
+    "notes": "Standard Fleet striker balanced for long sorties."
+  },
+  {
+    "id": "glaive_command",
+    "name": "Glaive Command",
+    "role": "Command",
+    "size": "Escort",
+    "level_requirement": 14,
+    "faction": "Colonial Fleet",
+    "counterpart": "Cylon Command Raider",
+    "upgrade_to": null,
+    "stats": {
+      "hull_hp": 1700,
+      "hull_regen": 15,
+      "armor": 25,
+      "durability": 30000,
+      "avoidance": 270,
+      "crit_defense": 100,
+      "max_speed": 37.5,
+      "boost_speed": 57.5,
+      "acceleration": 5,
+      "turn_rate": 22.5,
+      "turn_accel": 22.5,
+      "inertia_comp": 50,
+      "boost_drain": 1.8,
+      "power_cap": 330,
+      "power_regen": 12,
+      "firewall": 200,
+      "emitter": 200,
+      "dradis_range": 3500,
+      "visual_range": 750,
+      "ftl_range": 8.25,
+      "ftl_charge": 20,
+      "ftl_threat_charge": 28,
+      "ftl_cost_per_ly": 80
+    },
+    "slots": {
+      "weapons": {"cannon": 5, "launcher": 1},
+      "hull": 2,
+      "engine": 2,
+      "computer": 5,
+      "utility": 2
+    },
+    "hardpoints": [
+      {"id": "hp_glaive_front", "slot": "cannon", "position": [0.0, 0.2, 3.2], "gimbal": 32, "tracking_speed": 220, "group": "primary"},
+      {"id": "hp_glaive_port", "slot": "cannon", "position": [-1.8, 0.0, 1.4], "gimbal": 45, "tracking_speed": 180, "group": "primary"},
+      {"id": "hp_glaive_starboard", "slot": "cannon", "position": [1.8, 0.0, 1.4], "gimbal": 45, "tracking_speed": 180, "group": "primary"},
+      {"id": "hp_glaive_dorsal", "slot": "cannon", "position": [0.0, 0.9, 1.2], "gimbal": 55, "tracking_speed": 160, "group": "primary"},
+      {"id": "hp_glaive_ventral", "slot": "cannon", "position": [0.0, -0.9, 1.2], "gimbal": 55, "tracking_speed": 160, "group": "primary"},
+      {"id": "hp_glaive_launcher", "slot": "launcher", "position": [0.0, -0.4, 2.6], "gimbal": 40, "tracking_speed": 160, "group": "aux"}
+    ],
+    "economy": {
+      "purchase": {"tylium": 14800, "merits": 160},
+      "upgrade": {"tylium": 18600, "level": 18},
+      "operating": {"boost": 1.8, "ftl": 80}
+    },
+    "equipment": {
+      "modules": {
+        "computer": ["eccm_mk1", "jammer_mk1"],
+        "utility": ["point_defense_mk1"]
+      },
+      "weapons": {
+        "hp_glaive_front": "heavy_cannon_mk1",
+        "hp_glaive_port": "light_cannon_mk1",
+        "hp_glaive_starboard": "light_cannon_mk1",
+        "hp_glaive_dorsal": "light_cannon_mk1",
+        "hp_glaive_ventral": "light_cannon_mk1",
+        "hp_glaive_launcher": "missile_launcher_mk1"
+      }
+    },
+    "role_bonuses": [
+      "Command uplink reduces transponder power costs by 10%."
+    ],
+    "traits": [
+      "Ring batteries provide near-360° coverage, but the belly remains exposed."
+    ],
+    "notes": "Escort command hull that supports fleets with high computer capacity."
+  },
+  {
+    "id": "vanir_command",
+    "name": "Vanir Command",
+    "role": "Command",
+    "size": "Line",
+    "level_requirement": 18,
+    "faction": "Colonial Fleet",
+    "counterpart": "Cylon Siege Cruiser",
+    "upgrade_to": null,
+    "stats": {
+      "hull_hp": 3500,
+      "hull_regen": 19,
+      "armor": 40,
+      "durability": 35000,
+      "avoidance": 50,
+      "crit_defense": 100,
+      "max_speed": 27.5,
+      "boost_speed": 42.5,
+      "acceleration": 2,
+      "turn_rate": 9,
+      "turn_accel": 9,
+      "inertia_comp": 50,
+      "boost_drain": 5.4,
+      "power_cap": 650,
+      "power_regen": 28,
+      "firewall": 200,
+      "emitter": 200,
+      "dradis_range": 4000,
+      "visual_range": 1000,
+      "ftl_range": 11,
+      "ftl_charge": 25,
+      "ftl_threat_charge": 32,
+      "ftl_cost_per_ly": 250
+    },
+    "slots": {
+      "weapons": {"cannon": 4, "launcher": 2},
+      "hull": 2,
+      "engine": 2,
+      "computer": 4,
+      "utility": 2
+    },
+    "hardpoints": [
+      {"id": "hp_vanir_fore", "slot": "cannon", "position": [0.0, 0.4, 5.4], "gimbal": 30, "tracking_speed": 160, "group": "primary"},
+      {"id": "hp_vanir_port", "slot": "cannon", "position": [-2.4, 0.2, 3.2], "gimbal": 35, "tracking_speed": 150, "group": "primary"},
+      {"id": "hp_vanir_starboard", "slot": "cannon", "position": [2.4, 0.2, 3.2], "gimbal": 35, "tracking_speed": 150, "group": "primary"},
+      {"id": "hp_vanir_aft", "slot": "cannon", "position": [0.0, 0.2, -2.8], "gimbal": 28, "tracking_speed": 140, "group": "primary"},
+      {"id": "hp_vanir_launcher_port", "slot": "launcher", "position": [-1.6, -0.6, 1.2], "gimbal": 35, "tracking_speed": 140, "group": "aux"},
+      {"id": "hp_vanir_launcher_starboard", "slot": "launcher", "position": [1.6, -0.6, 1.2], "gimbal": 35, "tracking_speed": 140, "group": "aux"}
+    ],
+    "economy": {
+      "purchase": {"tylium": 23200, "merits": 260},
+      "upgrade": {"tylium": 28800, "level": 22},
+      "operating": {"boost": 5.4, "ftl": 250}
+    },
+    "equipment": {
+      "modules": {
+        "computer": ["eccm_mk1", "jammer_mk1"],
+        "utility": ["point_defense_mk1", "flare_launcher_mk1"]
+      },
+      "weapons": {
+        "hp_vanir_fore": "heavy_cannon_mk1",
+        "hp_vanir_port": "heavy_cannon_mk1",
+        "hp_vanir_starboard": "heavy_cannon_mk1",
+        "hp_vanir_aft": "light_cannon_mk1",
+        "hp_vanir_launcher_port": "missile_launcher_mk1",
+        "hp_vanir_launcher_starboard": "missile_launcher_mk1"
+      }
+    },
+    "role_bonuses": [
+      "Command node reduces fleet transponder costs by 15%."
+    ],
+    "traits": [
+      "Twin-hull design anchors firing lines and accepts missile-boat loadouts."
+    ],
+    "notes": "Heavy command line ship that serves as a mobile operations hub."
+  },
+  {
+    "id": "brimir_carrier",
+    "name": "Brimir Carrier",
+    "role": "Carrier",
+    "size": "Capital",
+    "level_requirement": 26,
+    "faction": "Colonial Fleet",
+    "counterpart": "Cylon Basestar",
+    "upgrade_to": null,
+    "stats": {
+      "hull_hp": 8000,
+      "hull_regen": 40,
+      "armor": 40,
+      "durability": 100000,
+      "avoidance": 20,
+      "crit_defense": 150,
+      "max_speed": 18,
+      "boost_speed": 30,
+      "acceleration": 3,
+      "turn_rate": 8,
+      "turn_accel": 9,
+      "inertia_comp": 44,
+      "boost_drain": 18,
+      "power_cap": 1000,
+      "power_regen": 40,
+      "firewall": 240,
+      "emitter": 240,
+      "dradis_range": 4500,
+      "visual_range": 1750,
+      "ftl_range": 12.5,
+      "ftl_charge": 30,
+      "ftl_threat_charge": 40,
+      "ftl_cost_per_ly": 600
+    },
+    "slots": {
+      "weapons": {"guns": 4, "launcher": 2, "defensive": 4},
+      "hull": 2,
+      "engine": 3,
+      "computer": 3,
+      "utility": 3
+    },
+    "hardpoints": [
+      {"id": "hp_brimir_bow", "slot": "gun", "position": [0.0, 0.5, 14.0], "gimbal": 25, "tracking_speed": 120, "group": "primary"},
+      {"id": "hp_brimir_port", "slot": "gun", "position": [-4.8, 0.3, 6.0], "gimbal": 35, "tracking_speed": 110, "group": "primary"},
+      {"id": "hp_brimir_starboard", "slot": "gun", "position": [4.8, 0.3, 6.0], "gimbal": 35, "tracking_speed": 110, "group": "primary"},
+      {"id": "hp_brimir_dorsal", "slot": "gun", "position": [0.0, 2.2, 4.0], "gimbal": 45, "tracking_speed": 100, "group": "primary"},
+      {"id": "hp_brimir_launcher_port", "slot": "launcher", "position": [-2.6, -0.8, 3.0], "gimbal": 32, "tracking_speed": 120, "group": "aux"},
+      {"id": "hp_brimir_launcher_starboard", "slot": "launcher", "position": [2.6, -0.8, 3.0], "gimbal": 32, "tracking_speed": 120, "group": "aux"},
+      {"id": "hp_brimir_pd_port", "slot": "defensive", "position": [-4.2, 1.2, -1.0], "gimbal": 60, "tracking_speed": 200, "group": "defense"},
+      {"id": "hp_brimir_pd_starboard", "slot": "defensive", "position": [4.2, 1.2, -1.0], "gimbal": 60, "tracking_speed": 200, "group": "defense"},
+      {"id": "hp_brimir_pd_dorsal", "slot": "defensive", "position": [0.0, 2.6, -1.5], "gimbal": 75, "tracking_speed": 220, "group": "defense"},
+      {"id": "hp_brimir_pd_ventral", "slot": "defensive", "position": [0.0, -2.6, -1.5], "gimbal": 75, "tracking_speed": 220, "group": "defense"}
+    ],
+    "economy": {
+      "purchase": {"tylium": 36000, "cubits": 120, "merits": 320},
+      "upgrade": {"tylium": 42000, "level": 32},
+      "operating": {"boost": 18, "ftl": 600}
+    },
+    "equipment": {
+      "modules": {
+        "computer": ["eccm_mk1", "jammer_mk1"],
+        "utility": ["point_defense_mk1", "flare_launcher_mk1"]
+      },
+      "weapons": {
+        "hp_brimir_bow": "heavy_cannon_mk1",
+        "hp_brimir_port": "heavy_cannon_mk1",
+        "hp_brimir_starboard": "heavy_cannon_mk1",
+        "hp_brimir_dorsal": "light_cannon_mk1",
+        "hp_brimir_launcher_port": "missile_launcher_mk1",
+        "hp_brimir_launcher_starboard": "missile_launcher_mk1"
+      }
+    },
+    "role_bonuses": [
+      "Carrier command enables jump-to-carrier and repair auras for the fleet."
+    ],
+    "traits": [
+      "Outpost mode locks the hull into a fortress and deploys a jump beacon.",
+      "Supports strike craft docking, repair, and rearm operations."
+    ],
+    "notes": "Mobile fleet anchor designed to project command and logistics support."
+  }
+]

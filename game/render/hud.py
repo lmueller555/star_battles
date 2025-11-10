@@ -17,6 +17,8 @@ FLANK_SLIDER_WIDTH = 280
 FLANK_SLIDER_HEIGHT = 14
 FLANK_SLIDER_MARGIN = 72
 THRUSTER_SPEED_MULTIPLIER = 1.5
+SHIP_INFO_BUTTON_SIZE = 48
+SHIP_INFO_BUTTON_SPACING = 18
 
 
 def flank_slider_rect(surface_size: tuple[int, int]) -> pygame.Rect:
@@ -28,6 +30,15 @@ def flank_slider_rect(surface_size: tuple[int, int]) -> pygame.Rect:
         FLANK_SLIDER_HEIGHT,
     )
     return rect
+
+
+def ship_info_button_rect(surface_size: tuple[int, int]) -> pygame.Rect:
+    width, height = surface_size
+    slider = flank_slider_rect(surface_size)
+    size = SHIP_INFO_BUTTON_SIZE
+    x = max(0, slider.centerx - size // 2)
+    y = max(0, slider.top - SHIP_INFO_BUTTON_SPACING - size)
+    return pygame.Rect(x, y, size, size)
 
 
 def _gimbal_radius(
@@ -241,6 +252,9 @@ class HUD:
         fps: float,
         docking_prompt: tuple[str, float, float] | None = None,
         mining_state: MiningHUDState | None = None,
+        *,
+        ship_info_open: bool = False,
+        ship_button_hovered: bool = False,
     ) -> None:
         self.draw_crosshair(camera, player)
         self.draw_lead(camera, player, target, projectile_speed)
@@ -248,6 +262,7 @@ class HUD:
         self.draw_meters(player)
         self.draw_lock_ring(camera, player, target)
         self.draw_dradis(dradis)
+        self.draw_ship_info_button(player, ship_info_open, ship_button_hovered)
         self.draw_flank_speed_slider(player)
         self.draw_overlay(sim_dt, fps, player, target)
         if docking_prompt:
@@ -358,6 +373,27 @@ class HUD:
             (rect.centerx - speed_text.get_width() // 2, rect.bottom + 8),
         )
 
+    def draw_ship_info_button(self, player: Ship, open_state: bool, hovered: bool) -> None:
+        rect = ship_info_button_rect(self.surface.get_size())
+        background = (12, 20, 28)
+        border = (70, 110, 150)
+        if hovered:
+            background = (20, 32, 44)
+            border = (120, 180, 220)
+        if open_state:
+            background = (40, 60, 80)
+            border = (255, 200, 140)
+        pygame.draw.rect(self.surface, background, rect)
+        pygame.draw.rect(self.surface, border, rect, 2)
+        nose = (rect.centerx, rect.top + 8)
+        port = (rect.left + 10, rect.bottom - 12)
+        stern = (rect.centerx, rect.bottom - 4)
+        starboard = (rect.right - 10, rect.bottom - 12)
+        color = (180, 220, 255) if not open_state else (255, 210, 160)
+        pygame.draw.polygon(self.surface, color, [nose, port, stern, starboard], 2)
+        engine_bar = pygame.Rect(rect.centerx - 8, rect.bottom - 18, 16, 4)
+        pygame.draw.rect(self.surface, color, engine_bar)
+
         status = "Thrusters ACTIVE" if player.thrusters_active else "Thrusters STANDBY"
         status_color = (255, 200, 140) if player.thrusters_active else (150, 190, 220)
         status_text = self.font.render(status, True, status_color)
@@ -367,4 +403,4 @@ class HUD:
         )
 
 
-__all__ = ["HUD", "format_distance", "flank_slider_rect"]
+__all__ = ["HUD", "format_distance", "flank_slider_rect", "ship_info_button_rect"]
