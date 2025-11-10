@@ -43,9 +43,10 @@ def main() -> None:
 
     display_flags = pygame.SCALED | pygame.FULLSCREEN
     if resolution == [0, 0] or resolution == (0, 0):
-        screen = pygame.display.set_mode((0, 0), display_flags)
-    else:
-        screen = pygame.display.set_mode(resolution, display_flags)
+        display_info = pygame.display.Info()
+        resolution = (display_info.current_w, display_info.current_h)
+
+    screen = pygame.display.set_mode(resolution, display_flags)
     pygame.display.set_caption("Star Battles Prototype")
     clock = pygame.time.Clock()
 
