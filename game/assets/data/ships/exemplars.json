@@ -303,5 +303,92 @@
       "Supports strike craft docking, repair, and rearm operations."
     ],
     "notes": "Mobile fleet anchor designed to project command and logistics support."
+  },
+  {
+    "id": "outpost_regular",
+    "name": "Aegis System Outpost",
+    "role": "Station",
+    "size": "Outpost",
+    "level_requirement": 0,
+    "faction": "Colonial Fleet",
+    "counterpart": null,
+    "upgrade_to": null,
+    "stats": {
+      "hull_hp": 24000,
+      "hull_regen": 18,
+      "armor": 160,
+      "durability": 250000,
+      "avoidance": 0.015,
+      "crit_defense": 220,
+      "max_speed": 0,
+      "boost_speed": 0,
+      "acceleration": 0,
+      "strafe_accel": 0,
+      "strafe_cap": 0,
+      "turn_rate": 6,
+      "turn_accel": 4,
+      "inertia_comp": 1.2,
+      "boost_drain": 0,
+      "power_cap": 2400,
+      "power_regen": 120,
+      "firewall": 420,
+      "emitter": 280,
+      "dradis_range": 6500,
+      "visual_range": 2200,
+      "ftl_range": 0,
+      "ftl_charge": 0,
+      "ftl_threat_charge": 0,
+      "ftl_cost_per_ly": 0
+    },
+    "slots": {
+      "weapons": {"guns": 6, "launcher": 2, "defensive": 4},
+      "hull": 6,
+      "engine": 0,
+      "computer": 6,
+      "utility": 6
+    },
+    "hardpoints": [
+      {"id": "hp_outpost_north", "slot": "gun", "position": [0.0, 60.0, 260.0], "gimbal": 35, "tracking_speed": 36, "group": "primary"},
+      {"id": "hp_outpost_south", "slot": "gun", "position": [0.0, -60.0, -260.0], "gimbal": 35, "tracking_speed": 36, "group": "primary"},
+      {"id": "hp_outpost_east", "slot": "gun", "position": [260.0, 0.0, 0.0], "gimbal": 42, "tracking_speed": 32, "group": "primary"},
+      {"id": "hp_outpost_west", "slot": "gun", "position": [-260.0, 0.0, 0.0], "gimbal": 42, "tracking_speed": 32, "group": "primary"},
+      {"id": "hp_outpost_dorsal", "slot": "gun", "position": [0.0, 260.0, 0.0], "gimbal": 28, "tracking_speed": 30, "group": "primary"},
+      {"id": "hp_outpost_ventral", "slot": "gun", "position": [0.0, -260.0, 0.0], "gimbal": 28, "tracking_speed": 30, "group": "primary"},
+      {"id": "hp_outpost_launcher_port", "slot": "launcher", "position": [-180.0, 120.0, 180.0], "gimbal": 30, "tracking_speed": 24, "group": "aux"},
+      {"id": "hp_outpost_launcher_starboard", "slot": "launcher", "position": [180.0, 120.0, 180.0], "gimbal": 30, "tracking_speed": 24, "group": "aux"},
+      {"id": "hp_outpost_pd_north", "slot": "defensive", "position": [0.0, 180.0, 220.0], "gimbal": 70, "tracking_speed": 180, "group": "defense"},
+      {"id": "hp_outpost_pd_south", "slot": "defensive", "position": [0.0, -180.0, -220.0], "gimbal": 70, "tracking_speed": 180, "group": "defense"},
+      {"id": "hp_outpost_pd_east", "slot": "defensive", "position": [220.0, 0.0, 180.0], "gimbal": 75, "tracking_speed": 180, "group": "defense"},
+      {"id": "hp_outpost_pd_west", "slot": "defensive", "position": [-220.0, 0.0, 180.0], "gimbal": 75, "tracking_speed": 180, "group": "defense"}
+    ],
+    "economy": {
+      "purchase": {"tylium": 0},
+      "upgrade": {"tylium": 0, "level": 0},
+      "operating": {"boost": 0, "ftl": 0}
+    },
+    "equipment": {
+      "modules": {
+        "computer": ["eccm_mk1", "jammer_mk1"],
+        "utility": ["point_defense_mk1", "flare_launcher_mk1"]
+      },
+      "weapons": {
+        "hp_outpost_north": "heavy_cannon_mk1",
+        "hp_outpost_south": "heavy_cannon_mk1",
+        "hp_outpost_east": "heavy_cannon_mk1",
+        "hp_outpost_west": "heavy_cannon_mk1",
+        "hp_outpost_dorsal": "heavy_cannon_mk1",
+        "hp_outpost_ventral": "heavy_cannon_mk1",
+        "hp_outpost_launcher_port": "missile_launcher_mk1",
+        "hp_outpost_launcher_starboard": "missile_launcher_mk1"
+      }
+    },
+    "role_bonuses": [
+      "Projects a logistics hub that anchors control of the sector."
+    ],
+    "traits": [
+      "Stationary battle station with wide firing arcs and embedded PD grids.",
+      "Serves as a jump beacon and services hub when active."
+    ],
+    "notes": "Permanent sector outpost used for testing deployment logic."
   }
 ]
