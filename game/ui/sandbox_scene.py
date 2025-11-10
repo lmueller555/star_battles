@@ -13,7 +13,7 @@ from game.render.camera import ChaseCamera
 from game.render.hud import HUD, TargetOverlay
 from game.render.renderer import VectorRenderer
 from game.sensors.dradis import DradisSystem
-from game.ships.ship import Ship
+from game.ships.ship import Ship, ShipControlState
 from game.world.ai import create_ai_for_ship
 from game.world.asteroids import Asteroid
 from game.world.space import COLLISION_RADII, SpaceWorld
@@ -70,59 +70,73 @@ class SandboxScene(Scene):
         self.input = kwargs["input"]
         self.logger = kwargs["logger"]
         self.flank_slider_ratio = 0.0
-        self.world = SpaceWorld(
-            self.content.weapons,
-            self.content.sector,
-            self.content.stations,
-            self.content.mining,
-            self.logger,
-        )
-        player_frame = self.content.ships.get("viper_mk_vii")
-        self.player = Ship(player_frame, team="player")
-        if self.content:
-            self.player.apply_default_loadout(self.content)
-        self.player.kinematics.position = Vector3(0.0, 0.0, 0.0)
-        self.player.set_flank_speed_ratio(self.flank_slider_ratio)
-        self.world.add_ship(self.player)
+        reused_world: SpaceWorld | None = kwargs.get("world")
+        reused_player: Ship | None = kwargs.get("player")
 
-        dummy_frame = self.content.ships.get("vanir_command")
-        self.dummy = Ship(dummy_frame, team="enemy")
-        if self.content:
-            self.dummy.apply_default_loadout(self.content)
-        self.dummy.kinematics.position = Vector3(0.0, 0.0, 820.0)
-        self.dummy.kinematics.velocity = Vector3(0.0, 0.0, -8.0)
-        enemy_ai = create_ai_for_ship(self.dummy)
-        self.world.add_ship(self.dummy, ai=enemy_ai)
+        self.world = None
+        self.player = None
+        self.dummy = None
 
-        if self.content:
-            additional_spawns: list[tuple[str, str, Vector3, Vector3]] = [
-                ("player", "glaive_command", Vector3(-340.0, -32.0, -210.0), Vector3(0.0, 0.0, 0.0)),
-                ("player", "vanir_command", Vector3(280.0, -24.0, -300.0), Vector3(0.0, 0.0, 0.0)),
-                ("enemy", "viper_mk_vii", Vector3(420.0, 60.0, 700.0), Vector3(-6.0, 0.0, -20.0)),
-                ("enemy", "viper_mk_vii", Vector3(-460.0, 48.0, 780.0), Vector3(7.0, 0.0, -18.0)),
-                ("enemy", "glaive_command", Vector3(60.0, -36.0, 940.0), Vector3(0.0, 0.0, -14.0)),
-                ("enemy", "brimir_carrier", Vector3(0.0, -80.0, 1280.0), Vector3(0.0, 0.0, -6.0)),
-            ]
-            for team, frame_id, position, velocity in additional_spawns:
-                frame = self.content.ships.get(frame_id)
-                ship = Ship(frame, team=team)
-                ship.kinematics.position = position
-                ship.kinematics.velocity = velocity
-                ship.apply_default_loadout(self.content)
-                ai = create_ai_for_ship(ship)
-                self.world.add_ship(ship, ai=ai)
+        if reused_world is not None and reused_player is not None:
+            self.world = reused_world
+            self.player = reused_player
+        else:
+            self.world = SpaceWorld(
+                self.content.weapons,
+                self.content.sector,
+                self.content.stations,
+                self.content.mining,
+                self.logger,
+            )
+            player_frame = self.content.ships.get("viper_mk_vii")
+            self.player = Ship(player_frame, team="player")
+            if self.content:
+                self.player.apply_default_loadout(self.content)
+            self.player.kinematics.position = Vector3(0.0, 0.0, 0.0)
+            self.player.set_flank_speed_ratio(self.flank_slider_ratio)
+            self.world.add_ship(self.player)
 
-            outpost_spawns: list[tuple[str, str, Vector3]] = [
-                ("player", "outpost_regular", Vector3(-720.0, 0.0, -1400.0)),
-                ("enemy", "outpost_regular", Vector3(720.0, 0.0, 1600.0)),
-            ]
-            for team, frame_id, position in outpost_spawns:
-                frame = self.content.ships.get(frame_id)
-                outpost = Ship(frame, team=team)
-                outpost.kinematics.position = position
-                outpost.kinematics.velocity = Vector3(0.0, 0.0, 0.0)
-                outpost.apply_default_loadout(self.content)
-                self.world.add_ship(outpost)
+            dummy_frame = self.content.ships.get("vanir_command")
+            self.dummy = Ship(dummy_frame, team="enemy")
+            if self.content:
+                self.dummy.apply_default_loadout(self.content)
+            self.dummy.kinematics.position = Vector3(0.0, 0.0, 820.0)
+            self.dummy.kinematics.velocity = Vector3(0.0, 0.0, -8.0)
+            enemy_ai = create_ai_for_ship(self.dummy)
+            self.world.add_ship(self.dummy, ai=enemy_ai)
+
+            if self.content:
+                additional_spawns: list[tuple[str, str, Vector3, Vector3]] = [
+                    ("player", "glaive_command", Vector3(-340.0, -32.0, -210.0), Vector3(0.0, 0.0, 0.0)),
+                    ("player", "vanir_command", Vector3(280.0, -24.0, -300.0), Vector3(0.0, 0.0, 0.0)),
+                    ("enemy", "viper_mk_vii", Vector3(420.0, 60.0, 700.0), Vector3(-6.0, 0.0, -20.0)),
+                    ("enemy", "viper_mk_vii", Vector3(-460.0, 48.0, 780.0), Vector3(7.0, 0.0, -18.0)),
+                    ("enemy", "glaive_command", Vector3(60.0, -36.0, 940.0), Vector3(0.0, 0.0, -14.0)),
+                    ("enemy", "brimir_carrier", Vector3(0.0, -80.0, 1280.0), Vector3(0.0, 0.0, -6.0)),
+                ]
+                for team, frame_id, position, velocity in additional_spawns:
+                    frame = self.content.ships.get(frame_id)
+                    ship = Ship(frame, team=team)
+                    ship.kinematics.position = position
+                    ship.kinematics.velocity = velocity
+                    ship.apply_default_loadout(self.content)
+                    ai = create_ai_for_ship(ship)
+                    self.world.add_ship(ship, ai=ai)
+
+                outpost_spawns: list[tuple[str, str, Vector3]] = [
+                    ("player", "outpost_regular", Vector3(-720.0, 0.0, -1400.0)),
+                    ("enemy", "outpost_regular", Vector3(720.0, 0.0, 1600.0)),
+                ]
+                for team, frame_id, position in outpost_spawns:
+                    frame = self.content.ships.get(frame_id)
+                    outpost = Ship(frame, team=team)
+                    outpost.kinematics.position = position
+                    outpost.kinematics.velocity = Vector3(0.0, 0.0, 0.0)
+                    outpost.apply_default_loadout(self.content)
+                    self.world.add_ship(outpost)
+
+        if not self.world or not self.player:
+            raise RuntimeError("SandboxScene requires an active world and player ship")
 
         self.dradis = DradisSystem(self.player)
         surface = pygame.display.get_surface()
@@ -151,9 +165,10 @@ class SandboxScene(Scene):
         self._configure_weapon_groups()
         self.combat_feedback = ""
         self.combat_feedback_timer = 0.0
-        self._enter_game_cursor()
         if self.player:
-            self.player.set_flank_speed_ratio(self.flank_slider_ratio)
+            self.flank_slider_ratio = getattr(self.player, "flank_speed_ratio", 0.0)
+        self._enter_game_cursor()
+        self.player.set_flank_speed_ratio(self.flank_slider_ratio)
 
     def on_exit(self) -> None:
         self._enter_ui_cursor()
@@ -485,10 +500,30 @@ class SandboxScene(Scene):
                     self.flank_slider_dragging = False
         if self.station_contact and self.input.consume_action("dock_explore"):
             station, distance = self.station_contact
-            if distance <= station.docking_radius:
-                # TODO: Transition into the Outpost interior once the Dock & Explore scene is implemented.
-                self._set_combat_feedback("Dock & Explore is not available yet.", duration=2.5)
+            if distance <= station.docking_radius and self.world and self.player:
+                if self.ship_info_open:
+                    self._close_ship_info_panel()
+                self.hangar_open = False
+                self.player.control = ShipControlState()
+                self.player.kinematics.velocity = Vector3()
+                self.player.kinematics.angular_velocity = Vector3()
+                self._enter_ui_cursor()
+                self.world.remove_ship(self.player)
+                self.manager.activate(
+                    "outpost_interior",
+                    content=self.content,
+                    input=self.input,
+                    logger=self.logger,
+                    world=self.world,
+                    player=self.player,
+                    station=station,
+                    distance=distance,
+                )
+                return
+            self._set_combat_feedback("Dock & Explore is not available yet.", duration=2.5)
         if self.hangar_open:
+            if self.hangar_view:
+                self.hangar_view.update(dt)
             self.player.control.look_delta = Vector3()
             self.player.control.strafe = Vector3()
             self.player.control.throttle = 0.0
