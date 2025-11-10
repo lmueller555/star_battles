@@ -17,7 +17,7 @@ DEFAULT_BINDINGS = {
     "strafe_down": ["K_e"],
     "roll_left": ["K_z"],
     "roll_right": ["K_c"],
-    "boost": ["K_LSHIFT"],
+    "boost": ["K_SPACE"],
     "brake": ["K_LCTRL"],
     "freelook": ["K_f"],
     "fire_primary": ["BUTTON_LEFT"],
@@ -36,7 +36,7 @@ DEFAULT_BINDINGS = {
     "open_hangar": ["K_h"],
     "scan_mining": ["K_v"],
     "toggle_mining": ["K_b"],
-    "stabilize_mining": ["K_SPACE"],
+    "stabilize_mining": ["K_LSHIFT"],
 }
 
 MOUSE_BUTTONS = {
