@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import random
-from typing import List, Optional, TYPE_CHECKING
+from typing import Iterable, List, Optional, TYPE_CHECKING
 
 from pygame.math import Vector3
 
@@ -370,16 +370,87 @@ class SpaceWorld:
     def asteroids_in_current_system(self) -> list[Asteroid]:
         return list(self.asteroids.current_field())
 
+    def _station_ships(self, *, team: str | None = None) -> Iterable[Ship]:
+        for candidate in self.ships:
+            if not candidate.is_alive():
+                continue
+            if team is not None and candidate.team != team:
+                continue
+            role = candidate.frame.role.lower()
+            size = candidate.frame.size.lower()
+            if "station" in role or "outpost" in role or size in {"station", "outpost"}:
+                yield candidate
+
+    def _station_docking_radius(self, station_ship: Ship) -> float:
+        base_radius = self._collision_radius(station_ship)
+        return max(600.0, base_radius + 650.0)
+
+    def _station_anchor_for(self, station: DockingStation, team: str) -> Ship | None:
+        station_pos = Vector3(*station.position)
+        best: Ship | None = None
+        best_distance = float("inf")
+        search_radius = max(station.docking_radius, 1.0) * 1.5
+        for candidate in self._station_ships(team=team):
+            candidate_pos = candidate.kinematics.position
+            distance = candidate_pos.distance_to(station_pos)
+            if distance <= search_radius and distance < best_distance:
+                best = candidate
+                best_distance = distance
+        return best
+
     def nearest_station(self, ship: Ship) -> tuple[Optional[DockingStation], float]:
         position = ship.kinematics.position
-        best_station = None
+        best_station: DockingStation | None = None
         best_distance = float("inf")
-        for station in self.stations_in_current_system():
-            station_pos = Vector3(*station.position)
+
+        def consider(
+            station_id: str,
+            name: str,
+            system_id: str,
+            station_pos: Vector3,
+            docking_radius: float,
+            *,
+            prefer: bool = False,
+        ) -> None:
+            nonlocal best_station, best_distance
             distance = position.distance_to(station_pos)
-            if distance < best_distance:
+            if distance < best_distance - 1e-3 or (
+                prefer and abs(distance - best_distance) <= 1e-3
+            ):
                 best_distance = distance
-                best_station = station
+                best_station = DockingStation(
+                    id=station_id,
+                    name=name,
+                    system_id=system_id,
+                    position=(station_pos.x, station_pos.y, station_pos.z),
+                    docking_radius=docking_radius,
+                )
+
+        current_system = self.current_system_id or ""
+        for station_ship in self._station_ships(team=getattr(ship, "team", None)):
+            consider(
+                f"ship:{id(station_ship)}",
+                station_ship.frame.name,
+                current_system,
+                station_ship.kinematics.position,
+                self._station_docking_radius(station_ship),
+            )
+
+        ship_team = getattr(ship, "team", None)
+        if ship_team is not None:
+            for station in self.stations_in_current_system():
+                anchor = self._station_anchor_for(station, ship_team)
+                if not anchor:
+                    continue
+                consider(
+                    station.id,
+                    station.name,
+                    station.system_id,
+                    anchor.kinematics.position,
+                    station.docking_radius,
+                    prefer=True,
+                )
+
         return best_station, best_distance
 
     def _collision_radius(self, ship: Ship) -> float:
