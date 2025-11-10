@@ -1,6 +1,7 @@
 """Docking hangar overlay for Outposts."""
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Dict, Iterable, List, Tuple
 
@@ -22,6 +23,121 @@ class _SlotDisplay:
     category: str
 
 
+class _HangarInteriorAnimator:
+    """Render a stylised hangar interior with light animation."""
+
+    def __init__(self) -> None:
+        self.time: float = 0.0
+        self._arm_offsets: Tuple[float, float, float] = (0.0, 1.6, 3.2)
+
+    def update(self, dt: float) -> None:
+        self.time += dt
+
+    def draw(self, surface: pygame.Surface) -> None:
+        width, height = surface.get_size()
+        deck_y = int(height * 0.62)
+
+        surface.fill((8, 12, 18))
+        upper_rect = pygame.Rect(0, 0, width, deck_y)
+        lower_rect = pygame.Rect(0, deck_y, width, height - deck_y)
+        pygame.draw.rect(surface, (18, 26, 36), upper_rect)
+        pygame.draw.rect(surface, (26, 34, 46), lower_rect)
+
+        door_rect = pygame.Rect(int(width * 0.16), int(height * 0.12), int(width * 0.68), int(height * 0.4))
+        pygame.draw.rect(surface, (12, 18, 26), door_rect)
+        pygame.draw.rect(surface, (60, 96, 134), door_rect, 4)
+
+        ceiling_beam = pygame.Rect(0, int(height * 0.18) - 10, width, 20)
+        pygame.draw.rect(surface, (32, 44, 58), ceiling_beam)
+
+        for offset in (0.22, 0.5, 0.78):
+            strut = pygame.Rect(
+                int(width * offset) - int(width * 0.01),
+                int(height * 0.18),
+                int(width * 0.02),
+                int(height * 0.34),
+            )
+            pygame.draw.rect(surface, (38, 52, 66), strut)
+            pygame.draw.rect(surface, (70, 110, 148), strut, 2)
+
+        platform = [
+            (int(width * 0.06), deck_y),
+            (int(width * 0.94), deck_y),
+            (width, height),
+            (0, height),
+        ]
+        pygame.draw.polygon(surface, (28, 36, 46), platform)
+        pygame.draw.line(surface, (70, 110, 150), platform[0], platform[1], 3)
+
+        for idx in range(9):
+            stripe_x = int(width * 0.08 + idx * width * 0.1)
+            stripe = pygame.Rect(stripe_x, deck_y + int(height * 0.05), int(width * 0.035), 6)
+            pygame.draw.rect(surface, (48, 66, 78), stripe)
+
+        ship_points = [
+            (int(width * 0.41), deck_y - int(height * 0.08)),
+            (int(width * 0.59), deck_y - int(height * 0.08)),
+            (int(width * 0.64), deck_y - int(height * 0.05)),
+            (int(width * 0.36), deck_y - int(height * 0.05)),
+        ]
+        pygame.draw.polygon(surface, (30, 42, 58), ship_points)
+        pygame.draw.lines(surface, (120, 170, 210), True, ship_points, 2)
+
+        glow_surface = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+        glow_strength = 60 + int(40 * (0.5 + 0.5 * math.sin(self.time * 1.8)))
+        glow_rect = pygame.Rect(
+            int(width * 0.25),
+            deck_y - int(height * 0.18),
+            int(width * 0.5),
+            int(height * 0.26),
+        )
+        pygame.draw.ellipse(glow_surface, (120, 190, 255, glow_strength), glow_rect)
+        surface.blit(glow_surface, (0, 0), special_flags=pygame.BLEND_ADD)
+
+        self._draw_arms(surface, width, deck_y)
+
+    def _draw_arms(self, surface: pygame.Surface, width: int, deck_y: int) -> None:
+        arm_color = (80, 128, 164)
+        joint_color = (160, 210, 240)
+        base_y = deck_y - int(surface.get_height() * 0.04)
+
+        for index, offset in enumerate(self._arm_offsets):
+            base_x = int(width * (0.3 + index * 0.2))
+            base = Vector2(base_x, base_y)
+            length_primary = surface.get_height() * 0.18
+            length_secondary = surface.get_height() * 0.11
+            sway = math.sin(self.time * 1.15 + offset) * 0.55
+            elbow_angle = -0.9 + sway
+            wrist_angle = 0.5 + math.sin(self.time * 1.7 + offset * 0.8) * 0.45
+            elbow = base + Vector2(
+                math.sin(elbow_angle) * length_primary,
+                -math.cos(elbow_angle) * length_primary,
+            )
+            tip = elbow + Vector2(
+                math.sin(elbow_angle + wrist_angle) * length_secondary,
+                -math.cos(elbow_angle + wrist_angle) * length_secondary,
+            )
+            jaw_left = tip + Vector2(-14.0, 16.0)
+            jaw_right = tip + Vector2(14.0, 16.0)
+            points = [
+                (int(base.x), int(base.y)),
+                (int(elbow.x), int(elbow.y)),
+                (int(tip.x), int(tip.y)),
+            ]
+            pygame.draw.lines(surface, arm_color, False, points, 7)
+            pygame.draw.circle(surface, (34, 48, 62), (int(base.x), int(base.y)), 14)
+            pygame.draw.circle(surface, arm_color, (int(elbow.x), int(elbow.y)), 10)
+            pygame.draw.circle(surface, joint_color, (int(tip.x), int(tip.y)), 6)
+            pygame.draw.line(surface, joint_color, (int(jaw_left.x), int(jaw_left.y)), (int(tip.x), int(tip.y)), 3)
+            pygame.draw.line(surface, joint_color, (int(jaw_right.x), int(jaw_right.y)), (int(tip.x), int(tip.y)), 3)
+
+            glow_radius = 22
+            glow_surface = pygame.Surface((glow_radius * 2, glow_radius * 2), pygame.SRCALPHA)
+            glow_value = min(255, 140 + int(80 * (0.5 + 0.5 * math.sin(self.time * 3.0 + offset))))
+            pygame.draw.circle(glow_surface, (120, 210, 255, glow_value), (glow_radius, glow_radius), glow_radius)
+            surface.blit(glow_surface, (int(tip.x) - glow_radius, int(tip.y) - glow_radius), special_flags=pygame.BLEND_ADD)
+
+
 class HangarView:
     """Render the station hangar management interface."""
 
@@ -34,6 +150,7 @@ class HangarView:
         self.ribbon_options: Tuple[str, ...] = ("Store", "Hold", "Locker")
         self.active_option: str = "Hold"
         self._ribbon_rects: Dict[str, pygame.Rect] = {}
+        self._interior = _HangarInteriorAnimator()
 
     def set_surface(self, surface: pygame.Surface) -> None:
         """Update the target surface when the display size changes."""
@@ -53,8 +170,14 @@ class HangarView:
                     return True
         return False
 
+    def update(self, dt: float) -> None:
+        """Advance hangar background animations."""
+
+        self._interior.update(dt)
+
     def draw(self, surface: pygame.Surface, ship: Ship, station: DockingStation, distance: float) -> None:
         width, height = surface.get_size()
+        self._interior.draw(surface)
         panel_width = int(width * 0.78)
         panel_height = int(height * 0.72)
         panel_rect = pygame.Rect((width - panel_width) // 2, (height - panel_height) // 2, panel_width, panel_height)
@@ -63,9 +186,11 @@ class HangarView:
 
         title = self.font.render(f"Docked at {station.name}", True, (220, 240, 255))
         surface.blit(title, (panel_rect.x + 28, panel_rect.y + 18))
-        range_text = self.small_font.render(
-            f"Distance: {distance:.0f} m (dock radius {station.docking_radius:.0f} m)", True, (178, 206, 228)
-        )
+        if distance <= 5.0:
+            range_message = "Docked inside hangar"
+        else:
+            range_message = f"Distance: {distance:.0f} m (dock radius {station.docking_radius:.0f} m)"
+        range_text = self.small_font.render(range_message, True, (178, 206, 228))
         surface.blit(range_text, (panel_rect.x + 28, panel_rect.y + 44))
 
         ribbon_height = 46

@@ -75,6 +75,21 @@ class SpaceWorld:
         if ai:
             self._ai[id(ship)] = ai
 
+    def remove_ship(self, ship: Ship) -> None:
+        """Remove a ship from the active simulation."""
+
+        if ship in self.ships:
+            self.ships.remove(ship)
+        self._ai.pop(id(ship), None)
+        if self.jump_ship is ship:
+            self.jump_ship = None
+            self.pending_jump_id = None
+            self.pending_jump_cost = 0.0
+            self.jump_charge_remaining = 0.0
+        for candidate in self.ships:
+            if candidate.target_id == id(ship):
+                candidate.target_id = None
+
     def update(self, dt: float) -> None:
         physics_log = self.logger.channel("physics")
         weapons_log = self.logger.channel("weapons")
