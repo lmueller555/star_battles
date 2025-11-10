@@ -632,17 +632,10 @@ class SandboxScene(Scene):
         if surface_width <= 0 or surface_height <= 0:
             return pos
 
-        # When using the SCALED display flag (our default window mode), pygame
-        # already reports mouse positions in the logical surface coordinate
-        # system.  Applying our own scaling in that situation would skew the
-        # coordinates and make the HUD widgets impossible to click.  Clamp the
-        # position to the surface bounds so the caller always receives values in
-        # the same coordinate space that the HUD uses for rendering.
-        if surface.get_flags() & pygame.SCALED:
-            clamped_x = max(0.0, min(float(surface_width), float(pos[0])))
-            clamped_y = max(0.0, min(float(surface_height), float(pos[1])))
-            return int(round(clamped_x)), int(round(clamped_y))
-
+        # Convert the window-relative mouse position back into logical surface
+        # coordinates.  This accounts for the scaling and letterboxing that
+        # pygame applies when the display surface is stretched to fit the
+        # window (including when the SCALED flag is active).
         window_width, window_height = pygame.display.get_window_size()
         if window_width <= 0 or window_height <= 0:
             return pos
@@ -655,7 +648,9 @@ class SandboxScene(Scene):
         offset_y = (window_height - display_height) / 2.0
         x = (pos[0] - offset_x) / scale
         y = (pos[1] - offset_y) / scale
-        return int(round(x)), int(round(y))
+        clamped_x = max(0.0, min(float(surface_width), float(x)))
+        clamped_y = max(0.0, min(float(surface_height), float(y)))
+        return int(round(clamped_x)), int(round(clamped_y))
 
     def _project_target_rect(
         self, position: Vector3, radius: float
