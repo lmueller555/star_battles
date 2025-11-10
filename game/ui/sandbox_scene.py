@@ -289,6 +289,10 @@ class SandboxScene(Scene):
             stabilizing = False
 
         self.world.update(dt)
+        if self.player and self.camera and self.player.collision_recoil > 0.0:
+            strength = max(0.05, self.player.collision_recoil * 0.6)
+            self.camera.apply_recoil(strength)
+            self.player.collision_recoil = 0.0
         self.dradis.update(self.world.ships, dt)
         self.mining_state = self.world.step_mining(
             self.player,
