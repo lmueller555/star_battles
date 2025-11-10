@@ -141,6 +141,39 @@ MODEL_LAYOUTS: Dict[str, Dict[str, object]] = {
             "utility": {"mode": "sym", "y": 118.0, "spacing": 188.0},
         },
     },
+    "Outpost": {
+        "shape": [
+            (-260.0, -220.0),
+            (260.0, -220.0),
+            (300.0, -120.0),
+            (300.0, 120.0),
+            (260.0, 220.0),
+            (-260.0, 220.0),
+            (-300.0, 120.0),
+            (-300.0, -120.0),
+        ],
+        "anchors": {
+            "guns": {"mode": "sym", "y": -140.0, "spacing": 260.0},
+            "launcher": {"mode": "sym", "y": -40.0, "spacing": 280.0},
+            "defensive": {
+                "mode": "grid",
+                "y": -200.0,
+                "spacing_x": 240.0,
+                "spacing_y": 70.0,
+                "columns": 2,
+            },
+            "hull": {"mode": "sym", "y": 40.0, "spacing": 240.0},
+            "engine": {"mode": "sym", "y": 200.0, "spacing": 260.0},
+            "computer": {
+                "mode": "grid",
+                "y": -240.0,
+                "spacing_x": 180.0,
+                "spacing_y": 56.0,
+                "columns": 3,
+            },
+            "utility": {"mode": "sym", "y": 120.0, "spacing": 240.0},
+        },
+    },
 }
 
 DEFAULT_ANCHORS: Dict[str, Dict[str, float]] = {

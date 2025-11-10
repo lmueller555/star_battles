@@ -22,12 +22,14 @@ COLLISION_RADII = {
     "Strike": 9.0,
     "Escort": 12.0,
     "Line": 16.0,
+    "Outpost": 260.0,
 }
 
 COLLISION_MASS = {
     "Strike": 1.0,
     "Escort": 1.5,
     "Line": 2.2,
+    "Outpost": 25.0,
 }
 
 COLLISION_RESTITUTION = 0.35

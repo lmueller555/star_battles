@@ -111,6 +111,18 @@ class SandboxScene(Scene):
                 ai = create_ai_for_ship(ship)
                 self.world.add_ship(ship, ai=ai)
 
+            outpost_spawns: list[tuple[str, str, Vector3]] = [
+                ("player", "outpost_regular", Vector3(-720.0, 0.0, -1400.0)),
+                ("enemy", "outpost_regular", Vector3(720.0, 0.0, 1600.0)),
+            ]
+            for team, frame_id, position in outpost_spawns:
+                frame = self.content.ships.get(frame_id)
+                outpost = Ship(frame, team=team)
+                outpost.kinematics.position = position
+                outpost.kinematics.velocity = Vector3(0.0, 0.0, 0.0)
+                outpost.apply_default_loadout(self.content)
+                self.world.add_ship(outpost)
+
         self.dradis = DradisSystem(self.player)
         surface = pygame.display.get_surface()
         aspect = surface.get_width() / surface.get_height()
