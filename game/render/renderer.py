@@ -22,6 +22,23 @@ ENEMY_COLOR = (255, 80, 100)
 PROJECTILE_COLOR = (255, 200, 80)
 MISSILE_COLOR = (255, 140, 60)
 
+# Engine layout presets by ship size. These are expressed using the same
+# lightweight local-space units as the wireframe definitions and roughly align
+# with common tail geometries for each hull class.
+ENGINE_LAYOUTS: dict[str, list[Vector3]] = {
+    "Strike": [
+        Vector3(-0.65, -0.12, -2.1),
+        Vector3(0.65, -0.12, -2.1),
+    ],
+    "Line": [
+        Vector3(-1.2, -0.25, -3.2),
+        Vector3(1.2, -0.25, -3.2),
+        Vector3(-1.2, 0.25, -3.2),
+        Vector3(1.2, 0.25, -3.2),
+    ],
+    "Outpost": [],
+}
+
 
 def _blend(color_a: tuple[int, int, int], color_b: tuple[int, int, int], amount: float) -> tuple[int, int, int]:
     amount = max(0.0, min(1.0, amount))
@@ -244,6 +261,170 @@ WIREFRAMES = {
 class VectorRenderer:
     def __init__(self, surface: pygame.Surface) -> None:
         self.surface = surface
+        self._rng = random.Random()
+
+    @staticmethod
+    def _local_to_world(
+        origin: Vector3,
+        right: Vector3,
+        up: Vector3,
+        forward: Vector3,
+        local: Vector3,
+    ) -> Vector3:
+        return origin + right * local.x + up * local.y + forward * local.z
+
+    def _draw_speed_streaks(
+        self,
+        camera: ChaseCamera,
+        origin: Vector3,
+        right: Vector3,
+        up: Vector3,
+        forward: Vector3,
+        ship: Ship,
+        intensity: float,
+    ) -> None:
+        if intensity <= 0.0:
+            return
+
+        tick = pygame.time.get_ticks()
+        self._rng.seed((id(ship) ^ tick) & 0xFFFFFFFF)
+
+        velocity = ship.kinematics.velocity
+        direction = velocity.normalize() if velocity.length_squared() > 1e-3 else forward
+        screen_size = self.surface.get_size()
+
+        streak_count = 6 + int(24 * intensity)
+        base_length = 1.6 + 2.4 * intensity
+        for _ in range(streak_count):
+            lateral = (
+                camera.right * self._rng.uniform(-6.0, 6.0)
+                + camera.up * self._rng.uniform(-3.5, 3.5)
+            )
+            forward_offset = direction * self._rng.uniform(-3.0, 6.0)
+            start_world = origin + lateral + forward_offset
+            end_world = start_world - direction * (
+                base_length + self._rng.uniform(0.0, base_length * 0.8)
+            )
+
+            start_screen, vis_start = camera.project(start_world, screen_size)
+            end_screen, vis_end = camera.project(end_world, screen_size)
+            if not (vis_start and vis_end):
+                continue
+
+            brightness = max(
+                0.0,
+                min(1.0, 0.18 + intensity * 0.6 + self._rng.uniform(-0.1, 0.1)),
+            )
+            streak_color = _blend(BACKGROUND, (210, 240, 255), brightness)
+            width = 1 if intensity < 0.55 else 2
+            pygame.draw.line(
+                self.surface,
+                streak_color,
+                (int(start_screen.x), int(start_screen.y)),
+                (int(end_screen.x), int(end_screen.y)),
+                width,
+            )
+
+    def _draw_hardpoints(
+        self,
+        camera: ChaseCamera,
+        origin: Vector3,
+        right: Vector3,
+        up: Vector3,
+        forward: Vector3,
+        ship: Ship,
+        color: tuple[int, int, int],
+    ) -> None:
+        if not ship.mounts:
+            return
+
+        screen_size = self.surface.get_size()
+        for mount in ship.mounts:
+            local = mount.hardpoint.position
+            base_world = self._local_to_world(origin, right, up, forward, local)
+            muzzle_world = base_world + forward * 0.9
+
+            base_screen, vis_base = camera.project(base_world, screen_size)
+            muzzle_screen, vis_muzzle = camera.project(muzzle_world, screen_size)
+            if not vis_base:
+                continue
+
+            armed = bool(mount.weapon_id)
+            base_color = _lighten(color, 0.25) if armed else _darken(color, 0.35)
+            muzzle_color = _lighten(color, 0.55) if armed else _darken(color, 0.15)
+            radius = 3 if ship.frame.size == "Strike" else 4
+            pygame.draw.circle(
+                self.surface,
+                base_color,
+                (int(round(base_screen.x)), int(round(base_screen.y))),
+                radius,
+                0,
+            )
+            pygame.draw.circle(
+                self.surface,
+                _darken(base_color, 0.35),
+                (int(round(base_screen.x)), int(round(base_screen.y))),
+                max(1, radius - 2),
+                0,
+            )
+            if vis_muzzle:
+                pygame.draw.aaline(
+                    self.surface,
+                    muzzle_color,
+                    (base_screen.x, base_screen.y),
+                    (muzzle_screen.x, muzzle_screen.y),
+                    blend=1,
+                )
+
+    def _draw_engines(
+        self,
+        camera: ChaseCamera,
+        origin: Vector3,
+        right: Vector3,
+        up: Vector3,
+        forward: Vector3,
+        ship: Ship,
+        color: tuple[int, int, int],
+    ) -> None:
+        layout = ENGINE_LAYOUTS.get(ship.frame.size, ENGINE_LAYOUTS.get("Strike", []))
+        if not layout:
+            return
+
+        screen_size = self.surface.get_size()
+        tick = pygame.time.get_ticks() * 0.001
+        for index, local in enumerate(layout):
+            base_world = self._local_to_world(origin, right, up, forward, local)
+            nozzle_world = base_world - forward * 0.35
+            base_screen, vis_base = camera.project(base_world, screen_size)
+            nozzle_screen, vis_nozzle = camera.project(nozzle_world, screen_size)
+            if not vis_base:
+                continue
+
+            base_pos = (int(round(base_screen.x)), int(round(base_screen.y)))
+            radius = 4 if ship.frame.size == "Strike" else 5
+            pygame.draw.circle(self.surface, _darken(color, 0.45), base_pos, radius, 1)
+            pygame.draw.circle(self.surface, _lighten(color, 0.15), base_pos, max(1, radius - 2), 0)
+
+            if ship.thrusters_active and vis_nozzle:
+                flicker = 0.6 + 0.4 * math.sin(tick * 12.0 + index * 1.3)
+                flame_length = 1.6 + 1.2 * flicker
+                flame_base = base_world - forward * 0.2
+                flame_tip = flame_base - forward * flame_length
+                flame_base_screen, vis_base_flame = camera.project(flame_base, screen_size)
+                flame_tip_screen, vis_tip_flame = camera.project(flame_tip, screen_size)
+                if vis_base_flame and vis_tip_flame:
+                    flame_color = _blend((130, 200, 255), (255, 190, 140), flicker * 0.6)
+                    width = 2 + int(round(flicker * 2.0))
+                    pygame.draw.line(
+                        self.surface,
+                        flame_color,
+                        (int(round(flame_base_screen.x)), int(round(flame_base_screen.y))),
+                        (int(round(flame_tip_screen.x)), int(round(flame_tip_screen.y))),
+                        width,
+                    )
+                    glow_radius = max(2, radius - 1)
+                    glow_color = _blend((60, 120, 220), (255, 220, 160), flicker * 0.5)
+                    pygame.draw.circle(self.surface, glow_color, base_pos, glow_radius, 0)
 
     def clear(self) -> None:
         self.surface.fill(BACKGROUND)
@@ -398,6 +579,14 @@ class VectorRenderer:
         color = SHIP_COLOR if ship.team == "player" else ENEMY_COLOR
         edges = WIREFRAMES.get(ship.frame.size, WIREFRAMES["Strike"])
         origin = ship.kinematics.position
+        speed = ship.kinematics.velocity.length()
+        speed_intensity = 0.0
+        if speed > 80.0:
+            speed_intensity = min(1.0, (speed - 80.0) / 35.0)
+
+        if speed_intensity > 0.0:
+            self._draw_speed_streaks(camera, origin, right, up, forward, ship, speed_intensity)
+
         for a_local, b_local in edges:
             a_world = origin + right * a_local.x + up * a_local.y + forward * a_local.z
             b_world = origin + right * b_local.x + up * b_local.y + forward * b_local.z
@@ -411,6 +600,9 @@ class VectorRenderer:
                     (b_screen.x, b_screen.y),
                     blend=1,
                 )
+
+        self._draw_hardpoints(camera, origin, right, up, forward, ship, color)
+        self._draw_engines(camera, origin, right, up, forward, ship, color)
 
     def draw_projectiles(self, camera: ChaseCamera, projectiles: Iterable[Projectile]) -> None:
         for projectile in projectiles:
