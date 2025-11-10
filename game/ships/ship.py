@@ -50,30 +50,42 @@ class ShipKinematics:
     rotation: Vector3
     angular_velocity: Vector3
 
-    def forward(self) -> Vector3:
+    def _basis_vectors(self) -> tuple[Vector3, Vector3, Vector3]:
         from math import cos, sin, radians
 
         pitch, yaw, roll = map(radians, (self.rotation.x, self.rotation.y, self.rotation.z))
-        cy = cos(yaw)
-        sy = sin(yaw)
         cp = cos(pitch)
         sp = sin(pitch)
-        forward = Vector3(cp * sy, -sp, cp * cy)
-        return forward.normalize() if forward.length_squared() > 0 else Vector3(0, 0, 1)
-
-    def right(self) -> Vector3:
-        from math import cos, sin, radians
-
-        pitch, yaw, roll = map(radians, (self.rotation.x, self.rotation.y, self.rotation.z))
         cy = cos(yaw)
         sy = sin(yaw)
         cr = cos(roll)
         sr = sin(roll)
-        right = Vector3(cy * cr + sy * sr, sy * cr - cy * sr, -sr)
-        return right.normalize() if right.length_squared() > 0 else Vector3(1, 0, 0)
+
+        forward = Vector3(sy * cp, -sp, cy * cp)
+        right = Vector3(cy * cr + sy * sp * sr, cp * sr, -sy * cr + cy * sp * sr)
+        up = Vector3(-cy * sr + sy * sp * cr, cp * cr, sy * sr + cy * sp * cr)
+
+        # Ensure numerical stability when the ship is aligned with an axis.
+        if forward.length_squared() == 0:
+            forward = Vector3(0.0, 0.0, 1.0)
+        if right.length_squared() == 0:
+            right = Vector3(1.0, 0.0, 0.0)
+        if up.length_squared() == 0:
+            up = Vector3(0.0, 1.0, 0.0)
+
+        return forward.normalize(), right.normalize(), up.normalize()
+
+    def forward(self) -> Vector3:
+        forward, _, _ = self._basis_vectors()
+        return forward
+
+    def right(self) -> Vector3:
+        _, right, _ = self._basis_vectors()
+        return right
 
     def up(self) -> Vector3:
-        return self.forward().cross(self.right())
+        _, _, up = self._basis_vectors()
+        return up
 
 
 @dataclass
