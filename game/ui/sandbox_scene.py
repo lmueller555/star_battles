@@ -23,6 +23,9 @@ from game.ui.hangar import HangarView
 from game.ui.ship_info import ShipInfoPanel
 
 
+KEY_LOOK_SCALE = 6.0
+
+
 class SandboxScene(Scene):
     def __init__(self, manager) -> None:
         super().__init__(manager)
@@ -253,13 +256,20 @@ class SandboxScene(Scene):
         else:
             mouse_dx, mouse_dy = self.input.mouse()
             freelook_held = self.input.action("freelook")
+            look_input = Vector3(
+                self.input.axis_state.get("look_x", 0.0),
+                self.input.axis_state.get("look_y", 0.0),
+                0.0,
+            )
+            if look_input.length_squared() > 0.0:
+                look_input = look_input.normalize() * KEY_LOOK_SCALE
             if freelook_held:
                 self.freelook_active = True
                 self.freelook_delta = (mouse_dx, mouse_dy)
                 self.player.control.look_delta = Vector3()
             else:
                 self.freelook_active = False
-                self.player.control.look_delta = Vector3(mouse_dx, mouse_dy, 0.0)
+                self.player.control.look_delta = look_input
             self.player.control.strafe = Vector3(
                 self.input.axis_state.get("strafe_x", 0.0),
                 self.input.axis_state.get("strafe_y", 0.0),
