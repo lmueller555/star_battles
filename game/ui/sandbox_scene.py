@@ -142,7 +142,7 @@ class SandboxScene(Scene):
         self.station_contact: tuple[DockingStation, float] | None = None
         self.selected_object = None
         self.hangar_open = False
-        self.hangar_view = HangarView(surface)
+        self.hangar_view = HangarView(surface, self.content)
         self.mining_state = None
         self.mining_feedback = ""
         self.mining_feedback_timer = 0.0
@@ -194,6 +194,10 @@ class SandboxScene(Scene):
                     return
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 self._close_ship_info_panel()
+                return
+        if self.hangar_open and self.hangar_view:
+            consumed = self.hangar_view.handle_event(ui_event)
+            if consumed:
                 return
         if self.hud:
             button_rect = self.hud.ship_info_button_rect
@@ -460,6 +464,11 @@ class SandboxScene(Scene):
                     self._enter_game_cursor()
                 if self.hangar_open:
                     self.flank_slider_dragging = False
+        if self.station_contact and self.input.consume_action("dock_explore"):
+            station, distance = self.station_contact
+            if distance <= station.docking_radius:
+                # TODO: Transition into the Outpost interior once the Dock & Explore scene is implemented.
+                self._set_combat_feedback("Dock & Explore is not available yet.", duration=2.5)
         if self.hangar_open:
             self.player.control.look_delta = Vector3()
             self.player.control.strafe = Vector3()
@@ -571,6 +580,7 @@ class SandboxScene(Scene):
             self.map_view.draw(surface, self.world, self.player, status)
         elif self.hangar_open and self.hangar_view and self.station_contact:
             station, distance = self.station_contact
+            self.hangar_view.set_surface(surface)
             self.hangar_view.draw(surface, self.player, station, distance)
         if self.ship_info_open and self.ship_info_panel:
             self.ship_info_panel.draw()

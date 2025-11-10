@@ -314,10 +314,34 @@ class HUD:
             self.draw_mining(mining_state)
 
     def draw_docking_prompt(self, name: str, distance: float, radius: float) -> None:
-        text = self.font.render(f"Dock: {name} ({distance:.0f} m / {radius:.0f} m) - Press H", True, (255, 230, 140))
-        x = self.surface.get_width() / 2 - text.get_width() / 2
-        y = self.surface.get_height() - 140
-        self.surface.blit(text, (x, y))
+        header = self.large_font.render(f"Docking available: {name}", True, (255, 232, 150))
+        x = self.surface.get_width() / 2 - header.get_width() / 2
+        y = 54
+        self.surface.blit(header, (x, y))
+
+        distance_text = self.font.render(
+            f"Range {distance:.0f} m / {radius:.0f} m", True, (220, 236, 250)
+        )
+        self.surface.blit(
+            distance_text,
+            (
+                self.surface.get_width() / 2 - distance_text.get_width() / 2,
+                y + header.get_height() + 6,
+            ),
+        )
+
+        options_text = self.font.render(
+            "[H] Dock at Hangar   |   [O] Dock & Explore",
+            True,
+            (255, 230, 160),
+        )
+        self.surface.blit(
+            options_text,
+            (
+                self.surface.get_width() / 2 - options_text.get_width() / 2,
+                y + header.get_height() + distance_text.get_height() + 18,
+            ),
+        )
 
     def draw_mining(self, state: MiningHUDState) -> None:
         panel_width = 240
