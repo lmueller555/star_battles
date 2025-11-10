@@ -1,7 +1,7 @@
 """Vector renderer built on pygame."""
 from __future__ import annotations
 
-from math import cos, radians, sin
+from math import ceil, cos, floor, radians, sin
 from typing import Iterable, List, Sequence
 
 import pygame
@@ -12,6 +12,8 @@ from game.render.camera import ChaseCamera
 from game.ships.ship import Ship
 
 BACKGROUND = (5, 8, 12)
+GRID_MINOR_COLOR = (20, 32, 44)
+GRID_MAJOR_COLOR = (34, 52, 72)
 SHIP_COLOR = (120, 220, 255)
 ENEMY_COLOR = (255, 80, 100)
 PROJECTILE_COLOR = (255, 200, 80)
@@ -64,6 +66,55 @@ class VectorRenderer:
 
     def clear(self) -> None:
         self.surface.fill(BACKGROUND)
+
+    def draw_grid(
+        self,
+        camera: ChaseCamera,
+        focus: Vector3,
+        *,
+        tile_size: float = 220.0,
+        extent: float = 3600.0,
+        height_offset: float = -18.0,
+    ) -> None:
+        """Render a tiled reference grid beneath the focus point."""
+
+        if tile_size <= 0.0 or extent <= 0.0:
+            return
+
+        half_extent = extent * 0.5
+        grid_y = focus.y + height_offset
+        screen_size = self.surface.get_size()
+
+        start_x = int(floor((focus.x - half_extent) / tile_size))
+        end_x = int(ceil((focus.x + half_extent) / tile_size))
+        start_z = int(floor((focus.z - half_extent) / tile_size))
+        end_z = int(ceil((focus.z + half_extent) / tile_size))
+
+        def _draw_segment(a: Vector3, b: Vector3, color: tuple[int, int, int]) -> None:
+            a_screen, vis_a = camera.project(a, screen_size)
+            b_screen, vis_b = camera.project(b, screen_size)
+            if vis_a and vis_b:
+                pygame.draw.aaline(
+                    self.surface,
+                    color,
+                    (a_screen.x, a_screen.y),
+                    (b_screen.x, b_screen.y),
+                    blend=1,
+                )
+
+        for xi in range(start_x, end_x + 1):
+            x_world = xi * tile_size
+            color = GRID_MAJOR_COLOR if xi % 5 == 0 else GRID_MINOR_COLOR
+            a = Vector3(x_world, grid_y, start_z * tile_size)
+            b = Vector3(x_world, grid_y, end_z * tile_size)
+            _draw_segment(a, b, color)
+
+        for zi in range(start_z, end_z + 1):
+            z_world = zi * tile_size
+            color = GRID_MAJOR_COLOR if zi % 5 == 0 else GRID_MINOR_COLOR
+            a = Vector3(start_x * tile_size, grid_y, z_world)
+            b = Vector3(end_x * tile_size, grid_y, z_world)
+            _draw_segment(a, b, color)
 
     def draw_ship(self, camera: ChaseCamera, ship: Ship) -> None:
         matrix = _rotation_matrix(ship.kinematics.rotation)
