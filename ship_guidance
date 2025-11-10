@@ -332,3 +332,265 @@ Role bonus (if any) is active and visible (e.g., Command transponder discount).
 Pre-installs appear correctly on first spawn.
 
 Advanced variant: added slots and stat upticks adhere to §4 (Engine/Hull/Computer by role) and energy increases accordingly.
+
+Outposts (stations, system control, sentry networks, services)
+1) Concept & role
+
+Outposts are stationary battle stations that function as the hub of a star system: they enable docking, refit/repair, resource management, and (at certain control levels) act as FTL jump beacons. Each faction can field an Outpost in a system; if both are present, the sector map displays a split ring (half blue/half red). On the system map, show the station icon; on the sector map, render a red or blue circle (split when both factions are present).
+
+Outposts exist in three strength tiers:
+
+Regular — base hull 50,000
+
+Upgraded — base hull 55,000
+
+Fortified — base hull 60,000
+
+The tier and the number/weight of Sentry Platforms around an Outpost are determined by System Control Level, which is driven by Outpost Progress % in that system.
+
+2) System control & Outpost Progress
+2.1 Progress scale & visibility
+
+Progress value: 0% … 300% (cap at 300%).
+
+UI: show a persistent “Outpost progress” widget (top-left), with current System Control Level (0–10) derived from the progress value.
+
+2.2 How progress increases (player/system activity)
+
+Increase progress by any of the following activities performed by the owning faction in that system:
+
+Mining (individual and via Mining Ships)
+
+PVE (killing NPCs)
+
+PVP (killing enemy players)
+
+Freighter in Distress mission success
+
+Drone Incursion (Nexus) mission success
+
+Penalty: an unsuccessful Freighter in Distress mission subtracts 15% from the progress counter.
+
+2.3 Auto-drain & retreat
+
+Auto-drain: progress decreases per minute when player activity subsides (make the drain rate a tunable).
+
+Retreat threshold: if progress drops below 90%, any active Outpost jumps out (despawns from the system).
+
+2.4 Destruction & repair timer
+
+If an Outpost is destroyed, it leaves the system. The owning faction’s progress UI replaces the percent with a Repair Timer set to 60 minutes.
+
+During repair countdown, players can still contribute to progress by doing the activities above. When the timer expires:
+
+If accumulated progress corresponds to Control Level ≥ 2 (≥90%), the progress resumes from that level (and the Outpost will re-enter per the level rules below).
+
+Otherwise, resume normal progress at the achieved number and wait for re-entry conditions to be met.
+
+2.5 Control levels & what they unlock
+
+Map progress to levels and station capabilities:
+
+Level	Progress	Station Change / Unlocks
+1	50%	System “captured” by a faction. No Outpost yet.
+2	90%	Regular Outpost enters system.
+3	125%	Outpost gains FTL Jump Beacon + 2 Light Sentry Platforms.
+4	175%	+2 more Light Sentry Platforms (total 4 Light).
+5	200%	Outpost upgrades to Upgraded; 2 Light → 2 Medium (net: 2 Light + 2 Medium).
+6	225%	Remaining 2 Light → 2 Medium (net: 4 Medium).
+7	250%	2 Medium → 2 Heavy (net: 2 Medium + 2 Heavy).
+8	275%	Outpost upgrades to Fortified; remaining 2 Medium → 2 Heavy (net: 4 Heavy).
+9–10	300%	No further changes (capstone stability).
+
+Both factions can have Outposts in the same system when their respective progress/levels warrant it. The sector ring becomes a split color.
+
+3) Sentry Platforms (defensive perimeter)
+
+Purpose: add graduated firepower and area denial around the Outpost based on the current control level.
+
+Placement: spawn platforms at equal angular intervals on a ring around the Outpost at a fixed radius (tunable), with line-of-fire overlap but no occlusion of the dock bay.
+
+Categories & given stats:
+
+Light Sentry Platform
+
+Hull: 7,500
+
+Energy: 3,000
+
+Armor: 35
+
+Armament: 8 × 20 mm autocannon turrets, 2 × Interceptor Missile Launchers
+
+Medium Sentry Platform
+
+Hull: 10,000
+
+Energy: 3,000
+
+Armor: 60
+
+Armament: 8 × 127 mm autocannon turrets, 5 × Medium Missile Launchers
+
+Heavy Sentry Platform
+
+Stats not provided in your brief. Define as a tunable upgrade over Medium (greater hull/armor/energy and heavier weapons). Document values explicitly when you decide them.
+
+Behavior:
+
+Platforms are immobile, inherit faction allegiance and IFF.
+
+Targeting priorities: missiles → strike craft → escorts → lines → capitals (tunable).
+
+Power economy: weapons consume platform energy; platforms pause fire to recharge if depleted.
+
+Respawn: no auto-respawn during the same Outpost life; they’re recreated when the Outpost re-enters at the appropriate level.
+
+4) Station services & docking
+4.1 Docking mechanics
+
+Docking radius: use your game’s standard (e.g., ≤ 800–1000 m) for interact prompts.
+
+Flow: slow to docking speed → press Interact → fade to Outpost Interior scene (faction-specific).
+
+Collision: dock entry corridor is non-combat; disable weapons once docking begins.
+
+4.2 Services available inside
+
+Fitting / Equipment Management: swap ship modules and weapons by slot family; validate power and slot constraints.
+
+Repairs & Recharge:
+
+Repair Hull (instant in bay) and Durability (consumes Titanium or credits).
+
+Recharge Power pool instantly; refill ammo/missiles.
+
+Resource Banking & Trade: deposit Tylium, Titanium, Water; exchange consistent with your economy rules.
+
+Mission Board: accept Freighter in Distress, Drone Incursion, contracts, etc.
+
+Spawn/Respawn Point: player can set Outpost as local respawn.
+
+FTL Beacon Access: if the Outpost has a beacon (Control Level ≥ 3), show Jump-to-Outpost/Jump-from-Outpost options subject to rules below.
+
+4.3 FTL beacon behavior
+
+Unlock level: from Level 3 upward.
+
+Jump-to-Outpost: allies can FTL to the Outpost if (a) they are not interdicted, (b) pay per-LY cost, (c) within their ship’s FTL range or you decide to allow beacon as a destination outside ship range (design choice; carriers often enabled global jumps—decide and document).
+
+Jump-from-Outpost: standard ship FTL rules apply (range/cost/charge).
+
+Interdiction: enemy jammers near the Outpost can delay or block inbound/outbound jumps (tunable radius/time).
+
+5) Ownership, UI, and map representation
+
+Ownership: store owner_faction per Outpost instance; when destroyed or retreated, set owner_faction = None.
+
+Sector map ring: draw a blue or red ring at system node; draw split ring if both factions have Outposts.
+
+System map icon: station glyph with a tier badge (Regular/Upgraded/Fortified) and a small counter of active platforms (L/M/H).
+
+HUD cues: broadcast faction-colored homing marker and distance in meters when Outpost exists.
+
+6) State machine (no code—behavioral blueprint)
+
+States
+
+Absent (no Outpost)
+
+Spooling (progress at/above threshold, jump-in pending)
+
+Deployed: Regular / Upgraded / Fortified
+
+Retreating (progress fell below 90% or hull reached 0 → jump-out)
+
+Repair Countdown (60 min), with progress accumulation active
+
+Transitions
+
+Absent → Spooling when progress ≥ 90%
+
+Spooling → Deployed(Regular) enter sequence & spawn perimeter platforms per current level
+
+Deployed(Regular/Upgraded/Fortified) → Retreating when progress < 90% OR hull ≤ 0
+
+Retreating → Repair Countdown (if destroyed) or Retreating → Absent (if progress fell)
+
+Repair Countdown → Absent when timer ends but progress < 90%
+
+Repair Countdown → Spooling when timer ends and progress ≥ 90% (resume at achieved level)
+
+7) Combat interactions & objectives
+
+Attack/defense: Outposts and platforms engage hostiles automatically; attackers can force retreat by destroying the Outpost, which also triggers the 60-minute repair timer.
+
+PVP/PVE hooks: killing enemies near the Outpost contributes to progress (for defenders) or stalls it (for attackers) per your contribution rules.
+
+Objective UI: when the Outpost is present, show an objective card with hull %, tier, platform status, and whether the FTL beacon is online.
+
+8) Tuning & fairness guidelines
+
+Platform DPS: set to deter lone attackers but not to erase full fleets; scale with level (Light < Medium < Heavy).
+
+Auto-drain: choose a value that empties a quiet system back below 90% within a reasonable window (e.g., tens of minutes) to keep the galaxy dynamic.
+
+Beacon power: powerful, but keep interdiction counters viable.
+
+Progress sources: weight group activities (Freighters/Drone Incursions) slightly higher than solo mining so systems with coordinated play upgrade faster.
+
+Spawn radius: position platforms so defenders can reach the fight, but attackers can also maneuver around blind sectors.
+
+9) Data you must define (per Outpost & per Platform)
+
+Outpost
+
+Faction, System ID, Position
+
+Tier (Regular/Upgraded/Fortified)
+
+Hull HP (per tier), Armor, Regen (if any)
+
+Control Level (derived) and Progress %
+
+Auto-drain rate (%/min)
+
+Repair Timer remaining (if any)
+
+Beacon enabled (bool)
+
+Platform layout (ring radius, count by category)
+
+Services enabled (booleans)
+
+Sentry Platform (by category)
+
+Hull, Armor, Energy, Recharge (if applicable)
+
+Weapons package (counts & types)
+
+Target priorities & engagement range
+
+Spawn transform relative to Outpost (radius, angle)
+
+Faction IFF
+
+Heavy Platform: stats not provided—fill these as a deliberate design pass and document them before implementation.
+
+10) Test scenarios (acceptance)
+
+Progress build-up: perform mining/PVE/PVP until 90% → Outpost jumps in at Level 2; verify tier = Regular.
+
+Level ups: continue to 125%, 175%, 200%, 225%, 250%, 275% → verify beacon and platform upgrades exactly match the table.
+
+Auto-drain: leave system idle until progress < 90% → Outpost retreats.
+
+Destruction: kill a Level-N Outpost → immediate retreat; 60-minute repair timer starts; continue contributing; after timer, ensure re-entry at the correct level.
+
+Dual presence: both factions cross thresholds → both Outposts present; sector ring splits correctly.
+
+Beacon: at Level ≥ 3, jump to/from Outpost; verify interdiction correctly blocks/delays.
+
+Services: dock and use fit/repair/rearm/bank; verify costs and constraints.
+
+Platform scaling: platform composition and stats match level; no respawn until station cycles.
