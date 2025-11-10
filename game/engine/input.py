@@ -30,7 +30,7 @@ DEFAULT_BINDINGS = {
     "toggle_overlay": ["K_F3"],
     "toggle_auto_throttle": ["K_x"],
     "toggle_auto_level": ["K_l"],
-    "open_map": ["K_m"],
+    "open_map": ["K_n"],
     "commit_jump": ["K_j"],
     "activate_pd": ["K_g"],
     "open_hangar": ["K_h"],
