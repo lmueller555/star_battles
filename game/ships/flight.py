@@ -14,6 +14,8 @@ PASSIVE_DRAG = 0.12
 STRAFE_DAMPING = 4.0
 AUTO_LEVEL_RATE = 90.0
 AUTO_INPUT_DEADZONE = 0.05
+THRUSTER_SPEED_BONUS = 0.5
+THRUSTER_TYLIUM_DRAIN = 0.35
 
 
 def _approach(current: float, target: float, rate: float) -> float:
@@ -29,13 +31,22 @@ def update_ship_flight(ship: Ship, dt: float, logger=None) -> None:
     kin = ship.kinematics
     ctrl = ship.control
 
-    # Update power regeneration and boost drain.
-    if ctrl.boost and ship.power > 0.0:
-        boost_target = stats.boost_speed
-        ship.power = max(0.0, ship.power - stats.boost_drain * dt)
-    else:
-        boost_target = None
-        ship.power = min(stats.power_cap, ship.power + stats.power_regen * dt)
+    # Regenerate ship power for other systems.
+    ship.power = min(stats.power_cap, ship.power + stats.power_regen * dt)
+
+    # Thruster engagement and tylium drain.
+    thrusters_requested = bool(ctrl.boost)
+    thrusters_active = False
+    if thrusters_requested and ship.resources.tylium > 0.0:
+        drain = THRUSTER_TYLIUM_DRAIN * dt
+        if ship.resources.tylium >= drain:
+            ship.resources.tylium -= drain
+            thrusters_active = True
+        else:
+            ship.resources.tylium = 0.0
+            thrusters_active = False
+    if not thrusters_active:
+        ctrl.boost = False
 
     forward = kin.forward()
     right = kin.right()
@@ -51,15 +62,20 @@ def update_ship_flight(ship: Ship, dt: float, logger=None) -> None:
             ship.auto_throttle_ratio = throttle_ratio
     if ctrl.brake and ship.auto_throttle_enabled:
         ship.disable_auto_throttle()
-    target_speed = stats.max_speed * throttle_ratio
-    if boost_target is not None:
-        target_speed = boost_target
+
+    flank_speed = stats.max_speed * max(0.0, min(1.0, ship.flank_speed_ratio))
+    current_max_speed = flank_speed
+    accel_value = stats.acceleration
+    if thrusters_active:
+        current_max_speed *= 1.0 + THRUSTER_SPEED_BONUS
+        accel_value *= 1.0 + THRUSTER_SPEED_BONUS
+    target_speed = current_max_speed * throttle_ratio
     if ctrl.brake:
         target_speed = 0.0
 
     speed_error = target_speed - current_speed
-    accel = stats.acceleration if speed_error >= 0 else stats.acceleration * 0.5
-    accel_step = max(-stats.acceleration, min(stats.acceleration, speed_error))
+    accel = accel_value if speed_error >= 0 else accel_value * 0.5
+    accel_step = max(-accel_value, min(accel_value, speed_error))
     kin.velocity += forward * accel_step * dt
 
     # Strafe control.
@@ -109,12 +125,13 @@ def update_ship_flight(ship: Ship, dt: float, logger=None) -> None:
         kin.rotation.z = (roll + 360.0) % 360.0
         kin.angular_velocity.z = _approach(kin.angular_velocity.z, 0.0, stats.turn_accel * dt)
 
+    ship.thrusters_active = thrusters_active
     ship.tick_cooldowns(dt)
     if ship.hull_regen_cooldown > 0.0:
         ship.hull_regen_cooldown = max(0.0, ship.hull_regen_cooldown - dt)
     else:
         ship.hull = min(ship.stats.hull_hp, ship.hull + ship.stats.hull_regen * dt)
-    ship.boost_meter = ship.power
+    ship.boost_meter = ship.resources.tylium
 
 
 __all__ = ["update_ship_flight"]

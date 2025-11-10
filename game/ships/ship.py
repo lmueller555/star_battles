@@ -99,8 +99,10 @@ class Ship:
             angular_velocity=Vector3(0.0, 0.0, 0.0),
         )
         self.control = ShipControlState()
+        self.resources = ShipResources(tylium=320.0, titanium=180.0, water=40.0)
+        self.tylium_capacity = self.resources.tylium
         self.power = self.stats.power_cap
-        self.boost_meter = self.stats.power_cap
+        self.boost_meter = self.tylium_capacity
         self.hull = self.stats.hull_hp
         self.durability = self.stats.durability
         self.hull_regen_cooldown = 0.0
@@ -109,7 +111,6 @@ class Ship:
         self.lock_progress: float = 0.0
         self.lock_decay_delay: float = 0.5
         self.lock_timer: float = 0.0
-        self.resources = ShipResources(tylium=320.0, titanium=180.0, water=40.0)
         self.modules_by_slot: Dict[str, list[ItemData]] = defaultdict(list)
         self._module_stat_cache: Dict[str, float] = defaultdict(float)
         self.countermeasure_cooldown: float = 0.0
@@ -117,6 +118,8 @@ class Ship:
         self.auto_throttle_ratio: float = 0.0
         self.auto_level_enabled: bool = True
         self.collision_recoil: float = 0.0
+        self.flank_speed_ratio: float = 0.6
+        self.thrusters_active: bool = False
         if modules:
             for module in modules:
                 self.equip_module(module)
@@ -126,12 +129,13 @@ class Ship:
 
     def reset(self) -> None:
         self.power = self.stats.power_cap
-        self.boost_meter = self.stats.power_cap
+        self.boost_meter = self.tylium_capacity
         self.hull = self.stats.hull_hp
         self.durability = self.stats.durability
         self.kinematics.velocity = Vector3()
         self.kinematics.angular_velocity = Vector3()
         self.control = ShipControlState()
+        self.resources.tylium = self.tylium_capacity
         for mount in self.mounts:
             mount.cooldown = 0.0
             mount.lock_progress = 0.0
@@ -139,6 +143,8 @@ class Ship:
         self.auto_throttle_enabled = False
         self.auto_throttle_ratio = 0.0
         self.collision_recoil = 0.0
+        self.flank_speed_ratio = 0.6
+        self.thrusters_active = False
 
     def tick_cooldowns(self, dt: float) -> None:
         for mount in self.mounts:
@@ -193,7 +199,7 @@ class Ship:
         if hold_current_speed:
             forward = self.kinematics.forward()
             current_speed = max(0.0, self.kinematics.velocity.dot(forward))
-            max_speed = max(1.0, self.stats.max_speed)
+            max_speed = max(1.0, self.stats.max_speed * max(0.0, min(1.0, self.flank_speed_ratio)))
             self.auto_throttle_ratio = max(0.0, min(1.0, current_speed / max_speed))
         self.auto_throttle_enabled = True
 
@@ -207,6 +213,15 @@ class Ship:
             return False
         self.enable_auto_throttle()
         return True
+
+    def set_flank_speed_ratio(self, ratio: float) -> None:
+        """Update the flank speed slider ratio and clamp the value."""
+
+        clamped = max(0.0, min(1.0, ratio))
+        if self.flank_speed_ratio != clamped:
+            self.flank_speed_ratio = clamped
+            if self.auto_throttle_enabled:
+                self.enable_auto_throttle(hold_current_speed=True)
 
     def set_auto_level(self, enabled: bool) -> None:
         self.auto_level_enabled = enabled

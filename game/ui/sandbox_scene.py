@@ -10,7 +10,7 @@ from game.engine.input import InputMapper
 from game.engine.logger import GameLogger
 from game.engine.scene import Scene
 from game.render.camera import ChaseCamera
-from game.render.hud import HUD
+from game.render.hud import HUD, flank_slider_rect
 from game.render.renderer import VectorRenderer
 from game.sensors.dradis import DradisSystem
 from game.ships.ship import Ship
@@ -50,6 +50,8 @@ class SandboxScene(Scene):
         self.weapon_group_actions: dict[str, str] = {}
         self.combat_feedback: str = ""
         self.combat_feedback_timer: float = 0.0
+        self.flank_slider_ratio: float = 0.6
+        self.flank_slider_dragging: bool = False
 
     def on_enter(self, **kwargs) -> None:
         self.content = kwargs["content"]
@@ -109,6 +111,8 @@ class SandboxScene(Scene):
         self.combat_feedback_timer = 0.0
         pygame.mouse.set_visible(False)
         pygame.event.set_grab(True)
+        if self.player:
+            self.player.set_flank_speed_ratio(self.flank_slider_ratio)
 
     def on_exit(self) -> None:
         pygame.mouse.set_visible(True)
@@ -118,6 +122,18 @@ class SandboxScene(Scene):
     def handle_event(self, event: pygame.event.Event) -> None:
         if self.input:
             self.input.handle_event(event)
+        if self.player and self.hud and not (self.map_open or self.hangar_open):
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                rect = flank_slider_rect(self.hud.surface.get_size()).inflate(12, 12)
+                if rect.collidepoint(event.pos):
+                    self.flank_slider_dragging = True
+                    self._update_flank_slider_from_mouse(event.pos[0])
+            elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                self.flank_slider_dragging = False
+            elif event.type == pygame.MOUSEMOTION and self.flank_slider_dragging:
+                self._update_flank_slider_from_mouse(event.pos[0])
+        if event.type in (pygame.MOUSEBUTTONUP, pygame.MOUSEBUTTONDOWN) and not (self.player and self.hud):
+            self.flank_slider_dragging = False
         if self.map_open and self.map_view:
             selection = self.map_view.handle_event(event)
             if selection:
@@ -147,12 +163,14 @@ class SandboxScene(Scene):
         self.freelook_delta = (0.0, 0.0)
         scanning = False
         stabilizing = False
+        self.player.set_flank_speed_ratio(self.flank_slider_ratio)
         if self.input.consume_action("open_map"):
             self.map_open = not self.map_open
             pygame.mouse.set_visible(self.map_open)
             pygame.event.set_grab(not self.map_open)
             if self.map_open:
                 self.hangar_open = False
+                self.flank_slider_dragging = False
         if self.map_open:
             self.player.control.look_delta = Vector3()
             self.player.control.strafe = Vector3()
@@ -277,6 +295,8 @@ class SandboxScene(Scene):
                 self.hangar_open = not self.hangar_open
                 pygame.mouse.set_visible(self.hangar_open)
                 pygame.event.set_grab(not self.hangar_open)
+                if self.hangar_open:
+                    self.flank_slider_dragging = False
         if self.hangar_open:
             self.player.control.look_delta = Vector3()
             self.player.control.strafe = Vector3()
@@ -287,6 +307,7 @@ class SandboxScene(Scene):
             self.freelook_active = False
             scanning = False
             stabilizing = False
+            self.flank_slider_dragging = False
 
         self.world.update(dt)
         if self.player and self.camera and self.player.collision_recoil > 0.0:
@@ -374,6 +395,17 @@ class SandboxScene(Scene):
             self._blit_feedback(surface, self.mining_feedback, offset=70)
         if self.combat_feedback_timer > 0.0:
             self._blit_feedback(surface, self.combat_feedback, offset=40)
+
+    def _update_flank_slider_from_mouse(self, mouse_x: int) -> None:
+        if not self.player or not self.hud:
+            return
+        rect = flank_slider_rect(self.hud.surface.get_size())
+        if rect.width <= 0:
+            return
+        ratio = (mouse_x - rect.left) / rect.width
+        ratio = max(0.0, min(1.0, ratio))
+        self.flank_slider_ratio = ratio
+        self.player.set_flank_speed_ratio(ratio)
 
     def _set_mining_feedback(self, message: str, duration: float = 2.0) -> None:
         if not message:

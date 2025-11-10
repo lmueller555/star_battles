@@ -13,6 +13,23 @@ from game.world.mining import MiningHUDState
 from game.ships.ship import Ship
 
 
+FLANK_SLIDER_WIDTH = 280
+FLANK_SLIDER_HEIGHT = 14
+FLANK_SLIDER_MARGIN = 72
+THRUSTER_SPEED_MULTIPLIER = 1.5
+
+
+def flank_slider_rect(surface_size: tuple[int, int]) -> pygame.Rect:
+    width, height = surface_size
+    rect = pygame.Rect(
+        max(0, width // 2 - FLANK_SLIDER_WIDTH // 2),
+        max(0, height - FLANK_SLIDER_MARGIN - FLANK_SLIDER_HEIGHT),
+        FLANK_SLIDER_WIDTH,
+        FLANK_SLIDER_HEIGHT,
+    )
+    return rect
+
+
 def _gimbal_radius(
     angle_deg: float,
     fov_deg: float,
@@ -145,7 +162,7 @@ class HUD:
             self.surface.blit(text, (x, base_y + offset - 16))
 
         draw_bar("Power", player.power, player.stats.power_cap, (120, 200, 255), 0)
-        draw_bar("Boost", player.boost_meter, player.stats.power_cap, (255, 160, 80), 24)
+        draw_bar("Tylium Reserve", player.resources.tylium, player.tylium_capacity, (255, 190, 120), 24)
         resources = [
             f"Tylium: {player.resources.tylium:.0f}",
             f"Titanium: {player.resources.titanium:.0f}",
@@ -224,6 +241,7 @@ class HUD:
         self.draw_meters(player)
         self.draw_lock_ring(camera, player, target)
         self.draw_dradis(dradis)
+        self.draw_flank_speed_slider(player)
         self.draw_overlay(sim_dt, fps, player, target)
         if docking_prompt:
             name, distance, radius = docking_prompt
@@ -258,6 +276,7 @@ class HUD:
             for i, line in enumerate(lines):
                 text = self.font.render(line, True, (200, 220, 255))
                 self.surface.blit(text, (x + 12, y + 32 + i * 18))
+
             bar_rect = pygame.Rect(x + 12, y + 90, panel_width - 24, 12)
             pygame.draw.rect(self.surface, (50, 70, 90), bar_rect, 1)
             pygame.draw.rect(
@@ -294,5 +313,51 @@ class HUD:
                 self.surface.blit(status_text, (x + panel_width - status_text.get_width() - 12, list_y))
                 list_y += 18
 
+    def draw_flank_speed_slider(self, player: Ship) -> None:
+        rect = flank_slider_rect(self.surface.get_size())
+        pygame.draw.rect(self.surface, (10, 18, 26), rect.inflate(12, 12))
+        pygame.draw.rect(self.surface, (60, 90, 120), rect.inflate(12, 12), 1)
 
-__all__ = ["HUD", "format_distance"]
+        ratio = max(0.0, min(1.0, player.flank_speed_ratio))
+        fill_width = int(rect.width * ratio)
+        if fill_width > 0:
+            fill_rect = pygame.Rect(rect.left, rect.top, fill_width, rect.height)
+            fill_color = (255, 200, 120) if player.thrusters_active else (120, 200, 255)
+            pygame.draw.rect(self.surface, fill_color, fill_rect)
+        pygame.draw.rect(self.surface, (35, 60, 85), rect, 2)
+
+        handle_x = rect.left + fill_width
+        handle_rect = pygame.Rect(handle_x - 5, rect.top - 4, 10, rect.height + 8)
+        handle_color = (255, 230, 160) if player.thrusters_active else (200, 220, 240)
+        pygame.draw.rect(self.surface, handle_color, handle_rect)
+        pygame.draw.rect(self.surface, (70, 110, 150), handle_rect, 1)
+
+        label = self.font.render("Flank Speed", True, (200, 220, 255))
+        label_pos = (
+            rect.centerx - label.get_width() // 2,
+            rect.top - 24,
+        )
+        self.surface.blit(label, label_pos)
+
+        flank_speed = player.stats.max_speed * ratio
+        thruster_speed = flank_speed * THRUSTER_SPEED_MULTIPLIER
+        speed_text = self.font.render(
+            f"{flank_speed:.0f} m/s | {thruster_speed:.0f} m/s",
+            True,
+            (160, 210, 230),
+        )
+        self.surface.blit(
+            speed_text,
+            (rect.centerx - speed_text.get_width() // 2, rect.bottom + 8),
+        )
+
+        status = "Thrusters ACTIVE" if player.thrusters_active else "Thrusters STANDBY"
+        status_color = (255, 200, 140) if player.thrusters_active else (150, 190, 220)
+        status_text = self.font.render(status, True, status_color)
+        self.surface.blit(
+            status_text,
+            (rect.centerx - status_text.get_width() // 2, rect.bottom + 26),
+        )
+
+
+__all__ = ["HUD", "format_distance", "flank_slider_rect"]
