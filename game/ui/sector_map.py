@@ -65,7 +65,9 @@ class SectorMapView:
         return points
 
     def _compute_layout(self, surface_size: tuple[int, int]) -> None:
-        self._rect = map_display_rect(surface_size)
+        width = max(0, surface_size[0])
+        height = max(0, surface_size[1])
+        self._rect = pygame.Rect(0, 0, int(width), int(height))
         width = float(self._rect.width)
         height = float(self._rect.height)
         min_x, min_y, max_x, max_y = self.sector.bounds()
