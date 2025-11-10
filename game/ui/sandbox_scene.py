@@ -417,6 +417,10 @@ class SandboxScene(Scene):
         self.hud.surface = surface
         self.renderer.clear()
         self.renderer.draw_grid(self.camera, self.player.kinematics.position)
+        self.renderer.draw_asteroids(
+            self.camera,
+            self.world.asteroids_in_current_system(),
+        )
         target = next(
             (
                 s

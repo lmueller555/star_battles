@@ -10,6 +10,7 @@ from pygame.math import Vector3
 from game.combat.weapons import Projectile
 from game.render.camera import ChaseCamera
 from game.ships.ship import Ship
+from game.world.asteroids import Asteroid
 
 BACKGROUND = (5, 8, 12)
 GRID_MINOR_COLOR = (20, 32, 44)
@@ -115,6 +116,48 @@ class VectorRenderer:
             a = Vector3(start_x * tile_size, grid_y, z_world)
             b = Vector3(end_x * tile_size, grid_y, z_world)
             _draw_segment(a, b, color)
+
+    def draw_asteroids(self, camera: ChaseCamera, asteroids: Iterable[Asteroid]) -> None:
+        screen_size = self.surface.get_size()
+
+        def _screen_radius(center: Vector3, world_point: Vector3) -> int:
+            other, visible = camera.project(world_point, screen_size)
+            if not visible:
+                return 0
+            delta = Vector3(other.x - center.x, other.y - center.y, 0.0)
+            return int(max(0.0, delta.length()))
+
+        for asteroid in asteroids:
+            center, visible = camera.project(asteroid.position, screen_size)
+            if not visible:
+                continue
+            radius_vectors = [
+                asteroid.position + camera.up * asteroid.radius,
+                asteroid.position + camera.right * asteroid.radius,
+                asteroid.position - camera.up * asteroid.radius,
+                asteroid.position - camera.right * asteroid.radius,
+            ]
+            radii = [
+                _screen_radius(center, vector)
+                for vector in radius_vectors
+            ]
+            radius = max(radii)
+            if radius <= 0:
+                radius = 2
+            color = asteroid.display_color
+            pygame.draw.circle(
+                self.surface,
+                color,
+                (int(center.x), int(center.y)),
+                radius,
+            )
+            pygame.draw.circle(
+                self.surface,
+                (60, 40, 24),
+                (int(center.x), int(center.y)),
+                radius,
+                1,
+            )
 
     def draw_ship(self, camera: ChaseCamera, ship: Ship) -> None:
         matrix = _rotation_matrix(ship.kinematics.rotation)

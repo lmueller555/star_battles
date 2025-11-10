@@ -16,6 +16,7 @@ from game.world.sector import SectorMap
 from game.world.station import DockingStation, StationDatabase
 from game.world.mining import MiningDatabase, MiningManager, MiningHUDState
 from game.ftl.utils import compute_ftl_charge, compute_ftl_cost
+from game.world.asteroids import Asteroid, AsteroidField
 
 COLLISION_RADII = {
     "Strike": 9.0,
@@ -63,6 +64,8 @@ class SpaceWorld:
         self._station_cache: dict[str, list[DockingStation]] = {}
         self.mining = MiningManager(mining)
         self.mining.enter_system(self.current_system_id)
+        self.asteroids = AsteroidField()
+        self.asteroids.enter_system(self.current_system_id)
         self._ai: dict[int, "ShipAI"] = {}
 
     def add_ship(self, ship: Ship, ai: "ShipAI | None" = None) -> None:
@@ -74,6 +77,8 @@ class SpaceWorld:
         physics_log = self.logger.channel("physics")
         weapons_log = self.logger.channel("weapons")
         ftl_log = self.logger.channel("ftl")
+
+        self.asteroids.update(dt)
 
         # Reset per-frame collision feedback.
         for ship in self.ships:
@@ -344,6 +349,7 @@ class SpaceWorld:
         ship.kinematics.angular_velocity = Vector3(0.0, 0.0, 0.0)
         self.current_system_id = destination
         self.mining.enter_system(destination)
+        self.asteroids.enter_system(destination)
         self.pending_jump_id = None
         self.pending_jump_cost = 0.0
         self.jump_ship = None
@@ -358,6 +364,9 @@ class SpaceWorld:
             stations = list(self.stations.in_system(self.current_system_id))
             self._station_cache[self.current_system_id] = stations
         return self._station_cache[self.current_system_id]
+
+    def asteroids_in_current_system(self) -> list[Asteroid]:
+        return list(self.asteroids.current_field())
 
     def nearest_station(self, ship: Ship) -> tuple[Optional[DockingStation], float]:
         position = ship.kinematics.position
@@ -462,6 +471,9 @@ class SpaceWorld:
     ) -> MiningHUDState:
         if scanning:
             self.mining.scan_step(ship, dt)
+            self.asteroids.scan_step(ship, dt)
+        else:
+            self.asteroids.halt_scanning()
         mining_log = self.logger.channel("mining")
         state = self.mining.step(
             ship,
