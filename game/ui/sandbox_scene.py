@@ -638,7 +638,9 @@ class SandboxScene(Scene):
         y = (pos[1] - offset_y) / scale
         return int(round(x)), int(round(y))
 
-    def _project_target_rect(self, position: Vector3, radius: float) -> tuple[pygame.Rect, float] | None:
+    def _project_target_rect(
+        self, position: Vector3, radius: float
+    ) -> tuple[pygame.Rect, float, pygame.Rect] | None:
         if not self.camera or not self.hud:
             return None
         if radius <= 0.0:
@@ -672,9 +674,10 @@ class SandboxScene(Scene):
             int(round(center_y)),
         )
         rect = rect.inflate(16, 16)
+        pick_rect = rect.copy()
         bounds = pygame.Rect(0, 0, screen_size[0], screen_size[1])
         rect.clamp_ip(bounds)
-        return rect, center.z
+        return rect, center.z, pick_rect
 
     def _ship_pick_radius(self, ship: Ship) -> float:
         return COLLISION_RADII.get(ship.frame.size, 12.0)
@@ -691,20 +694,24 @@ class SandboxScene(Scene):
         for ship in self.world.ships:
             if ship is self.player or not ship.is_alive():
                 continue
-            projected = self._project_target_rect(ship.kinematics.position, self._ship_pick_radius(ship))
+            projected = self._project_target_rect(
+                ship.kinematics.position, self._ship_pick_radius(ship)
+            )
             if not projected:
                 continue
-            rect, depth = projected
-            if rect.inflate(12, 12).collidepoint(mouse_pos) and depth < best_depth:
+            _, depth, pick_rect = projected
+            if pick_rect.inflate(12, 12).collidepoint(mouse_pos) and depth < best_depth:
                 best = ship
                 best_depth = depth
 
         for asteroid in self.world.asteroids_in_current_system():
-            projected = self._project_target_rect(asteroid.position, max(asteroid.radius, 6.0))
+            projected = self._project_target_rect(
+                asteroid.position, max(asteroid.radius, 6.0)
+            )
             if not projected:
                 continue
-            rect, depth = projected
-            if rect.inflate(8, 8).collidepoint(mouse_pos) and depth < best_depth:
+            _, depth, pick_rect = projected
+            if pick_rect.inflate(8, 8).collidepoint(mouse_pos) and depth < best_depth:
                 best = asteroid
                 best_depth = depth
 
@@ -748,7 +755,7 @@ class SandboxScene(Scene):
         projected = self._project_target_rect(position, radius)
         if not projected:
             return None
-        rect, _ = projected
+        rect, _, _ = projected
         distance = position.distance_to(self.player.kinematics.position)
         return TargetOverlay(
             rect=rect,
