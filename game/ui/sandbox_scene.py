@@ -59,6 +59,7 @@ class SandboxScene(Scene):
         self.flank_slider_dragging: bool = False
         self.cursor_pos = Vector2()
         self.cursor_indicator_visible = False
+        self._last_mouse_pos: Vector2 | None = None
         self.ship_info_panel: ShipInfoPanel | None = None
         self.ship_info_open: bool = False
         self._ship_button_hovered: bool = False
@@ -180,6 +181,29 @@ class SandboxScene(Scene):
                             payload[key] = getattr(event, key)
                 payload["pos"] = converted
                 ui_event = pygame.event.Event(event.type, payload)
+        if (
+            event.type == pygame.MOUSEMOTION
+            and self.cursor_indicator_visible
+            and self.hud
+        ):
+            width, height = self.hud.surface.get_size()
+            delta_x = 0.0
+            delta_y = 0.0
+            if mouse_pos is not None:
+                current_pos = Vector2(mouse_pos)
+                if self._last_mouse_pos is None:
+                    self._last_mouse_pos = current_pos
+                else:
+                    delta = current_pos - self._last_mouse_pos
+                    delta_x, delta_y = delta.x, delta.y
+                    self._last_mouse_pos = current_pos
+            else:
+                rel = getattr(event, "rel", None)
+                if rel:
+                    delta_x, delta_y = float(rel[0]), float(rel[1])
+            if delta_x != 0.0 or delta_y != 0.0:
+                self.cursor_pos.x = max(0.0, min(width, self.cursor_pos.x + delta_x))
+                self.cursor_pos.y = max(0.0, min(height, self.cursor_pos.y + delta_y))
         if self.ship_info_open and self.ship_info_panel:
             consumed = self.ship_info_panel.handle_event(ui_event)
             if consumed:
@@ -376,11 +400,6 @@ class SandboxScene(Scene):
                 else:
                     success, message = self.world.start_mining(self.player)
                     self._set_mining_feedback(message)
-            if self.cursor_indicator_visible and self.hud:
-                width, height = self.hud.surface.get_size()
-                self.cursor_pos.x = max(0.0, min(width, self.cursor_pos.x + mouse_dx))
-                self.cursor_pos.y = max(0.0, min(height, self.cursor_pos.y + mouse_dy))
-
         if self.input.consume_action("toggle_overlay"):
             self.hud.toggle_overlay()
         if self.input.consume_action("toggle_auto_throttle") and self.player:
@@ -861,11 +880,15 @@ class SandboxScene(Scene):
         pygame.event.set_grab(True)
         self.cursor_indicator_visible = True
         self._reset_cursor_to_center()
+        current_pos = pygame.mouse.get_pos()
+        converted = self._surface_mouse_pos(current_pos)
+        self._last_mouse_pos = Vector2(converted)
 
     def _enter_ui_cursor(self) -> None:
         pygame.mouse.set_visible(True)
         pygame.event.set_grab(False)
         self.cursor_indicator_visible = False
+        self._last_mouse_pos = None
 
     def _reset_cursor_to_center(self) -> None:
         surface = pygame.display.get_surface()
