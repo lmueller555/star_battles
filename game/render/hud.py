@@ -9,35 +9,36 @@ from pygame.math import Vector2
 
 from game.math.ballistics import compute_lead
 from game.sensors.dradis import DradisSystem
+from game.ui.sector_map import map_display_rect
 from game.world.mining import MiningHUDState
 from game.ships.ship import Ship
 
 
-FLANK_SLIDER_WIDTH = 280
-FLANK_SLIDER_HEIGHT = 14
-FLANK_SLIDER_MARGIN = 72
+FLANK_SLIDER_WIDTH = 18
+FLANK_SLIDER_SPACING = 24
 THRUSTER_SPEED_MULTIPLIER = 1.5
 SHIP_INFO_BUTTON_SIZE = 48
 SHIP_INFO_BUTTON_SPACING = 18
 
 
 def flank_slider_rect(surface_size: tuple[int, int]) -> pygame.Rect:
-    width, height = surface_size
-    rect = pygame.Rect(
-        max(0, width // 2 - FLANK_SLIDER_WIDTH // 2),
-        max(0, height - FLANK_SLIDER_MARGIN - FLANK_SLIDER_HEIGHT),
-        FLANK_SLIDER_WIDTH,
-        FLANK_SLIDER_HEIGHT,
-    )
-    return rect
+    map_rect = map_display_rect(surface_size)
+    if map_rect.width <= 0 or map_rect.height <= 0:
+        return pygame.Rect(0, 0, 0, 0)
+    surface_width = surface_size[0]
+    x = min(surface_width - FLANK_SLIDER_WIDTH - FLANK_SLIDER_SPACING, map_rect.right + FLANK_SLIDER_SPACING)
+    x = max(map_rect.right + 4, x)
+    y = map_rect.top
+    return pygame.Rect(x, y, FLANK_SLIDER_WIDTH, map_rect.height)
 
 
 def ship_info_button_rect(surface_size: tuple[int, int]) -> pygame.Rect:
-    width, height = surface_size
-    slider = flank_slider_rect(surface_size)
+    map_rect = map_display_rect(surface_size)
     size = SHIP_INFO_BUTTON_SIZE
-    x = max(0, slider.centerx - size // 2)
-    y = max(0, slider.top - SHIP_INFO_BUTTON_SPACING - size)
+    if map_rect.width <= 0 or map_rect.height <= 0:
+        return pygame.Rect(0, 0, size, size)
+    x = max(0, map_rect.left - SHIP_INFO_BUTTON_SPACING - size)
+    y = max(0, map_rect.centery - size // 2)
     return pygame.Rect(x, y, size, size)
 
 
@@ -340,27 +341,41 @@ class HUD:
 
     def draw_flank_speed_slider(self, player: Ship) -> None:
         rect = flank_slider_rect(self.surface.get_size())
-        pygame.draw.rect(self.surface, (10, 18, 26), rect.inflate(12, 12))
-        pygame.draw.rect(self.surface, (60, 90, 120), rect.inflate(12, 12), 1)
+        if rect.width <= 0 or rect.height <= 0:
+            return
+        expanded = rect.inflate(12, 12)
+        pygame.draw.rect(self.surface, (10, 18, 26), expanded)
+        pygame.draw.rect(self.surface, (60, 90, 120), expanded, 1)
 
         ratio = max(0.0, min(1.0, player.flank_speed_ratio))
-        fill_width = int(rect.width * ratio)
-        if fill_width > 0:
-            fill_rect = pygame.Rect(rect.left, rect.top, fill_width, rect.height)
+        fill_height = int(rect.height * ratio)
+        if fill_height > 0:
+            fill_rect = pygame.Rect(
+                rect.left,
+                rect.bottom - fill_height,
+                rect.width,
+                fill_height,
+            )
             fill_color = (255, 200, 120) if player.thrusters_active else (120, 200, 255)
             pygame.draw.rect(self.surface, fill_color, fill_rect)
         pygame.draw.rect(self.surface, (35, 60, 85), rect, 2)
 
-        handle_x = rect.left + fill_width
-        handle_rect = pygame.Rect(handle_x - 5, rect.top - 4, 10, rect.height + 8)
+        handle_center_y = rect.bottom - fill_height
+        handle_rect = pygame.Rect(
+            rect.left - 6,
+            int(handle_center_y) - 6,
+            rect.width + 12,
+            12,
+        )
         handle_color = (255, 230, 160) if player.thrusters_active else (200, 220, 240)
         pygame.draw.rect(self.surface, handle_color, handle_rect)
         pygame.draw.rect(self.surface, (70, 110, 150), handle_rect, 1)
 
         label = self.font.render("Flank Speed", True, (200, 220, 255))
+        label_x = max(8, min(self.surface.get_width() - label.get_width() - 8, rect.centerx - label.get_width() // 2))
         label_pos = (
-            rect.centerx - label.get_width() // 2,
-            rect.top - 24,
+            label_x,
+            rect.top - 28,
         )
         self.surface.blit(label, label_pos)
 
@@ -371,9 +386,13 @@ class HUD:
             True,
             (160, 210, 230),
         )
+        speed_x = max(
+            8,
+            min(self.surface.get_width() - speed_text.get_width() - 8, rect.centerx - speed_text.get_width() // 2),
+        )
         self.surface.blit(
             speed_text,
-            (rect.centerx - speed_text.get_width() // 2, rect.bottom + 8),
+            (speed_x, rect.bottom + 8),
         )
 
     def draw_ship_info_button(self, player: Ship, open_state: bool, hovered: bool) -> None:
@@ -400,9 +419,10 @@ class HUD:
         status = "Thrusters ACTIVE" if player.thrusters_active else "Thrusters STANDBY"
         status_color = (255, 200, 140) if player.thrusters_active else (150, 190, 220)
         status_text = self.font.render(status, True, status_color)
+        status_x = max(8, rect.centerx - status_text.get_width() // 2)
         self.surface.blit(
             status_text,
-            (rect.centerx - status_text.get_width() // 2, rect.bottom + 26),
+            (status_x, rect.bottom + 26),
         )
 
 
