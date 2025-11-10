@@ -50,6 +50,113 @@ def _ship_axes(ship: Ship) -> tuple[Vector3, Vector3, Vector3]:
     return right.normalize(), up, forward.normalize()
 
 
+def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
+    """Construct a multi-tiered station silhouette for Outposts."""
+
+    segments: list[tuple[Vector3, Vector3]] = []
+
+    def _loop_segments(points: list[Vector3]) -> None:
+        for index in range(len(points)):
+            start = points[index]
+            end = points[(index + 1) % len(points)]
+            segments.append((start, end))
+
+    core_radius = 140.0
+    core_heights = [-160.0, 0.0, 160.0]
+    previous_level: list[Vector3] | None = None
+    for height in core_heights:
+        corners = [
+            Vector3( core_radius, height,  core_radius),
+            Vector3(-core_radius, height,  core_radius),
+            Vector3(-core_radius, height, -core_radius),
+            Vector3( core_radius, height, -core_radius),
+        ]
+        _loop_segments(corners)
+        segments.append((corners[0], corners[2]))
+        segments.append((corners[1], corners[3]))
+        if previous_level is not None:
+            for upper, lower in zip(previous_level, corners):
+                segments.append((upper, lower))
+        previous_level = corners
+
+    segments.append((Vector3(0.0, -240.0, 0.0), Vector3(0.0, 240.0, 0.0)))
+    segments.append((Vector3(-core_radius, 0.0, 0.0), Vector3(core_radius, 0.0, 0.0)))
+    segments.append((Vector3(0.0, 0.0, -core_radius), Vector3(0.0, 0.0, core_radius)))
+
+    outer_radius = 420.0
+    top_height = 210.0
+    bottom_height = -210.0
+    outer_points: list[Vector3] = []
+    for step in range(8):
+        angle = step * (math.pi / 4.0)
+        outer_points.append(
+            Vector3(
+                math.cos(angle) * outer_radius,
+                0.0,
+                math.sin(angle) * outer_radius,
+            )
+        )
+
+    _loop_segments(outer_points)
+    for point in outer_points:
+        segments.append((Vector3(0.0, 0.0, 0.0), point))
+
+    top_points = [Vector3(point.x, top_height, point.z) for point in outer_points]
+    bottom_points = [Vector3(point.x, bottom_height, point.z) for point in outer_points]
+    _loop_segments(top_points)
+    _loop_segments(bottom_points)
+    for mid, top, bottom in zip(outer_points, top_points, bottom_points):
+        segments.append((mid, top))
+        segments.append((mid, bottom))
+        segments.append((top, bottom))
+
+    for offset in range(4):
+        segments.append((top_points[offset], top_points[(offset + 4) % 8]))
+        segments.append((bottom_points[offset], bottom_points[(offset + 4) % 8]))
+
+    dock_extension = 560.0
+    dock_height = 90.0
+    dock_span = 120.0
+
+    def _add_dock(axis: str, sign: float) -> None:
+        if axis == "x":
+            base = Vector3(sign * outer_radius, 0.0, 0.0)
+            tip = Vector3(sign * dock_extension, 0.0, 0.0)
+            offsets = [
+                Vector3(0.0, dock_height, dock_span),
+                Vector3(0.0, dock_height, -dock_span),
+                Vector3(0.0, -dock_height, -dock_span),
+                Vector3(0.0, -dock_height, dock_span),
+            ]
+        else:
+            base = Vector3(0.0, 0.0, sign * outer_radius)
+            tip = Vector3(0.0, 0.0, sign * dock_extension)
+            offsets = [
+                Vector3(dock_span, dock_height, 0.0),
+                Vector3(-dock_span, dock_height, 0.0),
+                Vector3(-dock_span, -dock_height, 0.0),
+                Vector3(dock_span, -dock_height, 0.0),
+            ]
+
+        outer_frame = [base + offset for offset in offsets]
+        inner_frame = [tip + offset for offset in offsets]
+        _loop_segments(outer_frame)
+        _loop_segments(inner_frame)
+        for inner, outer in zip(inner_frame, outer_frame):
+            segments.append((inner, outer))
+        for corner in outer_frame:
+            segments.append((corner, base))
+        for corner in inner_frame:
+            segments.append((corner, tip))
+        segments.append((base, tip))
+
+    for axis in ("x", "z"):
+        for sign in (-1.0, 1.0):
+            _add_dock(axis, sign)
+
+    return segments
+
+
 WIREFRAMES = {
     "Strike": [
         (Vector3(0, 0.3, 2.5), Vector3(0.9, 0, -2.0)),
@@ -67,24 +174,7 @@ WIREFRAMES = {
         (Vector3(1.4, 0, -3.5), Vector3(-1.4, 0, -3.5)),
         (Vector3(1.4, 0, -3.5), Vector3(0, 0.6, 3.5)),
     ],
-    "Outpost": [
-        (Vector3(-250.0, -250.0, -250.0), Vector3(250.0, -250.0, -250.0)),
-        (Vector3(-250.0, 250.0, -250.0), Vector3(250.0, 250.0, -250.0)),
-        (Vector3(-250.0, -250.0, 250.0), Vector3(250.0, -250.0, 250.0)),
-        (Vector3(-250.0, 250.0, 250.0), Vector3(250.0, 250.0, 250.0)),
-        (Vector3(-250.0, -250.0, -250.0), Vector3(-250.0, 250.0, -250.0)),
-        (Vector3(250.0, -250.0, -250.0), Vector3(250.0, 250.0, -250.0)),
-        (Vector3(-250.0, -250.0, 250.0), Vector3(-250.0, 250.0, 250.0)),
-        (Vector3(250.0, -250.0, 250.0), Vector3(250.0, 250.0, 250.0)),
-        (Vector3(-250.0, -250.0, -250.0), Vector3(-250.0, -250.0, 250.0)),
-        (Vector3(250.0, -250.0, -250.0), Vector3(250.0, -250.0, 250.0)),
-        (Vector3(-250.0, 250.0, -250.0), Vector3(-250.0, 250.0, 250.0)),
-        (Vector3(250.0, 250.0, -250.0), Vector3(250.0, 250.0, 250.0)),
-        (Vector3(-250.0, 0.0, -250.0), Vector3(250.0, 0.0, -250.0)),
-        (Vector3(-250.0, 0.0, 250.0), Vector3(250.0, 0.0, 250.0)),
-        (Vector3(0.0, -250.0, -250.0), Vector3(0.0, 250.0, -250.0)),
-        (Vector3(0.0, -250.0, 250.0), Vector3(0.0, 250.0, 250.0)),
-    ],
+    "Outpost": _build_outpost_wireframe(),
 }
 
 
