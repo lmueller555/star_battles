@@ -12,10 +12,26 @@ from game.world.sector import SectorMap
 from game.world.space import SpaceWorld
 
 
+MAP_MAX_WIDTH = 480
+MAP_MAX_HEIGHT = 260
+MAP_HORIZONTAL_MARGIN = 32
+MAP_BOTTOM_MARGIN = 48
+
+
 @dataclass
 class MapSelection:
     hovered_id: Optional[str] = None
     armed_id: Optional[str] = None
+
+
+def map_display_rect(surface_size: tuple[int, int]) -> pygame.Rect:
+    width = min(surface_size[0] - MAP_HORIZONTAL_MARGIN * 2, MAP_MAX_WIDTH)
+    height = min(surface_size[1] - MAP_BOTTOM_MARGIN * 2, MAP_MAX_HEIGHT)
+    width = max(0, width)
+    height = max(0, height)
+    x = max(0, (surface_size[0] - width) // 2)
+    y = max(0, surface_size[1] - height - MAP_BOTTOM_MARGIN)
+    return pygame.Rect(x, y, width, height)
 
 
 class SectorMapView:
@@ -30,19 +46,17 @@ class SectorMapView:
         self._grid_usable = Vector2()
 
     def _compute_layout(self, surface_size: tuple[int, int]) -> None:
-        width = min(surface_size[0] - 160, 720)
-        height = min(surface_size[1] - 160, 520)
-        self._rect = pygame.Rect(
-            (surface_size[0] - width) // 2,
-            (surface_size[1] - height) // 2,
-            width,
-            height,
-        )
+        self._rect = map_display_rect(surface_size)
+        width = float(self._rect.width)
+        height = float(self._rect.height)
         min_x, min_y, max_x, max_y = self.sector.bounds()
         span_x = max(1.0, max_x - min_x)
         span_y = max(1.0, max_y - min_y)
-        padding = Vector2(60, 60)
-        usable = Vector2(width, height) - padding * 2
+        padding = Vector2(40, 40)
+        usable = Vector2(
+            max(0.0, width - padding.x * 2),
+            max(0.0, height - padding.y * 2),
+        )
         self._grid_padding = padding
         self._grid_usable = usable
         self._positions.clear()

@@ -174,14 +174,16 @@ class SandboxScene(Scene):
                         return
         if self.player and self.hud and not (self.map_open or self.hangar_open or self.ship_info_open):
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                rect = flank_slider_rect(self.hud.surface.get_size()).inflate(12, 12)
-                if rect.collidepoint(event.pos):
-                    self.flank_slider_dragging = True
-                    self._update_flank_slider_from_mouse(event.pos[0])
+                base_rect = flank_slider_rect(self.hud.surface.get_size())
+                if base_rect.width > 0 and base_rect.height > 0:
+                    rect = base_rect.inflate(12, 12)
+                    if rect.collidepoint(event.pos):
+                        self.flank_slider_dragging = True
+                        self._update_flank_slider_from_mouse(event.pos)
             elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 self.flank_slider_dragging = False
             elif event.type == pygame.MOUSEMOTION and self.flank_slider_dragging:
-                self._update_flank_slider_from_mouse(event.pos[0])
+                self._update_flank_slider_from_mouse(event.pos)
         if event.type in (pygame.MOUSEBUTTONUP, pygame.MOUSEBUTTONDOWN) and not (self.player and self.hud):
             self.flank_slider_dragging = False
         if self.map_open and self.map_view:
@@ -484,13 +486,14 @@ class SandboxScene(Scene):
         if self.hud:
             self.hud.draw_cursor_indicator(self.cursor_pos, self.cursor_indicator_visible)
 
-    def _update_flank_slider_from_mouse(self, mouse_x: int) -> None:
+    def _update_flank_slider_from_mouse(self, mouse_pos: tuple[int, int]) -> None:
         if not self.player or not self.hud:
             return
         rect = flank_slider_rect(self.hud.surface.get_size())
-        if rect.width <= 0:
+        if rect.height <= 0:
             return
-        ratio = (mouse_x - rect.left) / rect.width
+        rel = (mouse_pos[1] - rect.top) / rect.height
+        ratio = 1.0 - rel
         ratio = max(0.0, min(1.0, ratio))
         self.flank_slider_ratio = ratio
         self.player.set_flank_speed_ratio(ratio)
