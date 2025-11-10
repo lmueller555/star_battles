@@ -51,7 +51,7 @@ def _ship_axes(ship: Ship) -> tuple[Vector3, Vector3, Vector3]:
 
 
 def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
-    """Construct a detailed multi-tiered station silhouette for Outposts."""
+    """Construct a capital-ship silhouette for Outposts."""
 
     segments: list[tuple[Vector3, Vector3]] = []
 
@@ -62,161 +62,160 @@ def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
             end = points[(index + 1) % len(points)] if close else points[index + 1]
             segments.append((start, end))
 
-    def _radial_ring(radius: float, height: float, *, sides: int) -> list[Vector3]:
+    def _elliptical_ring(z_pos: float, half_width: float, half_height: float, *, sides: int) -> list[Vector3]:
+        angle_step = 2.0 * math.pi / sides
         return [
             Vector3(
-                math.cos(step * (2.0 * math.pi / sides)) * radius,
-                height,
-                math.sin(step * (2.0 * math.pi / sides)) * radius,
+                math.cos(step * angle_step) * half_width,
+                math.sin(step * angle_step) * half_height,
+                z_pos,
             )
             for step in range(sides)
         ]
 
-    spine_profile: list[tuple[float, float]] = [
-        (-280.0, 60.0),
-        (-200.0, 120.0),
-        (-120.0, 180.0),
-        (0.0, 210.0),
-        (120.0, 180.0),
-        (210.0, 120.0),
-        (280.0, 70.0),
+    hull_profile: list[tuple[float, float, float]] = [
+        (-520.0, 90.0, 55.0),
+        (-440.0, 140.0, 70.0),
+        (-360.0, 180.0, 90.0),
+        (-240.0, 220.0, 110.0),
+        (-120.0, 240.0, 125.0),
+        (0.0, 250.0, 140.0),
+        (120.0, 230.0, 130.0),
+        (240.0, 200.0, 110.0),
+        (360.0, 170.0, 95.0),
+        (480.0, 140.0, 80.0),
+        (560.0, 120.0, 70.0),
     ]
 
+    ring_sides = 24
     previous_ring: list[Vector3] | None = None
-    ring_sides = 12
-    for height, radius in spine_profile:
-        ring = _radial_ring(radius, height, sides=ring_sides)
+    hull_sections: list[list[Vector3]] = []
+    for z_pos, half_width, half_height in hull_profile:
+        ring = _elliptical_ring(z_pos, half_width, half_height, sides=ring_sides)
+        hull_sections.append(ring)
         _loop_segments(ring)
         if previous_ring is not None:
-            for upper, lower in zip(previous_ring, ring):
-                segments.append((upper, lower))
-            for offset in range(ring_sides // 2):
-                segments.append((ring[offset], ring[(offset + ring_sides // 2) % ring_sides]))
-                segments.append((previous_ring[offset], previous_ring[(offset + ring_sides // 2) % ring_sides]))
+            for current, previous in zip(ring, previous_ring):
+                segments.append((current, previous))
+            for offset in range(0, ring_sides, 3):
+                segments.append((ring[offset], ring[(offset + 6) % ring_sides]))
+                segments.append((previous_ring[offset], previous_ring[(offset + 6) % ring_sides]))
+                segments.append((ring[offset], previous_ring[(offset + 3) % ring_sides]))
         previous_ring = ring
 
-    apex_top = Vector3(0.0, 340.0, 0.0)
-    apex_bottom = Vector3(0.0, -340.0, 0.0)
-    top_cap = _radial_ring(40.0, 300.0, sides=6)
-    bottom_cap = _radial_ring(40.0, -300.0, sides=6)
-    _loop_segments(top_cap)
-    _loop_segments(bottom_cap)
-    for point in top_cap:
-        segments.append((point, apex_top))
-    for point in bottom_cap:
-        segments.append((point, apex_bottom))
-    for top, bottom in zip(top_cap, bottom_cap):
+    nose_tip = Vector3(0.0, 40.0, hull_profile[-1][0] + 80.0)
+    ventral_spear = Vector3(0.0, -35.0, hull_profile[-1][0] + 70.0)
+    final_section = hull_sections[-1]
+    _loop_segments([nose_tip, ventral_spear, Vector3(40.0, 0.0, nose_tip.z - 30.0), Vector3(-40.0, 0.0, nose_tip.z - 30.0)])
+    for point in final_section[::2]:
+        segments.append((point, nose_tip))
+        segments.append((point, ventral_spear))
+
+    dorsal_spine_points: list[Vector3] = []
+    ventral_keel_points: list[Vector3] = []
+    for z_pos, _, half_height in hull_profile:
+        dorsal_spine_points.append(Vector3(0.0, half_height * 1.4 + 30.0, z_pos))
+        ventral_keel_points.append(Vector3(0.0, -half_height * 1.3 - 20.0, z_pos))
+    _loop_segments(dorsal_spine_points, close=False)
+    _loop_segments(ventral_keel_points, close=False)
+    for top, bottom in zip(dorsal_spine_points, ventral_keel_points):
         segments.append((top, bottom))
 
-    equator_ring = _radial_ring(420.0, 0.0, sides=12)
-    _loop_segments(equator_ring)
-    for point in equator_ring:
-        segments.append((Vector3(0.0, 0.0, 0.0), point))
+    tower_base_z = -60.0
+    tower_profile = [
+        Vector3(0.0, 220.0, tower_base_z - 40.0),
+        Vector3(70.0, 240.0, tower_base_z - 20.0),
+        Vector3(70.0, 320.0, tower_base_z + 30.0),
+        Vector3(-70.0, 320.0, tower_base_z + 30.0),
+        Vector3(-70.0, 240.0, tower_base_z - 20.0),
+    ]
+    _loop_segments(tower_profile)
+    bridge_tip = Vector3(0.0, 360.0, tower_base_z + 60.0)
+    for point in tower_profile:
+        segments.append((point, bridge_tip))
 
-    upper_ring = _radial_ring(360.0, 210.0, sides=12)
-    lower_ring = _radial_ring(360.0, -210.0, sides=12)
-    _loop_segments(upper_ring)
-    _loop_segments(lower_ring)
-    for equator, upper, lower in zip(equator_ring, upper_ring, lower_ring):
-        segments.append((equator, upper))
-        segments.append((equator, lower))
-        segments.append((upper, lower))
+    flank_ridges: list[list[Vector3]] = []
+    for sign in (-1.0, 1.0):
+        ridge_points: list[Vector3] = []
+        for z_pos, half_width, half_height in hull_profile[1:-1]:
+            ridge_points.append(
+                Vector3(sign * (half_width * 1.1 + 30.0), half_height * 0.6, z_pos)
+            )
+        flank_ridges.append(ridge_points)
+        _loop_segments(ridge_points, close=False)
+        for point, section in zip(ridge_points, hull_sections[1:-1]):
+            anchor = section[ring_sides // 4 if sign > 0 else (ring_sides * 3) // 4]
+            segments.append((point, anchor))
 
-    for offset in range(0, ring_sides, 2):
-        segments.append((upper_ring[offset], upper_ring[(offset + 3) % ring_sides]))
-        segments.append((lower_ring[offset], lower_ring[(offset + 3) % ring_sides]))
+    wing_span = 520.0
+    wing_thickness = 55.0
+    wing_points = [
+        Vector3(-wing_span, -wing_thickness, -120.0),
+        Vector3(-wing_span * 0.4, 20.0, -200.0),
+        Vector3(0.0, 60.0, -220.0),
+        Vector3(wing_span * 0.4, 20.0, -200.0),
+        Vector3(wing_span, -wing_thickness, -120.0),
+        Vector3(wing_span * 0.3, -90.0, -40.0),
+        Vector3(-wing_span * 0.3, -90.0, -40.0),
+    ]
+    _loop_segments(wing_points)
+    for index in range(len(wing_points)):
+        segments.append((wing_points[index], wing_points[(index + 3) % len(wing_points)]))
 
-    mid_supports = _radial_ring(520.0, 0.0, sides=6)
-    _loop_segments(mid_supports)
-    for point in mid_supports:
-        segments.append((Vector3(0.0, 0.0, 0.0), point))
-        segments.append((point, apex_top))
-        segments.append((point, apex_bottom))
-
-    vane_height = 140.0
-    vane_span = 260.0
-    vane_offset = 420.0
-    for axis in ("x", "z"):
-        for sign in (-1.0, 1.0):
-            if axis == "x":
-                root = Vector3(sign * vane_offset, 0.0, 0.0)
-                tips = [
-                    Vector3(sign * (vane_offset + vane_span), vane_height, 120.0),
-                    Vector3(sign * (vane_offset + vane_span), vane_height, -120.0),
-                    Vector3(sign * (vane_offset + vane_span), -vane_height, -120.0),
-                    Vector3(sign * (vane_offset + vane_span), -vane_height, 120.0),
-                ]
-            else:
-                root = Vector3(0.0, 0.0, sign * vane_offset)
-                tips = [
-                    Vector3(120.0, vane_height, sign * (vane_offset + vane_span)),
-                    Vector3(-120.0, vane_height, sign * (vane_offset + vane_span)),
-                    Vector3(-120.0, -vane_height, sign * (vane_offset + vane_span)),
-                    Vector3(120.0, -vane_height, sign * (vane_offset + vane_span)),
-                ]
-            _loop_segments(tips)
-            for tip in tips:
-                segments.append((root, tip))
-
-    dock_extension = 620.0
-    dock_height = 110.0
-    dock_span = 160.0
-
-    def _add_dock(axis: str, sign: float) -> None:
-        if axis == "x":
-            base = Vector3(sign * 360.0, 90.0, 0.0)
-            mid = Vector3(sign * dock_extension * 0.6, 90.0, 0.0)
-            tip = Vector3(sign * dock_extension, 60.0, 0.0)
-            frame_offsets = [
-                Vector3(0.0, dock_height, dock_span),
-                Vector3(0.0, dock_height, -dock_span),
-                Vector3(0.0, -dock_height, -dock_span),
-                Vector3(0.0, -dock_height, dock_span),
+    engine_clusters: list[list[Vector3]] = []
+    tail_z = hull_profile[0][0]
+    engine_offset_x = hull_profile[0][1] + 120.0
+    for sign in (-1.0, 1.0):
+        for vertical in (-1.0, 1.0):
+            center = Vector3(sign * engine_offset_x, vertical * 90.0, tail_z - 40.0)
+            ring = [
+                Vector3(
+                    center.x + math.cos(angle) * 70.0,
+                    center.y + math.sin(angle) * 70.0,
+                    center.z,
+                )
+                for angle in [step * (2.0 * math.pi / 16) for step in range(16)]
             ]
-        else:
-            base = Vector3(0.0, 90.0, sign * 360.0)
-            mid = Vector3(0.0, 90.0, sign * dock_extension * 0.6)
-            tip = Vector3(0.0, 60.0, sign * dock_extension)
-            frame_offsets = [
-                Vector3(dock_span, dock_height, 0.0),
-                Vector3(-dock_span, dock_height, 0.0),
-                Vector3(-dock_span, -dock_height, 0.0),
-                Vector3(dock_span, -dock_height, 0.0),
-            ]
+            engine_clusters.append(ring)
+            _loop_segments(ring)
+            thruster_end = Vector3(center.x, center.y, center.z - 70.0)
+            for point in ring[::2]:
+                segments.append((point, thruster_end))
+            anchor_index = ring_sides // 6 if sign > 0 else (ring_sides * 5) // 6
+            anchor_index += 0 if vertical > 0 else ring_sides // 2
+            hull_anchor = hull_sections[0][anchor_index % ring_sides]
+            for point in ring[::4]:
+                segments.append((point, hull_anchor))
 
-        base_frame = [base + offset for offset in frame_offsets]
-        mid_frame = [mid + offset * 0.7 for offset in frame_offsets]
-        tip_frame = [tip + offset * 0.4 for offset in frame_offsets]
+    plating_lines = []
+    for fraction in (0.15, 0.35, 0.65, 0.85):
+        idx = int(fraction * (len(hull_sections) - 1))
+        plating_lines.append(hull_sections[idx])
+    for section in plating_lines:
+        for offset in range(0, ring_sides, 2):
+            segments.append((section[offset], section[(offset + 2) % ring_sides]))
 
-        _loop_segments(base_frame)
-        _loop_segments(mid_frame)
-        _loop_segments(tip_frame)
-        for outer, inner in zip(base_frame, mid_frame):
-            segments.append((outer, inner))
-        for inner, tip_corner in zip(mid_frame, tip_frame):
-            segments.append((inner, tip_corner))
-        for tip_corner in tip_frame:
-            segments.append((tip_corner, tip))
-        for base_corner in base_frame:
-            segments.append((base_corner, base))
-        segments.append((base, mid))
-        segments.append((mid, tip))
+    dorsal_array_z = 200.0
+    dorsal_array = [
+        Vector3(-140.0, 360.0, dorsal_array_z - 60.0),
+        Vector3(0.0, 380.0, dorsal_array_z),
+        Vector3(140.0, 360.0, dorsal_array_z - 60.0),
+        Vector3(0.0, 340.0, dorsal_array_z - 120.0),
+    ]
+    _loop_segments(dorsal_array)
+    for point in dorsal_array:
+        segments.append((point, dorsal_spine_points[len(dorsal_spine_points) // 2]))
 
-    for axis in ("x", "z"):
-        for sign in (-1.0, 1.0):
-            _add_dock(axis, sign)
-
-    antenna_ring = _radial_ring(220.0, 240.0, sides=6)
-    _loop_segments(antenna_ring)
-    antenna_tips = [Vector3(point.x * 1.1, 320.0, point.z * 1.1) for point in antenna_ring]
-    _loop_segments(antenna_tips)
-    for base, tip in zip(antenna_ring, antenna_tips):
-        segments.append((base, tip))
-
-    sensor_ring = _radial_ring(260.0, -220.0, sides=8)
-    _loop_segments(sensor_ring)
-    for point in sensor_ring:
-        segments.append((point, apex_bottom))
+    ventral_bay_z = -160.0
+    bay_frame = [
+        Vector3(-130.0, -220.0, ventral_bay_z - 80.0),
+        Vector3(130.0, -220.0, ventral_bay_z - 80.0),
+        Vector3(160.0, -160.0, ventral_bay_z + 40.0),
+        Vector3(-160.0, -160.0, ventral_bay_z + 40.0),
+    ]
+    _loop_segments(bay_frame)
+    for point in bay_frame:
+        segments.append((point, ventral_keel_points[len(ventral_keel_points) // 2]))
 
     return segments
 
