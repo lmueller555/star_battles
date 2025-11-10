@@ -1,5 +1,5 @@
 {
-  "resolution": [1280, 720],
+  "resolution": [1920, 1080],
   "simHz": 60,
   "maxFps": 120,
   "logLevel": "INFO",
