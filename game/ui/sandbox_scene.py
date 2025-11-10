@@ -149,12 +149,30 @@ class SandboxScene(Scene):
             self.input.handle_event(event)
         if self.map_open or self.hangar_open or self.ship_info_open:
             self._ship_button_hovered = False
+        ui_event = event
+        mouse_pos: tuple[int, int] | None = None
+        if hasattr(event, "pos"):
+            converted = self._surface_mouse_pos(event.pos)
+            mouse_pos = converted
+            if converted != event.pos:
+                payload_source = getattr(event, "dict", None)
+                payload = payload_source.copy() if isinstance(payload_source, dict) else {}
+                if not payload:
+                    for key in ("pos", "rel", "buttons", "button", "touch", "window"):
+                        if hasattr(event, key):
+                            payload[key] = getattr(event, key)
+                payload["pos"] = converted
+                ui_event = pygame.event.Event(event.type, payload)
         if self.ship_info_open and self.ship_info_panel:
-            consumed = self.ship_info_panel.handle_event(event)
+            consumed = self.ship_info_panel.handle_event(ui_event)
             if consumed:
                 return
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if not self.ship_info_panel.panel_rect.collidepoint(event.pos):
+            if (
+                mouse_pos is not None
+                and event.type == pygame.MOUSEBUTTONDOWN
+                and event.button == 1
+            ):
+                if not self.ship_info_panel.panel_rect.collidepoint(mouse_pos):
                     self._close_ship_info_panel()
                     return
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -162,39 +180,58 @@ class SandboxScene(Scene):
                 return
         if self.hud:
             button_rect = ship_info_button_rect(self.hud.surface.get_size())
-            if event.type == pygame.MOUSEMOTION:
+            if event.type == pygame.MOUSEMOTION and mouse_pos is not None:
                 self._ship_button_hovered = (
-                    button_rect.collidepoint(event.pos)
+                    button_rect.collidepoint(mouse_pos)
                     and not (self.map_open or self.hangar_open or self.ship_info_open)
                 )
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            elif (
+                event.type == pygame.MOUSEBUTTONDOWN
+                and event.button == 1
+                and mouse_pos is not None
+            ):
                 if not (self.map_open or self.hangar_open):
-                    if button_rect.collidepoint(event.pos):
+                    if button_rect.collidepoint(mouse_pos):
                         self._toggle_ship_info_panel()
                         return
         if self.player and self.hud and not (self.map_open or self.hangar_open or self.ship_info_open):
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if (
+                event.type == pygame.MOUSEBUTTONDOWN
+                and event.button == 1
+                and mouse_pos is not None
+            ):
                 base_rect = flank_slider_rect(self.hud.surface.get_size())
                 if base_rect.width > 0 and base_rect.height > 0:
                     rect = base_rect.inflate(12, 12)
-                    if rect.collidepoint(event.pos):
+                    if rect.collidepoint(mouse_pos):
                         self.flank_slider_dragging = True
-                        self._update_flank_slider_from_mouse(event.pos)
+                        self._update_flank_slider_from_mouse(mouse_pos)
             elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 self.flank_slider_dragging = False
-            elif event.type == pygame.MOUSEMOTION and self.flank_slider_dragging:
-                self._update_flank_slider_from_mouse(event.pos)
-        if event.type in (pygame.MOUSEBUTTONUP, pygame.MOUSEBUTTONDOWN) and not (self.player and self.hud):
+            elif (
+                event.type == pygame.MOUSEMOTION
+                and self.flank_slider_dragging
+                and mouse_pos is not None
+            ):
+                self._update_flank_slider_from_mouse(mouse_pos)
+        if (
+            event.type in (pygame.MOUSEBUTTONUP, pygame.MOUSEBUTTONDOWN)
+            and not (self.player and self.hud)
+        ):
             self.flank_slider_dragging = False
-        if self.map_open and self.map_view:
-            selection = self.map_view.handle_event(event)
-            if selection:
-                self.armed_system_id = selection
-                self.map_view.selection.armed_id = selection
-                if self.content:
-                    system = self.content.sector.get(selection)
-                    self.jump_feedback = f"Jump armed: {system.name} (press J to commit)"
-                    self.jump_feedback_timer = 4.0
+        if self.map_open and self.map_view and mouse_pos is not None:
+            if event.type == pygame.MOUSEMOTION:
+                hovered = self.map_view.pick_system(mouse_pos)
+                self.map_view.selection.hovered_id = hovered
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                hovered = self.map_view.pick_system(mouse_pos)
+                if hovered:
+                    self.armed_system_id = hovered
+                    self.map_view.selection.armed_id = hovered
+                    if self.content:
+                        system = self.content.sector.get(hovered)
+                        self.jump_feedback = f"Jump armed: {system.name} (press J to commit)"
+                        self.jump_feedback_timer = 4.0
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             if self.ship_info_open:
                 self._close_ship_info_panel()
@@ -497,6 +534,25 @@ class SandboxScene(Scene):
         ratio = max(0.0, min(1.0, ratio))
         self.flank_slider_ratio = ratio
         self.player.set_flank_speed_ratio(ratio)
+
+    def _surface_mouse_pos(self, pos: tuple[int, int]) -> tuple[int, int]:
+        surface = pygame.display.get_surface()
+        if not surface:
+            return pos
+        surface_width, surface_height = surface.get_size()
+        window_width, window_height = pygame.display.get_window_size()
+        if window_width <= 0 or window_height <= 0:
+            return pos
+        scale = min(window_width / surface_width, window_height / surface_height)
+        if scale <= 0.0:
+            return pos
+        display_width = surface_width * scale
+        display_height = surface_height * scale
+        offset_x = (window_width - display_width) / 2.0
+        offset_y = (window_height - display_height) / 2.0
+        x = (pos[0] - offset_x) / scale
+        y = (pos[1] - offset_y) / scale
+        return int(round(x)), int(round(y))
 
     def _set_mining_feedback(self, message: str, duration: float = 2.0) -> None:
         if not message:
