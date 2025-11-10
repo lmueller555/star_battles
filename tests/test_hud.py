@@ -13,8 +13,8 @@ def test_gimbal_radius_increases_with_angle():
 
 
 def test_gimbal_radius_handles_wide_angles():
-    wide = _gimbal_radius(40.0, 70.0, 16 / 9, (1280, 720))
-    assert 0.0 < wide < max(1280, 720)
+    wide = _gimbal_radius(40.0, 70.0, 16 / 9, (1920, 1080))
+    assert 0.0 < wide < max(1920, 1080)
 
 
 def test_gimbal_radius_zero_for_invalid_fov_and_surface():

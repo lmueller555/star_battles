@@ -39,7 +39,7 @@ def load_settings() -> Dict[str, Any]:
 def main() -> None:
     settings = load_settings()
     pygame.init()
-    resolution = settings.get("resolution", [1280, 720])
+    resolution = settings.get("resolution", [1920, 1080])
     screen = pygame.display.set_mode(resolution, pygame.SCALED | pygame.RESIZABLE)
     pygame.display.set_caption("Star Battles Prototype")
     clock = pygame.time.Clock()
