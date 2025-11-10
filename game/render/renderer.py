@@ -1,8 +1,8 @@
 """Vector renderer built on pygame."""
 from __future__ import annotations
 
-from math import ceil, cos, floor, radians, sin
-from typing import Iterable, List, Sequence
+from math import ceil, floor
+from typing import Iterable
 
 import pygame
 from pygame.math import Vector3
@@ -21,24 +21,15 @@ PROJECTILE_COLOR = (255, 200, 80)
 MISSILE_COLOR = (255, 140, 60)
 
 
-def _rotation_matrix(rotation: Vector3) -> List[List[float]]:
-    pitch, yaw, roll = map(radians, (rotation.x, rotation.y, rotation.z))
-    cp, sp = cos(pitch), sin(pitch)
-    cy, sy = cos(yaw), sin(yaw)
-    cr, sr = cos(roll), sin(roll)
-    return [
-        [cy * cr + sy * sp * sr, sr * cp, cy * -sr + sy * sp * cr],
-        [-sy * cr + cy * sp * sr, cr * cp, -sy * -sr + cy * sp * cr],
-        [sy * cp, -sp, cy * cp],
-    ]
-
-
-def _apply_transform(point: Vector3, matrix: Sequence[Sequence[float]]) -> Vector3:
-    return Vector3(
-        matrix[0][0] * point.x + matrix[0][1] * point.y + matrix[0][2] * point.z,
-        matrix[1][0] * point.x + matrix[1][1] * point.y + matrix[1][2] * point.z,
-        matrix[2][0] * point.x + matrix[2][1] * point.y + matrix[2][2] * point.z,
-    )
+def _ship_axes(ship: Ship) -> tuple[Vector3, Vector3, Vector3]:
+    forward = ship.kinematics.forward()
+    right = ship.kinematics.right()
+    up = right.cross(forward)
+    if up.length_squared() == 0.0:
+        up = Vector3(0.0, 1.0, 0.0)
+    else:
+        up = up.normalize()
+    return right.normalize(), up, forward.normalize()
 
 
 WIREFRAMES = {
@@ -160,12 +151,13 @@ class VectorRenderer:
             )
 
     def draw_ship(self, camera: ChaseCamera, ship: Ship) -> None:
-        matrix = _rotation_matrix(ship.kinematics.rotation)
+        right, up, forward = _ship_axes(ship)
         color = SHIP_COLOR if ship.team == "player" else ENEMY_COLOR
         edges = WIREFRAMES.get(ship.frame.size, WIREFRAMES["Strike"])
+        origin = ship.kinematics.position
         for a_local, b_local in edges:
-            a_world = ship.kinematics.position + _apply_transform(a_local, matrix)
-            b_world = ship.kinematics.position + _apply_transform(b_local, matrix)
+            a_world = origin + right * a_local.x + up * a_local.y + forward * a_local.z
+            b_world = origin + right * b_local.x + up * b_local.y + forward * b_local.z
             a_screen, vis_a = camera.project(a_world, self.surface.get_size())
             b_screen, vis_b = camera.project(b_world, self.surface.get_size())
             if vis_a and vis_b:
