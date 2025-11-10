@@ -17,6 +17,21 @@ from game.world.station import DockingStation, StationDatabase
 from game.world.mining import MiningDatabase, MiningManager, MiningHUDState
 from game.ftl.utils import compute_ftl_charge, compute_ftl_cost
 
+COLLISION_RADII = {
+    "Strike": 9.0,
+    "Escort": 12.0,
+    "Line": 16.0,
+}
+
+COLLISION_MASS = {
+    "Strike": 1.0,
+    "Escort": 1.5,
+    "Line": 2.2,
+}
+
+COLLISION_RESTITUTION = 0.35
+COLLISION_DAMAGE_SCALE = 6.0
+
 if TYPE_CHECKING:
     from game.world.ai import ShipAI
 
@@ -60,6 +75,10 @@ class SpaceWorld:
         weapons_log = self.logger.channel("weapons")
         ftl_log = self.logger.channel("ftl")
 
+        # Reset per-frame collision feedback.
+        for ship in self.ships:
+            ship.collision_recoil = 0.0
+
         # Update any AI controllers before physics so they can steer.
         for ship_id, controller in list(self._ai.items()):
             if not controller.ship.is_alive():
@@ -70,6 +89,8 @@ class SpaceWorld:
             if not ship.is_alive():
                 continue
             update_ship_flight(ship, dt, logger=physics_log)
+
+        self._resolve_collisions(physics_log)
 
         for ship in self.ships:
             if ship.target_id is not None:
@@ -257,6 +278,17 @@ class SpaceWorld:
         if target.team == "player":
             self.threat_timer = max(self.threat_timer, 12.0)
 
+    def _apply_collision_damage(self, target: Ship, damage: float) -> None:
+        if damage <= 0.0:
+            return
+        if target.durability > 0.0:
+            absorbed = min(target.durability, damage)
+            target.durability -= absorbed
+            damage -= absorbed
+        if damage > 0.0:
+            target.hull = max(0.0, target.hull - damage)
+        target.hull_regen_cooldown = max(2.0, target.hull_regen_cooldown)
+
     def in_threat(self) -> bool:
         return self.threat_timer > 0.0
 
@@ -338,6 +370,67 @@ class SpaceWorld:
                 best_distance = distance
                 best_station = station
         return best_station, best_distance
+
+    def _collision_radius(self, ship: Ship) -> float:
+        return COLLISION_RADII.get(ship.frame.size, 12.0)
+
+    def _collision_mass(self, ship: Ship) -> float:
+        return COLLISION_MASS.get(ship.frame.size, 1.5)
+
+    def _resolve_collisions(self, logger: ChannelLogger | None) -> None:
+        count = len(self.ships)
+        for i in range(count):
+            ship_a = self.ships[i]
+            if not ship_a.is_alive():
+                continue
+            radius_a = self._collision_radius(ship_a)
+            mass_a = self._collision_mass(ship_a)
+            for j in range(i + 1, count):
+                ship_b = self.ships[j]
+                if not ship_b.is_alive():
+                    continue
+                radius_b = self._collision_radius(ship_b)
+                mass_b = self._collision_mass(ship_b)
+                offset = ship_b.kinematics.position - ship_a.kinematics.position
+                distance = offset.length()
+                min_distance = radius_a + radius_b
+                if distance >= min_distance:
+                    continue
+                if distance <= 1e-3:
+                    normal = Vector3(0.0, 0.0, 1.0)
+                else:
+                    normal = offset.normalize()
+                penetration = min_distance - distance
+                correction = normal * (penetration * 0.5)
+                ship_a.kinematics.position -= correction
+                ship_b.kinematics.position += correction
+                relative_velocity = ship_b.kinematics.velocity - ship_a.kinematics.velocity
+                closing_speed = relative_velocity.dot(normal)
+                if closing_speed < 0.0:
+                    impulse_mag = -(1.0 + COLLISION_RESTITUTION) * closing_speed
+                    impulse_mag /= (1.0 / mass_a + 1.0 / mass_b)
+                    impulse = normal * impulse_mag
+                    ship_a.kinematics.velocity -= impulse / mass_a
+                    ship_b.kinematics.velocity += impulse / mass_b
+                impact_speed = max(0.0, -closing_speed)
+                if impact_speed <= 0.0 and penetration <= 0.01:
+                    continue
+                damage_base = impact_speed * (mass_a + mass_b) * 0.5 * COLLISION_DAMAGE_SCALE
+                if damage_base > 0.0:
+                    total_mass = mass_a + mass_b
+                    self._apply_collision_damage(ship_a, damage_base * (mass_b / total_mass))
+                    self._apply_collision_damage(ship_b, damage_base * (mass_a / total_mass))
+                    intensity = min(0.7, damage_base / 500.0)
+                    ship_a.collision_recoil = max(ship_a.collision_recoil, intensity)
+                    ship_b.collision_recoil = max(ship_b.collision_recoil, intensity)
+                    if logger and logger.enabled:
+                        logger.debug(
+                            "Collision %s-%s speed=%.2f damage=%.1f",
+                            ship_a.frame.id,
+                            ship_b.frame.id,
+                            impact_speed,
+                            damage_base,
+                        )
 
     def start_mining(self, ship: Ship) -> tuple[bool, str]:
         mining_log = self.logger.channel("mining")

@@ -116,6 +116,7 @@ class Ship:
         self.auto_throttle_enabled: bool = False
         self.auto_throttle_ratio: float = 0.0
         self.auto_level_enabled: bool = True
+        self.collision_recoil: float = 0.0
         if modules:
             for module in modules:
                 self.equip_module(module)
@@ -137,6 +138,7 @@ class Ship:
         self.countermeasure_cooldown = 0.0
         self.auto_throttle_enabled = False
         self.auto_throttle_ratio = 0.0
+        self.collision_recoil = 0.0
 
     def tick_cooldowns(self, dt: float) -> None:
         for mount in self.mounts:
