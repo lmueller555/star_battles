@@ -14,7 +14,7 @@ PASSIVE_DRAG = 0.12
 STRAFE_DAMPING = 4.0
 AUTO_LEVEL_RATE = 90.0
 AUTO_INPUT_DEADZONE = 0.05
-THRUSTER_SPEED_BONUS = 0.5
+THRUSTER_SPEED_MULTIPLIER = 1.5
 THRUSTER_TYLIUM_DRAIN = 0.35
 
 
@@ -67,9 +67,11 @@ def update_ship_flight(ship: Ship, dt: float, logger=None) -> None:
     current_max_speed = flank_speed
     accel_value = stats.acceleration
     if thrusters_active:
-        current_max_speed *= 1.0 + THRUSTER_SPEED_BONUS
-        accel_value *= 1.0 + THRUSTER_SPEED_BONUS
+        current_max_speed = stats.max_speed * THRUSTER_SPEED_MULTIPLIER
+        accel_value *= THRUSTER_SPEED_MULTIPLIER
     target_speed = current_max_speed * throttle_ratio
+    if thrusters_active:
+        target_speed = current_max_speed
     if ctrl.brake:
         target_speed = 0.0
 
