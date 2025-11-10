@@ -88,6 +88,38 @@ class SandboxScene(Scene):
         enemy_ai = create_ai_for_ship(self.dummy)
         self.world.add_ship(self.dummy, ai=enemy_ai)
 
+        if self.content:
+            additional_spawns: list[tuple[str, str, Vector3, Vector3]] = [
+                ("player", "escort_mk1", Vector3(-320.0, -40.0, -180.0), Vector3(0.0, 0.0, 0.0)),
+                ("player", "command_escort", Vector3(280.0, -20.0, -260.0), Vector3(0.0, 0.0, 0.0)),
+                ("enemy", "interceptor_mk1", Vector3(420.0, 60.0, 680.0), Vector3(-5.0, 0.0, -22.0)),
+                ("enemy", "interceptor_mk1", Vector3(-460.0, 40.0, 760.0), Vector3(8.0, 0.0, -18.0)),
+                ("enemy", "escort_mk1", Vector3(60.0, -30.0, 920.0), Vector3(0.0, 0.0, -14.0)),
+            ]
+            for team, frame_id, position, velocity in additional_spawns:
+                frame = self.content.ships.get(frame_id)
+                ship = Ship(frame, team=team)
+                ship.kinematics.position = position
+                ship.kinematics.velocity = velocity
+                if frame_id == "escort_mk1":
+                    ship.assign_weapon("hp_cannon_a", "light_cannon_mk1")
+                    ship.assign_weapon("hp_cannon_b", "light_cannon_mk1")
+                    ship.assign_weapon(
+                        "hp_cannon_c",
+                        "heavy_cannon_mk1" if team == "player" else "light_cannon_mk1",
+                    )
+                    ship.assign_weapon("hp_launcher", "missile_launcher_mk1")
+                elif frame_id == "command_escort":
+                    ship.assign_weapon("hp_command_l", "light_cannon_mk1")
+                    ship.assign_weapon("hp_command_r", "light_cannon_mk1")
+                    ship.assign_weapon("hp_command_launcher", "missile_launcher_mk1")
+                elif frame_id == "interceptor_mk1":
+                    ship.assign_weapon("hp_light_1", "light_cannon_mk1")
+                    ship.assign_weapon("hp_light_2", "light_cannon_mk1")
+                    ship.assign_weapon("hp_missile", "missile_launcher_mk1")
+                ai = create_ai_for_ship(ship)
+                self.world.add_ship(ship, ai=ai)
+
         self.dradis = DradisSystem(self.player)
         surface = pygame.display.get_surface()
         aspect = surface.get_width() / surface.get_height()
@@ -343,6 +375,7 @@ class SandboxScene(Scene):
         self.renderer.surface = surface
         self.hud.surface = surface
         self.renderer.clear()
+        self.renderer.draw_grid(self.camera, self.player.kinematics.position)
         target = next(
             (
                 s
