@@ -10,7 +10,7 @@ from game.engine.input import InputMapper
 from game.engine.logger import GameLogger
 from game.engine.scene import Scene
 from game.render.camera import ChaseCamera
-from game.render.hud import HUD, TargetOverlay, flank_slider_rect, ship_info_button_rect
+from game.render.hud import HUD, TargetOverlay
 from game.render.renderer import VectorRenderer
 from game.sensors.dradis import DradisSystem
 from game.ships.ship import Ship
@@ -182,10 +182,12 @@ class SandboxScene(Scene):
                 self._close_ship_info_panel()
                 return
         if self.hud:
-            button_rect = ship_info_button_rect(self.hud.surface.get_size())
+            button_rect = self.hud.ship_info_button_rect
             if event.type == pygame.MOUSEMOTION and mouse_pos is not None:
                 self._ship_button_hovered = (
-                    button_rect.collidepoint(mouse_pos)
+                    button_rect.width > 0
+                    and button_rect.height > 0
+                    and button_rect.collidepoint(mouse_pos)
                     and not (self.map_open or self.hangar_open or self.ship_info_open)
                 )
             elif (
@@ -194,7 +196,11 @@ class SandboxScene(Scene):
                 and mouse_pos is not None
             ):
                 if not (self.map_open or self.hangar_open):
-                    if button_rect.collidepoint(mouse_pos):
+                    if (
+                        button_rect.width > 0
+                        and button_rect.height > 0
+                        and button_rect.collidepoint(mouse_pos)
+                    ):
                         self._toggle_ship_info_panel()
                         return
         if self.player and self.hud and not (self.map_open or self.hangar_open or self.ship_info_open):
@@ -203,10 +209,9 @@ class SandboxScene(Scene):
                 and event.button == 1
                 and mouse_pos is not None
             ):
-                base_rect = flank_slider_rect(self.hud.surface.get_size())
-                if base_rect.width > 0 and base_rect.height > 0:
-                    rect = base_rect.inflate(12, 12)
-                    if rect.collidepoint(mouse_pos):
+                slider_rect = self.hud.flank_slider_hit_rect
+                if slider_rect.width > 0 and slider_rect.height > 0:
+                    if slider_rect.collidepoint(mouse_pos):
                         self.flank_slider_dragging = True
                         self._update_flank_slider_from_mouse(mouse_pos)
             elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
@@ -223,8 +228,12 @@ class SandboxScene(Scene):
                 and mouse_pos is not None
                 and self.camera
             ):
-                slider_rect = flank_slider_rect(self.hud.surface.get_size())
-                if slider_rect.width > 0 and slider_rect.height > 0 and slider_rect.inflate(12, 12).collidepoint(mouse_pos):
+                slider_rect = self.hud.flank_slider_hit_rect
+                if (
+                    slider_rect.width > 0
+                    and slider_rect.height > 0
+                    and slider_rect.collidepoint(mouse_pos)
+                ):
                     pass
                 else:
                     picked = self._pick_target_at(mouse_pos)
@@ -563,7 +572,7 @@ class SandboxScene(Scene):
     def _update_flank_slider_from_mouse(self, mouse_pos: tuple[int, int]) -> None:
         if not self.player or not self.hud:
             return
-        rect = flank_slider_rect(self.hud.surface.get_size())
+        rect = self.hud.flank_slider_rect
         if rect.height <= 0:
             return
         rel = (mouse_pos[1] - rect.top) / rect.height

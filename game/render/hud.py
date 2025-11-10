@@ -93,6 +93,9 @@ class HUD:
         self.font = pygame.font.SysFont("consolas", 16)
         self.large_font = pygame.font.SysFont("consolas", 24)
         self.overlay_enabled = False
+        self._flank_slider_rect = pygame.Rect(0, 0, 0, 0)
+        self._flank_slider_hit_rect = pygame.Rect(0, 0, 0, 0)
+        self._ship_info_button_rect = pygame.Rect(0, 0, 0, 0)
 
     def toggle_overlay(self) -> None:
         self.overlay_enabled = not self.overlay_enabled
@@ -376,9 +379,12 @@ class HUD:
 
     def draw_flank_speed_slider(self, player: Ship) -> None:
         rect = flank_slider_rect(self.surface.get_size())
+        self._flank_slider_rect = rect.copy()
         if rect.width <= 0 or rect.height <= 0:
+            self._flank_slider_hit_rect = pygame.Rect(0, 0, 0, 0)
             return
         expanded = rect.inflate(12, 12)
+        self._flank_slider_hit_rect = expanded.copy()
         pygame.draw.rect(self.surface, (10, 18, 26), expanded)
         pygame.draw.rect(self.surface, (60, 90, 120), expanded, 1)
 
@@ -432,6 +438,7 @@ class HUD:
 
     def draw_ship_info_button(self, player: Ship, open_state: bool, hovered: bool) -> None:
         rect = ship_info_button_rect(self.surface.get_size())
+        self._ship_info_button_rect = rect.copy()
         background = (12, 20, 28)
         border = (70, 110, 150)
         if hovered:
@@ -460,11 +467,21 @@ class HUD:
             (status_x, rect.bottom + 26),
         )
 
+    @property
+    def flank_slider_rect(self) -> pygame.Rect:
+        return self._flank_slider_rect.copy()
+
+    @property
+    def flank_slider_hit_rect(self) -> pygame.Rect:
+        return self._flank_slider_hit_rect.copy()
+
+    @property
+    def ship_info_button_rect(self) -> pygame.Rect:
+        return self._ship_info_button_rect.copy()
+
 
 __all__ = [
     "HUD",
     "TargetOverlay",
     "format_distance",
-    "flank_slider_rect",
-    "ship_info_button_rect",
 ]
