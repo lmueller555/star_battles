@@ -46,6 +46,7 @@ class SectorMapView:
         self._rect = pygame.Rect(0, 0, 0, 0)
         self._grid_padding = Vector2()
         self._grid_usable = Vector2()
+        self._grid_scale = Vector2(0.0, 0.0)
         self._galaxy_points = self._generate_galaxy_points()
 
     def _generate_galaxy_points(self) -> list[tuple[float, float, float, float]]:
@@ -80,6 +81,10 @@ class SectorMapView:
         )
         self._grid_padding = padding
         self._grid_usable = usable
+        self._grid_scale = Vector2(
+            usable.x / span_x if span_x > 0 else 0.0,
+            usable.y / span_y if span_y > 0 else 0.0,
+        )
         self._positions.clear()
         for system in self.sector.all_systems():
             norm_x = (system.position[0] - min_x) / span_x
@@ -206,6 +211,23 @@ class SectorMapView:
         if current_id:
             for system in self.sector.reachable(current_id, player.stats.ftl_range):
                 reachable.add(system.id)
+
+        if current_id and current_id in self._positions:
+            center = self._positions[current_id] - Vector2(self._rect.left, self._rect.top)
+            if player.stats.ftl_range > 0 and self._grid_scale.x > 0 and self._grid_scale.y > 0:
+                horizontal_radius = player.stats.ftl_range * self._grid_scale.x
+                vertical_radius = player.stats.ftl_range * self._grid_scale.y
+                if horizontal_radius > 0.0 and vertical_radius > 0.0:
+                    range_overlay = pygame.Surface(self._rect.size, pygame.SRCALPHA)
+                    ellipse_rect = pygame.Rect(
+                        0,
+                        0,
+                        max(2, int(round(horizontal_radius * 2.0))),
+                        max(2, int(round(vertical_radius * 2.0))),
+                    )
+                    ellipse_rect.center = (int(round(center.x)), int(round(center.y)))
+                    pygame.draw.ellipse(range_overlay, (140, 200, 255, 120), ellipse_rect, 3)
+                    surface.blit(range_overlay, self._rect.topleft)
 
         for system in self.sector.all_systems():
             if not current_id or system.id == current_id:
