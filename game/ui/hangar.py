@@ -1752,8 +1752,6 @@ class HangarView:
         else:
             dialog.guarantee_rect = None
 
-        dialog.pip_rects = self._pip_rects
-
         status_text = dialog.message
         if not status_text and not can_upgrade and reason:
             status_text = reason
