@@ -97,6 +97,7 @@ class WeaponMount:
     weapon_id: Optional[str] = None
     cooldown: float = 0.0
     lock_progress: float = 0.0
+    level: int = 1
 
 
 class Ship:
@@ -139,9 +140,10 @@ class Ship:
         self.lock_decay_delay: float = 0.5
         self.lock_timer: float = 0.0
         self.modules_by_slot: Dict[str, list[ItemData]] = defaultdict(list)
+        self.module_levels: Dict[str, List[int]] = defaultdict(list)
         self._module_stat_cache: Dict[str, float] = defaultdict(float)
         self.hold_items: Dict[str, int] = {}
-        self.equipment_levels: Dict[str, int] = {}
+        self.hold_item_levels: Dict[str, List[int]] = defaultdict(list)
         self.hold_capacity: int = 30
         self.countermeasure_cooldown: float = 0.0
         self.auto_throttle_enabled: bool = False
@@ -226,12 +228,15 @@ class Ship:
         for mount in self.mounts:
             if mount.hardpoint.id == hardpoint_id:
                 mount.weapon_id = weapon_id
+                mount.level = 1
                 return
         raise KeyError(f"No hardpoint {hardpoint_id}")
 
     # Module helpers -----------------------------------------------------
 
-    def equip_module(self, module: ItemData) -> bool:
+    def equip_module(
+        self, module: ItemData, level: int = 1, index: Optional[int] = None
+    ) -> bool:
         """Equip a module if slot capacity allows."""
 
         capacity = getattr(self.frame.slots, module.slot_type, None)
@@ -240,23 +245,35 @@ class Ship:
         installed = self.modules_by_slot[module.slot_type]
         if len(installed) >= capacity:
             return False
-        installed.append(module)
+        levels = self.module_levels[module.slot_type]
+        level_value = max(1, int(level))
+        if index is None:
+            installed.append(module)
+            levels.append(level_value)
+        else:
+            target = max(0, min(int(index), len(installed)))
+            installed.insert(target, module)
+            levels.insert(target, level_value)
         for key, value in module.stats.items():
             self._module_stat_cache[key] += float(value)
         self._recompute_stats()
         return True
 
-    def unequip_module(self, slot_type: str, index: int) -> ItemData | None:
+    def unequip_module(self, slot_type: str, index: int) -> tuple[ItemData, int] | None:
         """Remove a module from the specified slot index."""
 
         modules = self.modules_by_slot.get(slot_type)
         if not modules or index < 0 or index >= len(modules):
             return None
         module = modules.pop(index)
+        levels = self.module_levels.get(slot_type, [])
+        level = 1
+        if 0 <= index < len(levels):
+            level = levels.pop(index)
         for key, value in module.stats.items():
             self._module_stat_cache[key] -= float(value)
         self._recompute_stats()
-        return module
+        return module, level
 
     def hold_item_count(self) -> int:
         return sum(self.hold_items.values())
@@ -264,33 +281,127 @@ class Ship:
     def can_store_in_hold(self, quantity: int = 1) -> bool:
         return self.hold_item_count() + max(0, quantity) <= self.hold_capacity
 
-    def add_hold_item(self, item_id: str, quantity: int = 1) -> bool:
+    def add_hold_item(self, item_id: str, quantity: int = 1, level: int = 1) -> bool:
         if quantity <= 0:
             return True
         if not self.can_store_in_hold(quantity):
             return False
         self.hold_items[item_id] = self.hold_items.get(item_id, 0) + quantity
-        self.equipment_levels.setdefault(item_id, 1)
+        levels = self.hold_item_levels.setdefault(item_id, [])
+        level_value = max(1, int(level))
+        for _ in range(quantity):
+            levels.append(level_value)
         return True
 
-    def remove_hold_item(self, item_id: str, quantity: int = 1) -> bool:
+    def remove_hold_item(
+        self, item_id: str, quantity: int = 1, *, index: Optional[int] = None
+    ) -> List[int]:
         if quantity <= 0:
-            return True
+            return []
         current = self.hold_items.get(item_id, 0)
         if current < quantity:
-            return False
+            return []
+        levels = self._ensure_hold_levels(item_id)
+        removed: List[int] = []
+        for i in range(quantity):
+            if not levels:
+                removed.append(1)
+                continue
+            if i == 0 and index is not None and 0 <= index < len(levels):
+                removed.append(levels.pop(index))
+            else:
+                removed.append(levels.pop(0))
         remaining = current - quantity
         if remaining > 0:
             self.hold_items[item_id] = remaining
+            # Trim any excess level entries beyond remaining quantity
+            while len(levels) > remaining:
+                levels.pop()
         else:
             self.hold_items.pop(item_id, None)
-        return True
+            self.hold_item_levels.pop(item_id, None)
+        return removed
+
+    def hold_item_level(self, item_id: str, index: int = 0) -> int:
+        levels = self._ensure_hold_levels(item_id)
+        if not levels:
+            return 1
+        if 0 <= index < len(levels):
+            return levels[index]
+        return levels[0]
+
+    def set_hold_item_level(self, item_id: str, index: int, level: int) -> None:
+        levels = self._ensure_hold_levels(item_id)
+        target = max(0, int(index))
+        level_value = max(1, int(level))
+        while len(levels) <= target:
+            levels.append(1)
+            self.hold_items[item_id] = self.hold_items.get(item_id, 0) + 1
+        levels[target] = level_value
+
+    def module_level(self, slot_type: str, index: int) -> int:
+        levels = self.module_levels.get(slot_type, [])
+        if 0 <= index < len(levels):
+            return levels[index]
+        return 1
+
+    def set_module_level(self, slot_type: str, index: int, level: int) -> None:
+        levels = self.module_levels.setdefault(slot_type, [])
+        target = max(0, int(index))
+        level_value = max(1, int(level))
+        while len(levels) <= target:
+            levels.append(1)
+        levels[target] = level_value
+
+    def weapon_level(self, mount_index: int) -> int:
+        if 0 <= mount_index < len(self.mounts):
+            return max(1, int(self.mounts[mount_index].level))
+        return 1
+
+    def set_weapon_level(self, mount_index: int, level: int) -> None:
+        if 0 <= mount_index < len(self.mounts):
+            self.mounts[mount_index].level = max(1, int(level))
 
     def item_level(self, item_id: str) -> int:
-        return max(1, self.equipment_levels.get(item_id, 1))
+        levels = self.hold_item_levels.get(item_id)
+        if levels:
+            return levels[0]
+        for slot_type, modules in self.modules_by_slot.items():
+            for index, module in enumerate(modules):
+                if module.id == item_id:
+                    return self.module_level(slot_type, index)
+        for mount in self.mounts:
+            if mount.weapon_id == item_id:
+                return max(1, int(mount.level))
+        return 1
 
     def set_item_level(self, item_id: str, level: int) -> None:
-        self.equipment_levels[item_id] = max(1, level)
+        level_value = max(1, int(level))
+        levels = self.hold_item_levels.get(item_id)
+        if levels:
+            levels[0] = level_value
+            return
+        for slot_type, modules in self.modules_by_slot.items():
+            for index, module in enumerate(modules):
+                if module.id == item_id:
+                    self.set_module_level(slot_type, index, level_value)
+                    return
+        for mount in self.mounts:
+            if mount.weapon_id == item_id:
+                mount.level = level_value
+                return
+        self.hold_item_levels[item_id] = [level_value]
+
+    def _ensure_hold_levels(self, item_id: str) -> List[int]:
+        quantity = self.hold_items.get(item_id, 0)
+        levels = self.hold_item_levels.setdefault(item_id, [])
+        if quantity <= 0:
+            return []
+        if len(levels) < quantity:
+            levels.extend([1] * (quantity - len(levels)))
+        elif len(levels) > quantity:
+            del levels[quantity:]
+        return levels
 
     def apply_default_loadout(self, content: "ContentManager") -> None:
         """Equip the frame's default modules and weapons when available."""
