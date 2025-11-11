@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import math
+import random
 from dataclasses import dataclass, field
 from typing import Dict, Iterable, List, Optional, Tuple
 
@@ -13,6 +14,7 @@ from game.ships.ship import Ship, WeaponMount
 from game.world.station import DockingStation
 from game.ui.ship_info import DEFAULT_ANCHORS, MODEL_LAYOUTS
 from game.ui.strike_store import CATALOG, ItemCardData, StoreFilters, StoreItem, fitting, store
+from game.ui.equipment_upgrade import EQUIPMENT_UPGRADE_SPECS, EquipmentUpgradeModel
 
 
 @dataclass
@@ -49,6 +51,8 @@ class _HoldRow:
     button_rect: Optional[pygame.Rect]
     action: Optional[str] = None
     enabled: bool = False
+    upgrade_rect: Optional[pygame.Rect] = None
+    upgrade_enabled: bool = False
 
 
 @dataclass
@@ -64,6 +68,126 @@ class _SellDialog:
     cancel_rect: pygame.Rect = field(default_factory=lambda: pygame.Rect(0, 0, 0, 0))
     available: float = 0.0
 
+
+@dataclass(frozen=True)
+class _StatRowDef:
+    label: str
+    keys: Tuple[str, ...]
+    units: str
+    precision: int
+    axis: Optional[str] = None
+    tooltip: str = ""
+
+
+@dataclass
+class _UpgradeDialog:
+    item: _HoldItem
+    store_item: StoreItem
+    spec: EquipmentUpgradeSpec
+    model: EquipmentUpgradeModel
+    rect: pygame.Rect = field(default_factory=lambda: pygame.Rect(0, 0, 0, 0))
+    pip_rects: List[Tuple[int, pygame.Rect]] = field(default_factory=list)
+    left_chevron: Optional[pygame.Rect] = None
+    right_chevron: Optional[pygame.Rect] = None
+    confirm_rect: Optional[pygame.Rect] = None
+    cancel_rect: Optional[pygame.Rect] = None
+    max_rect: Optional[pygame.Rect] = None
+    guarantee_rect: Optional[pygame.Rect] = None
+    message: Optional[str] = None
+    flash_timer: float = 0.0
+    flash_axes: Tuple[str, ...] = ()
+    row_rects: List[Tuple[pygame.Rect, _StatRowDef]] = field(default_factory=list)
+
+
+STAT_TOOLTIPS: Dict[str, str] = {
+    "damage": "Average damage range delivered per shot.",
+    "armor_piercing": "Reduces target armor before damage mitigation.",
+    "range": "Minimum and maximum firing distance envelope.",
+    "optimal_range": "Range where the weapon maintains peak accuracy and DPS.",
+    "accuracy": "Directly improves hit chance against evasive targets.",
+    "critical_offense": "Raises critical hit chance against enemy defenses.",
+    "reload": "Seconds between shots or bursts.",
+    "power": "Energy drawn from the ship per shot.",
+    "firing_arc": "Degrees of traverse the weapon can cover.",
+    "durability": "Item health before it becomes inoperable.",
+    "armor": "Adds to the ship's damage reduction value.",
+    "hull_hp": "Flat hull hit points added to the ship.",
+    "acceleration": "Change to linear acceleration.",
+    "turn_accel": "Change to rotational acceleration.",
+    "turn_rate": "Change to rotational speed.",
+    "max_speed": "Increase to sustained cruise speed.",
+    "boost_speed": "Increase to boosted top speed.",
+    "avoidance": "Improves chance to avoid incoming fire.",
+}
+
+
+AXIS_KEYS: Dict[str, Tuple[str, ...]] = {
+    "damage": ("damage_min", "damage_max"),
+    "critical_offense": ("critical_offense",),
+    "optimal_range": ("optimal_range",),
+    "armor": ("armor",),
+    "hull_hp": ("hull_hp",),
+    "acceleration": ("acceleration",),
+    "turn_accel": ("turn_accel",),
+    "turn_rate": ("turn_rate",),
+    "max_speed": ("max_speed",),
+    "boost_speed": ("boost_speed",),
+    "avoidance": ("avoidance_rating",),
+}
+
+
+WEAPON_ROWS: Tuple[_StatRowDef, ...] = (
+    _StatRowDef("Damage", ("damage_min", "damage_max"), "points", 2, axis="damage", tooltip=STAT_TOOLTIPS["damage"]),
+    _StatRowDef(
+        "Armor Piercing",
+        ("armor_piercing",),
+        "points",
+        0,
+        tooltip=STAT_TOOLTIPS["armor_piercing"],
+    ),
+    _StatRowDef("Range", ("range_min", "range_max"), "m", 0, tooltip=STAT_TOOLTIPS["range"]),
+    _StatRowDef(
+        "Optimal Range",
+        ("optimal_range",),
+        "m",
+        0,
+        axis="optimal_range",
+        tooltip=STAT_TOOLTIPS["optimal_range"],
+    ),
+    _StatRowDef("Accuracy", ("accuracy",), "points", 0, tooltip=STAT_TOOLTIPS["accuracy"]),
+    _StatRowDef(
+        "Critical Offense",
+        ("critical_offense",),
+        "points",
+        0,
+        axis="critical_offense",
+        tooltip=STAT_TOOLTIPS["critical_offense"],
+    ),
+    _StatRowDef("Reload", ("reload",), "s", 2, tooltip=STAT_TOOLTIPS["reload"]),
+    _StatRowDef("Power Cost", ("power",), "points", 2, tooltip=STAT_TOOLTIPS["power"]),
+    _StatRowDef("Firing Arc", ("firing_arc",), "°", 0, tooltip=STAT_TOOLTIPS["firing_arc"]),
+    _StatRowDef("Durability", ("durability",), "points", 0, tooltip=STAT_TOOLTIPS["durability"]),
+)
+
+
+HULL_ROWS: Tuple[_StatRowDef, ...] = (
+    _StatRowDef("Armor Value", ("armor",), "points", 2, axis="armor", tooltip=STAT_TOOLTIPS["armor"]),
+    _StatRowDef("Hull Points", ("hull_hp",), "points", 1, axis="hull_hp", tooltip=STAT_TOOLTIPS["hull_hp"]),
+    _StatRowDef("Acceleration", ("acceleration",), "m/s²", 2, tooltip=STAT_TOOLTIPS["acceleration"]),
+    _StatRowDef("Turn Accel", ("turn_accel",), "deg/s²", 2, tooltip=STAT_TOOLTIPS["turn_accel"]),
+    _StatRowDef("Durability", ("durability",), "points", 0, tooltip=STAT_TOOLTIPS["durability"]),
+)
+
+
+ENGINE_ROWS: Tuple[_StatRowDef, ...] = (
+    _StatRowDef("Speed", ("max_speed",), "m/s", 2, axis="max_speed", tooltip=STAT_TOOLTIPS["max_speed"]),
+    _StatRowDef("Boost Speed", ("boost_speed",), "m/s", 2, axis="boost_speed", tooltip=STAT_TOOLTIPS["boost_speed"]),
+    _StatRowDef("Acceleration", ("acceleration",), "m/s²", 2, axis="acceleration", tooltip=STAT_TOOLTIPS["acceleration"]),
+    _StatRowDef("Turn Speed", ("turn_rate",), "deg/s", 2, axis="turn_rate", tooltip=STAT_TOOLTIPS["turn_rate"]),
+    _StatRowDef("Turn Accel", ("turn_accel",), "deg/s²", 2, axis="turn_accel", tooltip=STAT_TOOLTIPS["turn_accel"]),
+    _StatRowDef("Avoidance", ("avoidance_rating",), "points", 1, axis="avoidance", tooltip=STAT_TOOLTIPS["avoidance"]),
+    _StatRowDef("Durability", ("durability",), "points", 0, tooltip=STAT_TOOLTIPS["durability"]),
+)
 
 class _HangarInteriorAnimator:
     """Render a stylised hangar interior with light animation."""
@@ -198,6 +322,7 @@ class HangarView:
         self._price_icons = self._create_price_icons()
         self._hold_rows: List[_HoldRow] = []
         self._sell_dialog: Optional[_SellDialog] = None
+        self._upgrade_dialog: Optional[_UpgradeDialog] = None
         self._current_ship: Optional[Ship] = None
         self._store_filters = StoreFilters()
         self._store_toggle_states: Dict[str, bool] = {"weapon": True, "hull": True, "engine": True}
@@ -230,6 +355,7 @@ class HangarView:
         self._tooltip_button_rect: Optional[pygame.Rect] = None
         self._tooltip_button_slot: Optional[_SlotDisplay] = None
         self._tooltip_button_enabled: bool = False
+        self._player_skills: Dict[str, int] = {"Gunnery": 3, "Engineering": 3, "Propulsion": 3}
 
     def set_surface(self, surface: pygame.Surface) -> None:
         """Update the target surface when the display size changes."""
@@ -239,6 +365,8 @@ class HangarView:
     def handle_event(self, event: pygame.event.Event) -> bool:
         """Allow ribbon selection via mouse input."""
 
+        if self._upgrade_dialog and self._handle_upgrade_dialog_event(event):
+            return True
         if self._sell_dialog and self._handle_sell_dialog_event(event):
             return True
         if self.active_option == "Store":
@@ -300,6 +428,11 @@ class HangarView:
                                 self._play_confirm_sound()
                                 self._clear_active_slot()
                         return True
+                    if row.upgrade_rect and row.upgrade_rect.collidepoint(pos):
+                        if row.upgrade_enabled:
+                            self._open_upgrade_dialog(row.item)
+                            self._clear_active_slot()
+                        return True
             for option, rect in self._ribbon_rects.items():
                 if rect.collidepoint(pos):
                     self.active_option = option
@@ -314,6 +447,8 @@ class HangarView:
         """Advance hangar background animations."""
 
         self._interior.update(dt)
+        if self._upgrade_dialog and self._upgrade_dialog.flash_timer > 0.0:
+            self._upgrade_dialog.flash_timer = max(0.0, self._upgrade_dialog.flash_timer - dt)
 
     def draw(self, surface: pygame.Surface, ship: Ship, station: DockingStation, distance: float) -> None:
         self._current_ship = ship
@@ -369,6 +504,8 @@ class HangarView:
 
         if self._sell_dialog:
             self._draw_sell_dialog(surface)
+        if self._upgrade_dialog:
+            self._draw_upgrade_dialog(surface)
 
     # ------------------------------------------------------------------
     def _draw_ribbon(self, surface: pygame.Surface, rect: pygame.Rect) -> None:
@@ -941,6 +1078,26 @@ class HangarView:
                         button_rect.centery - label.get_height() // 2,
                     ),
                 )
+                upgrade_rect = pygame.Rect(button_rect.x - 108, button_rect.y, 98, 36)
+                upgrade_spec = (
+                    EQUIPMENT_UPGRADE_SPECS.get(item.store_item.id)
+                    if item.store_item
+                    else None
+                )
+                upgrade_enabled = bool(upgrade_spec and item.amount > 0.0)
+                upgrade_fill = (70, 130, 180, 230) if upgrade_enabled else (32, 44, 58, 200)
+                upgrade_border = (170, 230, 255) if upgrade_enabled else (70, 96, 120)
+                self._blit_panel(surface, upgrade_rect, upgrade_fill, upgrade_border, 1)
+                upgrade_label = self.small_font.render(
+                    "Upgrade", True, (220, 240, 255) if upgrade_enabled else (150, 170, 188)
+                )
+                surface.blit(
+                    upgrade_label,
+                    (
+                        upgrade_rect.centerx - upgrade_label.get_width() // 2,
+                        upgrade_rect.centery - upgrade_label.get_height() // 2,
+                    ),
+                )
                 if not enabled:
                     status = "No free slot" if item.amount > 0.0 else "None owned"
                     note_text = self.mini_font.render(status, True, (150, 170, 188))
@@ -997,7 +1154,15 @@ class HangarView:
                 )
 
             self._hold_rows.append(
-                _HoldRow(item=item, rect=row_rect, button_rect=button_rect, action=action, enabled=enabled)
+                _HoldRow(
+                    item=item,
+                    rect=row_rect,
+                    button_rect=button_rect,
+                    action=action,
+                    enabled=enabled,
+                    upgrade_rect=upgrade_rect if item.equippable and item.store_item else None,
+                    upgrade_enabled=upgrade_enabled if item.equippable and item.store_item else False,
+                )
             )
             y += row_height + spacing
 
@@ -1306,6 +1471,534 @@ class HangarView:
         dialog.confirm_rect = confirm_rect
         dialog.cancel_rect = cancel_rect
 
+    def _draw_upgrade_dialog(self, surface: pygame.Surface) -> None:
+        if not self._upgrade_dialog or not self._current_ship:
+            return
+        dialog = self._upgrade_dialog
+        ship = self._current_ship
+        model = dialog.model
+        model.player_resources = self._resource_snapshot(ship)
+
+        width, height = surface.get_size()
+        overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+        overlay.fill((6, 10, 16, 220))
+        surface.blit(overlay, (0, 0))
+
+        box_width = min(900, int(width * 0.72))
+        box_height = min(680, int(height * 0.78))
+        box_width = max(720, box_width)
+        box_height = max(520, box_height)
+        rect = pygame.Rect((width - box_width) // 2, (height - box_height) // 2, box_width, box_height)
+        self._blit_panel(surface, rect, (18, 30, 44, 238), (120, 200, 255), 2)
+        dialog.rect = rect
+
+        header_rect = pygame.Rect(rect.x + 28, rect.y + 20, rect.width - 56, 90)
+        icon = self._hold_icons.get(dialog.item.icon_key or dialog.store_item.slot_family)
+        text_x = header_rect.x
+        if icon:
+            icon_rect = icon.get_rect()
+            icon_rect.x = header_rect.x
+            icon_rect.centery = header_rect.centery
+            surface.blit(icon, icon_rect.topleft)
+            text_x = icon_rect.right + 18
+
+        name_text = self.font.render(dialog.store_item.name, True, (224, 240, 255))
+        surface.blit(name_text, (text_x, header_rect.y + 4))
+
+        level_label = self.small_font.render(
+            f"Level {model.current_level} / {dialog.spec.level_cap}",
+            True,
+            (182, 208, 232),
+        )
+        surface.blit(level_label, (text_x, header_rect.y + 34))
+
+        effect_rect = pygame.Rect(header_rect.right - 320, header_rect.y, 300, header_rect.height)
+        self._draw_wrapped_text(
+            surface,
+            dialog.spec.effect,
+            self.mini_font,
+            (176, 206, 232),
+            effect_rect,
+        )
+
+        pip_area = pygame.Rect(rect.x + 56, header_rect.bottom + 12, rect.width - 112, 60)
+        self._draw_upgrade_pips(surface, pip_area, dialog)
+
+        table_top = pip_area.bottom + 16
+        table_rect = pygame.Rect(rect.x + 32, table_top, rect.width - 64, rect.bottom - table_top - 118)
+        self._blit_panel(surface, table_rect, (12, 22, 32, 220), (80, 124, 168), 1)
+
+        row_height = 34
+        label_x = table_rect.x + 18
+        current_x = table_rect.x + int(table_rect.width * 0.46)
+        preview_x = table_rect.x + int(table_rect.width * 0.7)
+        delta_x = table_rect.right - 20
+        y = table_rect.y + 14
+        dialog.row_rects = []
+        tooltip_text: Optional[str] = None
+
+        rows = self._stat_rows_for_slot(dialog.spec.slot)
+        for row in rows:
+            row_rect = pygame.Rect(table_rect.x + 8, y - 6, table_rect.width - 16, row_height)
+            if dialog.flash_timer > 0.0 and row.axis and row.axis in dialog.flash_axes:
+                highlight = pygame.Surface((row_rect.width, row_rect.height), pygame.SRCALPHA)
+                intensity = int(120 * dialog.flash_timer)
+                intensity = max(30, min(120, intensity))
+                highlight.fill((70, 150, 200, intensity))
+                surface.blit(highlight, row_rect.topleft)
+
+            current_values: List[float] = []
+            preview_values: List[float] = []
+            preview_known = True
+            for key in row.keys:
+                current_value, _ = model.stat_value(key, model.current_level)
+                preview_value, known = model.stat_value(key, model.preview_level)
+                current_values.append(current_value)
+                preview_values.append(preview_value)
+                preview_known = preview_known and known
+            differences = [pv - cv for pv, cv in zip(preview_values, current_values)]
+            axis_active = bool(row.axis and row.axis in dialog.spec.upgrade_axes)
+            current_text = self._format_stat_value(row, current_values)
+            preview_text = self._format_stat_value(row, preview_values)
+            delta_text, delta_color = self._format_delta_text(row, differences, preview_known, axis_active)
+            if not preview_known and axis_active:
+                preview_text += " ?"
+
+            label_surface = self.small_font.render(row.label, True, (196, 220, 240))
+            surface.blit(label_surface, (label_x, y))
+
+            current_surface = self.small_font.render(current_text, True, (180, 204, 226))
+            surface.blit(
+                current_surface,
+                (current_x - current_surface.get_width(), y),
+            )
+
+            preview_surface = self.small_font.render(preview_text, True, (226, 242, 255))
+            surface.blit(
+                preview_surface,
+                (preview_x - preview_surface.get_width(), y),
+            )
+
+            delta_surface = self.small_font.render(delta_text, True, delta_color)
+            surface.blit(
+                delta_surface,
+                (delta_x - delta_surface.get_width(), y),
+            )
+
+            dialog.row_rects.append((row_rect, row))
+            if row_rect.collidepoint(pygame.mouse.get_pos()):
+                tooltip_text = row.tooltip
+            y += row_height
+
+        footer_rect = pygame.Rect(rect.x + 32, rect.bottom - 104, rect.width - 64, 72)
+        self._blit_panel(surface, footer_rect, (14, 24, 34, 230), (86, 132, 170), 1)
+
+        skill_ok, requirement = model.meets_skill()
+        if requirement:
+            skill_text = f"Requires Skill: {requirement[0].skill} {requirement[0].rank}"
+        else:
+            skill_text = "Requires Skill: None"
+        skill_color = (180, 214, 238) if skill_ok or not requirement else (220, 120, 120)
+        skill_surface = self.small_font.render(skill_text, True, skill_color)
+        surface.blit(skill_surface, (footer_rect.x + 16, footer_rect.y + 12))
+
+        totals, unknown_cost = model.aggregate_cost()
+        shortfalls = model.missing_resources()
+        cost_parts: List[str] = []
+        currency_names = {"tylium": "Tylium", "cubits": "Cubits", "merits": "Merits", "tuning_kits": "TKs"}
+        order = ["tylium", "cubits", "merits", "tuning_kits"]
+        for currency in order:
+            amount = totals.get(currency, 0.0)
+            if amount <= 0.0 and currency not in totals:
+                continue
+            label = currency_names.get(currency, currency.title())
+            if currency == "tuning_kits":
+                text_value = f"{amount:.0f}"
+            else:
+                text_value = f"{amount:,.0f}" if not unknown_cost else "—"
+            if currency in shortfalls:
+                text_value = f"[ {text_value} ]"
+            cost_parts.append(f"{label} {text_value}")
+        if unknown_cost and not cost_parts:
+            cost_parts.append("Cost data incomplete")
+        cost_text = " | ".join(cost_parts) if cost_parts else "No additional cost"
+        cost_color = (204, 234, 254)
+        cost_surface = self.small_font.render(cost_text, True, cost_color)
+        cost_x = footer_rect.centerx - cost_surface.get_width() // 2
+        surface.blit(cost_surface, (cost_x, footer_rect.y + 12))
+
+        chance_text = self._chance_text(dialog)
+        if chance_text:
+            chance_surface = self.mini_font.render(chance_text, True, (180, 210, 238))
+            surface.blit(
+                chance_surface,
+                (
+                    footer_rect.centerx - chance_surface.get_width() // 2,
+                    footer_rect.y + 36,
+                ),
+            )
+
+        button_y = footer_rect.bottom - 52
+        button_size = pygame.Rect(0, 0, 116, 44)
+        cancel_rect = pygame.Rect(footer_rect.right - 120, button_y, button_size.width, button_size.height)
+        confirm_rect = pygame.Rect(cancel_rect.left - 126, button_y, button_size.width, button_size.height)
+        max_rect = pygame.Rect(confirm_rect.left - 126, button_y, button_size.width, button_size.height)
+
+        can_upgrade, reason = model.can_upgrade()
+        confirm_fill = (70, 140, 180, 236) if can_upgrade else (32, 46, 60, 200)
+        confirm_border = (170, 230, 255) if can_upgrade else (80, 110, 140)
+        self._blit_panel(surface, confirm_rect, confirm_fill, confirm_border, 1)
+        confirm_text = self.small_font.render("Upgrade", True, (232, 244, 255) if can_upgrade else (150, 170, 190))
+        surface.blit(
+            confirm_text,
+            (
+                confirm_rect.centerx - confirm_text.get_width() // 2,
+                confirm_rect.centery - confirm_text.get_height() // 2,
+            ),
+        )
+
+        self._blit_panel(surface, cancel_rect, (34, 50, 64, 210), (90, 130, 168), 1)
+        cancel_text = self.small_font.render("Cancel", True, (200, 220, 236))
+        surface.blit(
+            cancel_text,
+            (
+                cancel_rect.centerx - cancel_text.get_width() // 2,
+                cancel_rect.centery - cancel_text.get_height() // 2,
+            ),
+        )
+
+        max_level = model.max_affordable_level()
+        max_enabled = max_level > model.current_level
+        self._blit_panel(
+            surface,
+            max_rect,
+            (34, 50, 64, 210) if max_enabled else (24, 34, 46, 200),
+            (120, 170, 210) if max_enabled else (70, 96, 120),
+            1,
+        )
+        max_text = self.small_font.render("Max", True, (214, 236, 255) if max_enabled else (150, 170, 188))
+        surface.blit(
+            max_text,
+            (
+                max_rect.centerx - max_text.get_width() // 2,
+                max_rect.centery - max_text.get_height() // 2,
+            ),
+        )
+
+        dialog.confirm_rect = confirm_rect
+        dialog.cancel_rect = cancel_rect
+        dialog.max_rect = max_rect
+
+        steps = model.steps_in_range()
+        has_tuning = any(step.tuning_kits for step in steps)
+        if has_tuning:
+            guarantee_rect = pygame.Rect(footer_rect.x + 16, button_y, 132, 44)
+            guarantee_active = model.guarantee
+            fill = (64, 120, 160, 228) if guarantee_active else (30, 44, 58, 200)
+            border = (180, 230, 255) if guarantee_active else (80, 110, 140)
+            self._blit_panel(surface, guarantee_rect, fill, border, 1)
+            guarantee_text = "Guaranteed" if guarantee_active else "Guarantee"
+            text_surface = self.small_font.render(guarantee_text, True, (224, 242, 255))
+            surface.blit(
+                text_surface,
+                (
+                    guarantee_rect.centerx - text_surface.get_width() // 2,
+                    guarantee_rect.centery - text_surface.get_height() // 2,
+                ),
+            )
+            dialog.guarantee_rect = guarantee_rect
+        else:
+            dialog.guarantee_rect = None
+
+        dialog.pip_rects = self._pip_rects
+
+        status_text = dialog.message
+        if not status_text and not can_upgrade and reason:
+            status_text = reason
+        if status_text:
+            color = (120, 210, 150) if "Upgraded" in status_text else (220, 140, 140)
+            status_surface = self.mini_font.render(status_text, True, color)
+            surface.blit(status_surface, (rect.x + 32, footer_rect.y - 28))
+
+        if tooltip_text:
+            tooltip_surface = self.mini_font.render(tooltip_text, True, (196, 224, 248))
+            surface.blit(
+                tooltip_surface,
+                (
+                    rect.x + 32,
+                    footer_rect.y - tooltip_surface.get_height() - 6,
+                ),
+            )
+
+    def _draw_upgrade_pips(self, surface: pygame.Surface, area: pygame.Rect, dialog: _UpgradeDialog) -> None:
+        model = dialog.model
+        spec = dialog.spec
+        pygame.draw.line(surface, (90, 130, 170), (area.x, area.centery), (area.right, area.centery), 2)
+        count = spec.level_cap
+        spacing = area.width / max(1, count - 1)
+        radius = 11
+        pip_rects: List[Tuple[int, pygame.Rect]] = []
+        for index in range(count):
+            level = index + 1
+            center_x = int(area.x + index * spacing)
+            center = (center_x, area.centery)
+            tier_color = (92, 156, 214) if level <= 10 else (208, 96, 120)
+            outline_color = (170, 230, 255) if model.current_level < level <= model.preview_level else tier_color
+            fill_color = tier_color if level <= model.current_level else (26, 38, 52)
+            pygame.draw.circle(surface, fill_color, center, radius)
+            pygame.draw.circle(surface, outline_color, center, radius, 2)
+            pip_rects.append((level, pygame.Rect(center_x - radius, area.centery - radius, radius * 2, radius * 2)))
+        dialog.pip_rects = pip_rects
+
+        left_rect = pygame.Rect(area.x - 42, area.centery - 20, 34, 40)
+        right_rect = pygame.Rect(area.right + 8, area.centery - 20, 34, 40)
+        pygame.draw.polygon(surface, (150, 210, 255), [(left_rect.right, left_rect.top), (left_rect.right, left_rect.bottom), (left_rect.x, left_rect.centery)], 0)
+        pygame.draw.polygon(surface, (150, 210, 255), [(right_rect.x, right_rect.top), (right_rect.x, right_rect.bottom), (right_rect.right, right_rect.centery)], 0)
+        dialog.left_chevron = left_rect
+        dialog.right_chevron = right_rect
+
+        preview_label = self.small_font.render(
+            f"Preview Level {model.preview_level}",
+            True,
+            (186, 214, 240),
+        )
+        surface.blit(preview_label, (area.centerx - preview_label.get_width() // 2, area.bottom + 6))
+
+    def _chance_text(self, dialog: _UpgradeDialog) -> str:
+        model = dialog.model
+        steps = model.steps_in_range()
+        if not steps:
+            return ""
+        unique_chances = {step.success_chance for step in steps if step.success_chance and step.success_chance < 1.0}
+        if not unique_chances:
+            if model.guarantee and any(step.guarantee_kits for step in steps):
+                return "Guaranteed"
+            return ""
+        if model.guarantee and any(step.guarantee_kits for step in steps):
+            return "Chance: Guaranteed"
+        if len(unique_chances) == 1:
+            chance = next(iter(unique_chances)) * 100.0
+            overall = model.aggregated_success()
+            if overall is not None and len(steps) > 1:
+                return f"Chance: {chance:.0f}% per step (Overall {overall * 100:.0f}%)"
+            return f"Chance: {chance:.0f}% per step"
+        return "Chance varies per step"
+
+    def _format_stat_value(self, row: _StatRowDef, values: List[float]) -> str:
+        if len(values) == 1:
+            text = self._format_number(values[0], row.precision)
+        else:
+            formatted = [self._format_number(v, row.precision) for v in values]
+            text = "–".join(formatted)
+        return f"{text} {row.units}"
+
+    def _format_delta_text(
+        self,
+        row: _StatRowDef,
+        differences: List[float],
+        preview_known: bool,
+        axis_active: bool,
+    ) -> Tuple[str, Tuple[int, int, int]]:
+        if not axis_active:
+            return "—", (120, 140, 160)
+        if not preview_known:
+            return "unknown", (170, 180, 210)
+        if all(abs(delta) < 1e-4 for delta in differences):
+            return "—", (120, 140, 160)
+        formatted = [self._format_delta(delta, row.precision) for delta in differences]
+        text = " / ".join(formatted)
+        has_positive = any(delta > 1e-4 for delta in differences)
+        has_negative = any(delta < -1e-4 for delta in differences)
+        if has_positive and has_negative:
+            color = (210, 210, 160)
+        elif has_positive:
+            color = (130, 210, 160)
+        else:
+            color = (220, 140, 140)
+        return f"{text} {row.units}", color
+
+    def _format_number(self, value: float, precision: int) -> str:
+        fmt = f"{{:,.{precision}f}}"
+        return fmt.format(value)
+
+    def _format_delta(self, value: float, precision: int) -> str:
+        fmt = f"{{:+,.{precision}f}}"
+        return fmt.format(value)
+
+    def _resource_snapshot(self, ship: Ship) -> Dict[str, float]:
+        resources = vars(ship.resources).copy()
+        return {key: float(value) for key, value in resources.items()}
+
+    def _stat_rows_for_slot(self, slot: str) -> Tuple[_StatRowDef, ...]:
+        if slot == "weapon":
+            return WEAPON_ROWS
+        if slot == "hull":
+            return HULL_ROWS
+        if slot == "engine":
+            return ENGINE_ROWS
+        return ()
+
+    def _chance_axes_delta(self, dialog: _UpgradeDialog, previous: int, new_level: int) -> str:
+        rows = self._stat_rows_for_slot(dialog.spec.slot)
+        labels: List[str] = []
+        for row in rows:
+            if not row.axis or row.axis not in dialog.spec.upgrade_axes:
+                continue
+            keys = AXIS_KEYS.get(row.axis, row.keys)
+            diffs: List[str] = []
+            for key in keys:
+                prev_value, prev_known = dialog.model.stat_value(key, previous)
+                new_value, new_known = dialog.model.stat_value(key, new_level)
+                if prev_known and new_known:
+                    diffs.append(self._format_delta(new_value - prev_value, row.precision))
+            if diffs:
+                delta_text = diffs[0] if len(diffs) == 1 else " / ".join(diffs)
+                labels.append(f"{row.label} {delta_text}")
+        return ", ".join(labels)
+
+    def _handle_upgrade_dialog_event(self, event: pygame.event.Event) -> bool:
+        if not self._upgrade_dialog:
+            return False
+        dialog = self._upgrade_dialog
+        model = dialog.model
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                self._close_upgrade_dialog()
+                return True
+            if event.key in (pygame.K_LEFT, pygame.K_a):
+                model.increment_preview(-1)
+                dialog.message = None
+                return True
+            if event.key in (pygame.K_RIGHT, pygame.K_d):
+                model.increment_preview(1)
+                dialog.message = None
+                return True
+            if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                self._attempt_upgrade()
+                return True
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            pos = getattr(event, "pos", pygame.mouse.get_pos())
+            if dialog.confirm_rect and dialog.confirm_rect.collidepoint(pos):
+                self._attempt_upgrade()
+                return True
+            if dialog.cancel_rect and dialog.cancel_rect.collidepoint(pos):
+                self._close_upgrade_dialog()
+                return True
+            if dialog.max_rect and dialog.max_rect.collidepoint(pos):
+                model.set_preview_level(model.max_affordable_level())
+                dialog.message = None
+                return True
+            if dialog.guarantee_rect and dialog.guarantee_rect.collidepoint(pos):
+                model.toggle_guarantee()
+                dialog.message = None
+                return True
+            for level, pip_rect in dialog.pip_rects:
+                if pip_rect.collidepoint(pos):
+                    model.set_preview_level(level)
+                    dialog.message = None
+                    return True
+            if dialog.left_chevron and dialog.left_chevron.collidepoint(pos):
+                model.increment_preview(-1)
+                dialog.message = None
+                return True
+            if dialog.right_chevron and dialog.right_chevron.collidepoint(pos):
+                model.increment_preview(1)
+                dialog.message = None
+                return True
+            if dialog.rect and not dialog.rect.collidepoint(pos):
+                self._close_upgrade_dialog()
+                return True
+        return False
+
+    def _attempt_upgrade(self) -> None:
+        if not self._upgrade_dialog or not self._current_ship:
+            return
+        dialog = self._upgrade_dialog
+        model = dialog.model
+        can_upgrade, reason = model.can_upgrade()
+        if not can_upgrade:
+            dialog.message = reason or "Cannot upgrade"
+            return
+        steps = model.steps_in_range()
+        if not steps:
+            dialog.message = "Already at level cap"
+            return
+
+        ship = self._current_ship
+        previous_level = model.current_level
+        last_success_level = previous_level
+        failure_level: Optional[int] = None
+        for step in steps:
+            for currency, amount in step.costs.items():
+                if amount > 0.0:
+                    ship.resources.spend(currency, amount)
+            if step.tuning_kits:
+                kits = float(step.tuning_kits)
+                if model.guarantee and step.guarantee_kits:
+                    kits = float(step.guarantee_kits)
+                ship.resources.tuning_kits = max(0.0, ship.resources.tuning_kits - kits)
+            chance = 1.0
+            if step.success_chance is not None:
+                if model.guarantee and step.guarantee_kits:
+                    chance = 1.0
+                else:
+                    chance = step.success_chance
+            success = True
+            roll_value = 0.0
+            if chance < 0.999:
+                roll_value = random.random()
+                success = roll_value <= chance
+            if success:
+                last_success_level = step.level
+            else:
+                failure_level = step.level
+                break
+
+        ship.set_item_level(dialog.store_item.id, last_success_level)
+        model.current_level = last_success_level
+        model.set_preview_level(min(model.spec.level_cap, last_success_level + 1))
+        model.player_resources = self._resource_snapshot(ship)
+
+        if last_success_level > previous_level:
+            delta_summary = self._chance_axes_delta(dialog, previous_level, last_success_level)
+            if delta_summary:
+                dialog.message = f"Upgraded to Level {last_success_level} ({delta_summary})"
+            else:
+                dialog.message = f"Upgraded to Level {last_success_level}"
+            dialog.flash_timer = 1.2
+        elif failure_level:
+            dialog.message = f"Upgrade failed at Level {failure_level} (stopped at {last_success_level})"
+            dialog.flash_timer = 0.0
+        else:
+            dialog.message = "Upgrade made no progress"
+            dialog.flash_timer = 0.0
+
+    def _open_upgrade_dialog(self, item: _HoldItem) -> None:
+        if not self._current_ship or not item.store_item:
+            return
+        spec = EQUIPMENT_UPGRADE_SPECS.get(item.store_item.id)
+        if not spec:
+            return
+        ship = self._current_ship
+        model = EquipmentUpgradeModel(
+            spec,
+            current_level=ship.item_level(item.store_item.id),
+            player_resources=self._resource_snapshot(ship),
+            player_skills=dict(self._player_skills),
+        )
+        dialog = _UpgradeDialog(
+            item=item,
+            store_item=item.store_item,
+            spec=spec,
+            model=model,
+            flash_axes=spec.upgrade_axes,
+        )
+        self._upgrade_dialog = dialog
+        self._sell_dialog = None
+
+    def _close_upgrade_dialog(self) -> None:
+        self._upgrade_dialog = None
+
     def _confirm_sell(self) -> None:
         if not self._sell_dialog or not self._current_ship:
             return
@@ -1358,6 +2051,32 @@ class HangarView:
         if currency == "cubits":
             return "Cubits"
         return currency.title()
+
+    def _draw_wrapped_text(
+        self,
+        surface: pygame.Surface,
+        text: str,
+        font: pygame.font.Font,
+        color: Tuple[int, int, int],
+        rect: pygame.Rect,
+    ) -> None:
+        words = text.split()
+        if not words:
+            return
+        line = ""
+        line_height = font.get_linesize()
+        y = rect.y
+        for word in words:
+            candidate = f"{line} {word}".strip()
+            if font.size(candidate)[0] <= rect.width:
+                line = candidate
+            else:
+                if line:
+                    surface.blit(font.render(line, True, color), (rect.x, y))
+                    y += line_height
+                line = word
+        if line and y <= rect.bottom:
+            surface.blit(font.render(line, True, color), (rect.x, y))
 
     def _draw_ship_panel(self, surface: pygame.Surface, rect: pygame.Rect, ship: Ship) -> None:
         self._blit_panel(surface, rect, (18, 28, 40, 210), (70, 110, 150))
