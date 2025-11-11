@@ -7,6 +7,9 @@ from game.ui.equipment_upgrade import (
     UpgradeCurve,
     UpgradeStep,
 )
+from game.ships.data import ShipFrame
+from game.ships.ship import Ship
+from game.ships.stats import ShipSlotLayout, ShipStats
 
 
 def _resources(**kwargs):
@@ -77,3 +80,19 @@ def test_stat_value_marks_unknown_when_curve_missing():
     value, known = model.stat_value("damage_min", 3)
     assert not known
     assert math.isclose(value, 1.5)
+
+
+def _make_test_ship() -> Ship:
+    stats = ShipStats.from_dict({})
+    slots = ShipSlotLayout.from_dict({})
+    frame = ShipFrame("test", "Test", "Interceptor", "Strike", stats, slots, [])
+    return Ship(frame)
+
+
+def test_hold_item_levels_are_instance_specific():
+    ship = _make_test_ship()
+    assert ship.add_hold_item("light_turbo_boosters", quantity=3)
+    ship.set_hold_item_level("light_turbo_boosters", 0, 15)
+    assert ship.hold_item_level("light_turbo_boosters", 0) == 15
+    assert ship.hold_item_level("light_turbo_boosters", 1) == 1
+    assert ship.hold_item_level("light_turbo_boosters", 2) == 1

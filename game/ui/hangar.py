@@ -42,6 +42,11 @@ class _HoldItem:
     equippable: bool = False
     slot_family: Optional[str] = None
     store_item: Optional[StoreItem] = None
+    item_id: Optional[str] = None
+    instance_index: Optional[int] = None
+    slot_index: Optional[int] = None
+    location: str = "hold"
+    mount_index: Optional[int] = None
 
 
 @dataclass
@@ -1228,6 +1233,9 @@ class HangarView:
                         equippable=True,
                         slot_family=store_item.slot_family,
                         store_item=store_item,
+                        item_id=item_id,
+                        instance_index=0,
+                        location="hold",
                     )
                 )
             else:
@@ -1241,6 +1249,45 @@ class HangarView:
                     )
                 )
         return items
+
+    def _item_current_level(self, ship: Ship, item: _HoldItem) -> int:
+        if not item.store_item:
+            return 1
+        if item.location == "hold":
+            index = item.instance_index or 0
+            return ship.hold_item_level(item.store_item.id, index)
+        if item.location == "module":
+            slot_type = item.slot_family or item.store_item.slot_family
+            if slot_type is None:
+                return ship.item_level(item.store_item.id)
+            index = item.slot_index or 0
+            return ship.module_level(slot_type, index)
+        if item.location == "weapon":
+            if item.mount_index is None:
+                return ship.item_level(item.store_item.id)
+            return ship.weapon_level(item.mount_index)
+        return ship.item_level(item.store_item.id)
+
+    def _set_item_level(self, ship: Ship, item: _HoldItem, level: int) -> None:
+        if not item.store_item:
+            return
+        if item.location == "hold":
+            index = item.instance_index or 0
+            ship.set_hold_item_level(item.store_item.id, index, level)
+            return
+        if item.location == "module":
+            slot_type = item.slot_family or item.store_item.slot_family
+            if slot_type is None:
+                ship.set_item_level(item.store_item.id, level)
+                return
+            index = item.slot_index or 0
+            ship.set_module_level(slot_type, index, level)
+            return
+        if item.location == "weapon":
+            if item.mount_index is not None:
+                ship.set_weapon_level(item.mount_index, level)
+            return
+        ship.set_item_level(item.store_item.id, level)
 
     def _can_equip_store_item(self, ship: Ship, item: StoreItem) -> bool:
         family = item.slot_family.lower()
@@ -1258,8 +1305,12 @@ class HangarView:
         store_item = item.store_item
         if not self._can_equip_store_item(ship, store_item):
             return False
-        if not ship.remove_hold_item(store_item.id):
+        removed_levels = ship.remove_hold_item(
+            store_item.id, index=item.instance_index or 0
+        )
+        if not removed_levels:
             return False
+        level = removed_levels[0]
         success = False
         family = store_item.slot_family.lower()
         if family in {"hull", "engine", "computer", "utility"}:
@@ -1270,29 +1321,35 @@ class HangarView:
                 tags=list(store_item.tags),
                 stats=dict(store_item.stats),
             )
-            success = ship.equip_module(module)
+            success = ship.equip_module(module, level=level)
         elif family == "weapon":
-            mount = self._find_available_mount(ship, store_item.slot_family)
-            if mount:
+            mount_info = self._find_available_mount(ship, store_item.slot_family)
+            if mount_info:
+                mount_index, mount = mount_info
                 mount.weapon_id = store_item.id
+                mount.level = max(1, int(level))
                 success = True
         if not success:
-            ship.add_hold_item(store_item.id)
+            ship.add_hold_item(store_item.id, level=level)
             return False
         store.bind_ship(ship)
         return True
 
-    def _find_available_mount(self, ship: Ship, slot_family: str) -> Optional[WeaponMount]:
+    def _find_available_mount(
+        self, ship: Ship, slot_family: str
+    ) -> Optional[tuple[int, WeaponMount]]:
         normalized = slot_family.lower()
-        for mount in ship.mounts:
+        for index, mount in enumerate(ship.mounts):
             if not mount.weapon_id and self._slot_matches(mount.hardpoint.slot, normalized):
-                return mount
-        for mount in ship.mounts:
+                return index, mount
+        for index, mount in enumerate(ship.mounts):
             if not mount.weapon_id:
-                return mount
+                return index, mount
         return None
 
-    def _weapon_mount_at_index(self, ship: Ship, slot_type: str, index: int) -> Optional[WeaponMount]:
+    def _weapon_mount_at_index(
+        self, ship: Ship, slot_type: str, index: int
+    ) -> Optional[tuple[int, WeaponMount]]:
         normalized = slot_type.lower()
         mounts = [
             mount
@@ -1300,7 +1357,8 @@ class HangarView:
             if self._slot_matches(mount.hardpoint.slot, normalized)
         ]
         if 0 <= index < len(mounts):
-            return mounts[index]
+            mount = mounts[index]
+            return ship.mounts.index(mount), mount
         return None
 
     def _unequip_slot(self, widget: _SlotDisplay) -> bool:
@@ -1310,20 +1368,28 @@ class HangarView:
         if not ship.can_store_in_hold():
             return False
         if widget.category == "weapon":
-            mount = self._weapon_mount_at_index(ship, widget.slot_type, widget.index)
-            if not mount or not mount.weapon_id:
+            mount_info = self._weapon_mount_at_index(ship, widget.slot_type, widget.index)
+            if not mount_info:
+                return False
+            mount_index, mount = mount_info
+            if not mount.weapon_id:
                 return False
             item_id = mount.weapon_id
-            if not ship.add_hold_item(item_id):
+            level = mount.level if hasattr(mount, "level") else 1
+            if not ship.add_hold_item(item_id, level=level):
                 return False
             mount.weapon_id = None
+            mount.level = 1
             store.bind_ship(ship)
             return True
-        module = ship.unequip_module(widget.slot_type, widget.index)
-        if not module or not module.id:
+        result = ship.unequip_module(widget.slot_type, widget.index)
+        if not result:
             return False
-        if not ship.add_hold_item(module.id):
-            ship.equip_module(module)
+        module, level = result
+        if not module.id:
+            return False
+        if not ship.add_hold_item(module.id, level=level):
+            ship.equip_module(module, level=level, index=widget.index)
             modules = ship.modules_by_slot.get(widget.slot_type, [])
             if modules:
                 modules.insert(widget.index, modules.pop())
@@ -1340,6 +1406,21 @@ class HangarView:
         icon_key = store_item.slot_family.lower()
         if icon_key not in self._hold_icons:
             icon_key = "module"
+        location = "module"
+        instance_index = 0
+        slot_index = widget.index
+        mount_index: Optional[int] = None
+        if widget.category == "weapon":
+            mount_info = self._weapon_mount_at_index(
+                self._current_ship, widget.slot_type, widget.index
+            )
+            if not mount_info:
+                return
+            mount_index, mount = mount_info
+            if not mount.weapon_id:
+                return
+            location = "weapon"
+        item_id = store_item.id
         item = _HoldItem(
             key=store_item.id,
             name=store_item.name,
@@ -1349,6 +1430,11 @@ class HangarView:
             equippable=True,
             slot_family=store_item.slot_family,
             store_item=store_item,
+            item_id=item_id,
+            instance_index=instance_index,
+            slot_index=slot_index,
+            location=location,
+            mount_index=mount_index,
         )
         self._open_upgrade_dialog(item)
 
@@ -1357,9 +1443,11 @@ class HangarView:
         if not ship or not widget.filled:
             return None
         if widget.category == "weapon":
-            mount = self._weapon_mount_at_index(ship, widget.slot_type, widget.index)
-            if mount and mount.weapon_id:
-                return CATALOG.get(mount.weapon_id)
+            mount_info = self._weapon_mount_at_index(ship, widget.slot_type, widget.index)
+            if mount_info:
+                _, mount = mount_info
+                if mount.weapon_id:
+                    return CATALOG.get(mount.weapon_id)
             return None
         modules = ship.modules_by_slot.get(widget.slot_type, [])
         if 0 <= widget.index < len(modules):
@@ -1994,7 +2082,7 @@ class HangarView:
                 failure_level = step.level
                 break
 
-        ship.set_item_level(dialog.store_item.id, last_success_level)
+        self._set_item_level(ship, dialog.item, last_success_level)
         model.current_level = last_success_level
         model.set_preview_level(min(model.spec.level_cap, last_success_level + 1))
         model.player_resources = self._resource_snapshot(ship)
@@ -2022,7 +2110,7 @@ class HangarView:
         ship = self._current_ship
         model = EquipmentUpgradeModel(
             spec,
-            current_level=ship.item_level(item.store_item.id),
+            current_level=self._item_current_level(ship, item),
             player_resources=self._resource_snapshot(ship),
             player_skills=dict(self._player_skills),
         )
