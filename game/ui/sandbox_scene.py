@@ -34,6 +34,7 @@ class WeaponSlotState:
     index: int
     action: str
     mount: WeaponMount
+    active: bool = False
 
     @property
     def label(self) -> str:
@@ -839,6 +840,7 @@ class SandboxScene(Scene):
         self.combat_feedback_timer = duration
 
     def _setup_weapon_slots(self) -> None:
+        previous_states = {id(slot.mount): slot.active for slot in self.weapon_slots}
         self.weapon_slots.clear()
         self._weapon_action_map.clear()
         self._tracked_weapon_mount_ids.clear()
@@ -854,7 +856,13 @@ class SandboxScene(Scene):
         ]
         mounts = [mount for mount in self.player.mounts if mount.weapon_id]
         for index, mount in enumerate(mounts[: len(actions)]):
-            slot = WeaponSlotState(index=index, action=actions[index], mount=mount)
+            active = previous_states.get(id(mount), False)
+            slot = WeaponSlotState(
+                index=index,
+                action=actions[index],
+                mount=mount,
+                active=active,
+            )
             self.weapon_slots.append(slot)
             self._weapon_action_map[slot.action] = slot
             self._tracked_weapon_mount_ids.add(id(mount))
@@ -866,12 +874,19 @@ class SandboxScene(Scene):
         if current != self._tracked_weapon_mount_ids:
             self._setup_weapon_slots()
 
+    def _update_weapon_slot_toggles(self) -> None:
+        if not self.input:
+            return
+        for slot in self.weapon_slots:
+            if self.input.consume_action(slot.action):
+                slot.active = not slot.active
+
     def _update_weapon_systems(self, target: Ship | None) -> None:
         if not self.input or not self.player or not self.world or not self.content:
             return
-        active_slots = [
-            slot for slot in self.weapon_slots if self.input.action(slot.action)
-        ]
+        self._refresh_weapon_slots_if_needed()
+        self._update_weapon_slot_toggles()
+        active_slots = [slot for slot in self.weapon_slots if slot.active]
         if not active_slots:
             return
         preferred = None
@@ -904,7 +919,8 @@ class SandboxScene(Scene):
             return
         if mount.cooldown > 0.0:
             return
-        if self.player.power < weapon.power_per_shot:
+        power_cost = weapon.power_cost
+        if self.player.power < power_cost:
             return
         if weapon.slot_type == "launcher" and self.player.lock_progress < 1.0:
             return
@@ -966,6 +982,7 @@ class SandboxScene(Scene):
     def _weapon_slot_hud_states(self) -> list[WeaponSlotHUDState]:
         if not self.player or not self.content or not self.input:
             return []
+        self._refresh_weapon_slots_if_needed()
         states: list[WeaponSlotHUDState] = []
         for slot in self.weapon_slots:
             mount = slot.mount
@@ -975,8 +992,8 @@ class SandboxScene(Scene):
                 weapon = self.content.weapons.get(mount.weapon_id)
             except KeyError:
                 continue
-            active = self.input.action(slot.action)
-            ready = mount.cooldown <= 0.0 and self.player.power >= weapon.power_per_shot
+            active = slot.active
+            ready = mount.cooldown <= 0.0 and self.player.power >= weapon.power_cost
             states.append(
                 WeaponSlotHUDState(
                     label=slot.label,

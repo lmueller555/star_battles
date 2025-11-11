@@ -20,6 +20,7 @@ from game.engine.logger import ChannelLogger
 
 MAGNETISM_ANGLE = 5.5
 MAGNETISM_STRENGTH = 0.45
+POWER_COST_SCALE = 0.5
 
 
 def _range_accuracy_modifier(distance: float, optimal: float, max_range: float) -> float:
@@ -107,6 +108,10 @@ class WeaponData:
     def cooldown(self) -> float:
         return 1.0 / max(0.01, self.rof)
 
+    @property
+    def power_cost(self) -> float:
+        return self.power_per_shot * POWER_COST_SCALE
+
 
 class WeaponDatabase:
     def __init__(self) -> None:
@@ -186,6 +191,8 @@ class Projectile:
         target_id: Optional[int],
         ttl: float,
         team: str,
+        *,
+        visual_only: bool = False,
     ) -> None:
         self.weapon = weapon
         self.position = position
@@ -194,6 +201,7 @@ class Projectile:
         self.ttl = ttl
         self.team = team
         self.lock_strength = 1.0
+        self.visual_only = visual_only
 
     def update(self, dt: float, logger: Optional[ChannelLogger] = None) -> None:
         self.position += self.velocity * dt
