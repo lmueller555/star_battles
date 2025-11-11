@@ -21,6 +21,7 @@ class _SlotDisplay:
     rect: pygame.Rect
     filled: bool
     category: str
+    slot_type: str
 
 
 class _HangarInteriorAnimator:
@@ -151,6 +152,7 @@ class HangarView:
         self.active_option: str = "Hold"
         self._ribbon_rects: Dict[str, pygame.Rect] = {}
         self._interior = _HangarInteriorAnimator()
+        self._slot_icons = self._create_slot_icons()
 
     def set_surface(self, surface: pygame.Surface) -> None:
         """Update the target surface when the display size changes."""
@@ -252,35 +254,30 @@ class HangarView:
         surface.blit(header, (rect.x + 24, rect.y + 16))
 
         layout_rect = pygame.Rect(rect.x + 24, rect.y + 52, rect.width - 48, rect.height - 88)
-        layout_rect.height = int(layout_rect.height * 0.72)
-        detail_rect = pygame.Rect(rect.x + 24, layout_rect.bottom + 12, rect.width - 48, rect.bottom - layout_rect.bottom - 36)
+        layout_rect.height = int(layout_rect.height * 0.9)
 
         shape, widgets = self._build_ship_layout(ship, layout_rect)
         if shape:
             pygame.draw.polygon(surface, (30, 44, 58), shape, 0)
             pygame.draw.lines(surface, (160, 210, 240), True, shape, 2)
+        hovered_widget: _SlotDisplay | None = None
+        mouse_pos = pygame.mouse.get_pos()
         for widget in widgets:
-            fill_color = (130, 210, 255) if widget.category == "weapon" else (255, 204, 144)
+            fill_color = (70, 118, 162) if widget.category == "weapon" else (170, 120, 72)
             empty_color = (40, 52, 62) if widget.category == "weapon" else (56, 44, 32)
             color = fill_color if widget.filled else empty_color
             pygame.draw.rect(surface, color, widget.rect)
             pygame.draw.rect(surface, (12, 18, 26), widget.rect, 2)
-            label = self.mini_font.render(widget.label, True, (12, 18, 26))
-            surface.blit(
-                label,
-                (
-                    widget.rect.centerx - label.get_width() // 2,
-                    widget.rect.centery - label.get_height() // 2,
-                ),
-            )
+            icon = self._slot_icons.get(self._icon_key_for_slot(widget))
+            if icon:
+                icon_rect = icon.get_rect(center=widget.rect.center)
+                surface.blit(icon, icon_rect.topleft)
+            if widget.rect.collidepoint(mouse_pos):
+                hovered_widget = widget
+                pygame.draw.rect(surface, (210, 236, 255), widget.rect, 2)
 
-        self._blit_panel(surface, detail_rect, (16, 28, 40, 210), (60, 98, 134))
-        detail_title = self.small_font.render("Installed Equipment", True, (200, 224, 242))
-        surface.blit(detail_title, (detail_rect.x + 12, detail_rect.y + 10))
-        detail_lines = self._equipment_lines(widgets)
-        for idx, line in enumerate(detail_lines):
-            text = self.small_font.render(line, True, (180, 208, 228))
-            surface.blit(text, (detail_rect.x + 12, detail_rect.y + 34 + idx * 18))
+        if hovered_widget:
+            self._draw_tooltip(surface, hovered_widget, mouse_pos)
 
     def _blit_panel(
         self,
@@ -350,6 +347,7 @@ class HangarView:
                         rect=widget_rect,
                         filled=filled,
                         category="weapon",
+                        slot_type=normalized,
                     )
                 )
 
@@ -380,6 +378,7 @@ class HangarView:
                         rect=widget_rect,
                         filled=module is not None,
                         category="module",
+                        slot_type=normalized,
                     )
                 )
 
@@ -394,7 +393,7 @@ class HangarView:
         if option == "Hold":
             return [
                 "Ship hold inventory management coming soon.",
-                "Review installed gear on the right panel for now.",
+                "Hover over ship slots to inspect installed gear.",
             ]
         if option == "Locker":
             return [
@@ -402,17 +401,6 @@ class HangarView:
                 "Stow and retrieve equipment here in a later update.",
             ]
         return ["No data available."]
-
-    def _equipment_lines(self, widgets: Iterable[_SlotDisplay]) -> List[str]:
-        lines: List[str] = []
-        for widget in widgets:
-            if widget.filled and widget.detail:
-                lines.append(f"{widget.label}: {widget.detail}")
-            else:
-                lines.append(f"{widget.label}: Empty")
-        if not lines:
-            lines.append("No equipment installed.")
-        return lines
 
     def _slot_counts(self, ship: Ship) -> Dict[str, int]:
         counts: Dict[str, int] = {}
@@ -538,6 +526,138 @@ class HangarView:
         scale_x = available_width / denom_x if available_width > 0 else 1.0
         scale_y = available_height / denom_y if available_height > 0 else 1.0
         return max(0.25, min(scale_x, scale_y))
+
+    def _create_slot_icons(self) -> Dict[str, pygame.Surface]:
+        def base_surface() -> pygame.Surface:
+            surf = pygame.Surface((32, 32), pygame.SRCALPHA)
+            pygame.draw.rect(surf, (18, 28, 36, 220), pygame.Rect(0, 0, 32, 32))
+            pygame.draw.rect(surf, (12, 18, 26), pygame.Rect(0, 0, 32, 32), 2)
+            return surf
+
+        icons: Dict[str, pygame.Surface] = {}
+
+        weapon = base_surface()
+        pygame.draw.circle(weapon, (220, 90, 90), (16, 16), 7)
+        pygame.draw.circle(weapon, (60, 16, 16), (16, 16), 7, 2)
+        pygame.draw.line(weapon, (220, 200, 200), (16, 4), (16, 28), 2)
+        pygame.draw.line(weapon, (220, 200, 200), (4, 16), (28, 16), 2)
+        icons["weapon"] = weapon
+
+        hull = base_surface()
+        pygame.draw.polygon(
+            hull,
+            (210, 190, 120),
+            [(16, 4), (26, 10), (26, 22), (16, 28), (6, 22), (6, 10)],
+        )
+        pygame.draw.polygon(
+            hull,
+            (80, 70, 40),
+            [(16, 6), (24, 11), (24, 21), (16, 26), (8, 21), (8, 11)],
+            2,
+        )
+        icons["hull"] = hull
+
+        engine = base_surface()
+        pygame.draw.polygon(engine, (120, 200, 255), [(16, 4), (24, 20), (8, 20)])
+        pygame.draw.rect(engine, (220, 140, 60), pygame.Rect(10, 20, 12, 6))
+        pygame.draw.rect(engine, (255, 200, 120), pygame.Rect(10, 24, 12, 4))
+        icons["engine"] = engine
+
+        computer = base_surface()
+        pygame.draw.rect(computer, (140, 200, 220), pygame.Rect(6, 8, 20, 16))
+        pygame.draw.rect(computer, (40, 60, 70), pygame.Rect(6, 8, 20, 16), 2)
+        for x in (6, 12, 18, 24):
+            pygame.draw.line(computer, (80, 120, 160), (x, 26), (x, 30), 2)
+        icons["computer"] = computer
+
+        utility = base_surface()
+        pygame.draw.circle(utility, (230, 180, 90), (12, 12), 5)
+        pygame.draw.rect(utility, (120, 90, 40), pygame.Rect(15, 15, 12, 10))
+        pygame.draw.line(utility, (240, 220, 150), (20, 4), (28, 12), 3)
+        icons["utility"] = utility
+
+        module = base_surface()
+        pygame.draw.polygon(module, (150, 210, 230), [(16, 4), (28, 16), (16, 28), (4, 16)])
+        pygame.draw.polygon(module, (70, 110, 130), [(16, 7), (25, 16), (16, 25), (7, 16)], 2)
+        icons["module"] = module
+
+        empty = pygame.Surface((32, 32), pygame.SRCALPHA)
+        pygame.draw.rect(empty, (40, 52, 62, 180), pygame.Rect(0, 0, 32, 32))
+        pattern_color = (18, 26, 34)
+        for offset in range(0, 32, 4):
+            pygame.draw.line(empty, pattern_color, (offset, 0), (0, offset), 1)
+        pygame.draw.rect(empty, (90, 110, 126), pygame.Rect(2, 2, 28, 28), 2)
+        icons["empty"] = empty
+
+        return icons
+
+    def _icon_key_for_slot(self, widget: _SlotDisplay) -> str:
+        if not widget.filled:
+            return "empty"
+        normalized = widget.slot_type.lower()
+        module_keys = {"hull", "engine", "computer", "utility"}
+        if normalized in module_keys:
+            return normalized
+        if normalized in self._slot_icons:
+            return normalized
+        return "weapon" if widget.category == "weapon" else "module"
+
+    def _draw_tooltip(self, surface: pygame.Surface, widget: _SlotDisplay, mouse_pos: tuple[int, int]) -> None:
+        text_lines: List[str] = []
+        header = widget.label
+        if header:
+            text_lines.append(header)
+        if widget.filled and widget.detail:
+            text_lines.append(widget.detail)
+        else:
+            text_lines.append("Empty")
+
+        font = self.small_font
+        padding = 12
+        spacing = 6
+        button_height = 28
+        button_padding_top = 10
+        text_surfaces = [font.render(line, True, (220, 236, 250)) for line in text_lines]
+        text_width = max((surf.get_width() for surf in text_surfaces), default=0)
+        width = max(120, text_width + padding * 2)
+        height = padding * 2 + sum(surf.get_height() for surf in text_surfaces)
+        height += spacing * (len(text_surfaces) - 1 if text_surfaces else 0)
+        height += button_padding_top + button_height
+
+        tooltip_rect = pygame.Rect(mouse_pos[0] + 16, mouse_pos[1] + 16, width, height)
+        surface_rect = surface.get_rect()
+        if tooltip_rect.right > surface_rect.right:
+            tooltip_rect.x = mouse_pos[0] - width - 16
+        if tooltip_rect.bottom > surface_rect.bottom:
+            tooltip_rect.y = surface_rect.bottom - height - 16
+        if tooltip_rect.x < surface_rect.left:
+            tooltip_rect.x = surface_rect.left + 16
+        if tooltip_rect.y < surface_rect.top:
+            tooltip_rect.y = surface_rect.top + 16
+
+        self._blit_panel(surface, tooltip_rect, (16, 24, 32, 230), (90, 140, 180))
+
+        cursor_y = tooltip_rect.y + padding
+        for surf in text_surfaces:
+            surface.blit(surf, (tooltip_rect.x + padding, cursor_y))
+            cursor_y += surf.get_height() + spacing
+        cursor_y -= spacing
+
+        button_rect = pygame.Rect(
+            tooltip_rect.x + padding,
+            cursor_y + button_padding_top,
+            tooltip_rect.width - padding * 2,
+            button_height,
+        )
+        self._blit_panel(surface, button_rect, (28, 52, 70, 240), (130, 180, 220))
+        button_label = self.mini_font.render("Upgrade", True, (220, 236, 250))
+        surface.blit(
+            button_label,
+            (
+                button_rect.centerx - button_label.get_width() // 2,
+                button_rect.centery - button_label.get_height() // 2,
+            ),
+        )
 
 
 __all__ = ["HangarView"]
