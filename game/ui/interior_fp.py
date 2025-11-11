@@ -11,13 +11,7 @@ from pygame import Surface
 from pygame.math import Vector2, Vector3
 
 from game.engine.input import InputMapper
-from game.world.interior import (
-    InteriorChunk,
-    InteriorDefinition,
-    InteriorDoor,
-    InteriorNavArea,
-    InteriorNode,
-)
+from game.world.interior import InteriorChunk, InteriorDefinition, InteriorDoor, InteriorNavArea
 
 
 FOV_DEGREES = 86.0
@@ -166,40 +160,11 @@ class ProjectedSegment:
     thickness: int
 
 
-@dataclass
-class ProjectedSurface:
-    points: list[Vector2]
-    depth: float
-    colour: tuple[int, int, int, int]
-
-
 class WireframeProjector:
     """Performs perspective projection for interior wireframe geometry."""
 
     def __init__(self) -> None:
         self.half_fov = math.radians(FOV_DEGREES * 0.5)
-
-    @staticmethod
-    def _clip_polygon_to_near(points: Sequence[Vector3], near_plane: float) -> list[Vector3]:
-        if not points:
-            return []
-        clipped: list[Vector3] = []
-        prev = points[-1]
-        prev_inside = prev.z > near_plane
-        for current in points:
-            current_inside = current.z > near_plane
-            if current_inside != prev_inside:
-                direction = current - prev
-                denom = direction.z
-                if abs(denom) > 1e-6:
-                    t = (near_plane - prev.z) / denom
-                    intersection = prev + direction * t
-                    clipped.append(intersection)
-            if current_inside:
-                clipped.append(current)
-            prev = current
-            prev_inside = current_inside
-        return clipped
 
     def _camera_basis(self, forward: Vector3) -> tuple[Vector3, Vector3, Vector3]:
         up_world = Vector3(0.0, 0.0, 1.0)
@@ -299,49 +264,6 @@ class WireframeProjector:
         sy = (0.5 - y_ndc * 0.5) * height
         return Vector2(sx, sy), z_cam
 
-    def project_polygon(
-        self,
-        camera_pos: Vector3,
-        forward: Vector3,
-        points: Sequence[Vector3],
-        colour: tuple[int, int, int, int],
-        surface_size: tuple[int, int],
-    ) -> Optional[ProjectedSurface]:
-        width, height = surface_size
-        aspect = width / max(1, height)
-        right, up, forward_n = self._camera_basis(forward)
-
-        cam_space: list[Vector3] = []
-        for point in points:
-            rel = point - camera_pos
-            x_cam = rel.dot(right)
-            y_cam = rel.dot(up)
-            z_cam = rel.dot(forward_n)
-            cam_space.append(Vector3(x_cam, y_cam, z_cam))
-
-        cam_space = self._clip_polygon_to_near(cam_space, NEAR_PLANE)
-        if len(cam_space) < 3:
-            return None
-
-        projected: list[Vector2] = []
-        depth_accum = 0.0
-        count = 0
-        f = 1.0 / math.tan(self.half_fov)
-        for vertex in cam_space:
-            if vertex.z <= 0.0 or vertex.z >= FAR_PLANE:
-                return None
-            scale = f / vertex.z
-            x_ndc = vertex.x * scale
-            y_ndc = vertex.y * scale
-            sx = (x_ndc * aspect * 0.5 + 0.5) * width
-            sy = (0.5 - y_ndc * 0.5) * height
-            projected.append(Vector2(sx, sy))
-            depth_accum += vertex.z
-            count += 1
-
-        depth = depth_accum / max(1, count)
-        return ProjectedSurface(projected, depth, colour)
-
 
 class FirstPersonInteriorView:
     """Interactive first-person rendering of an interior definition."""
@@ -362,7 +284,6 @@ class FirstPersonInteriorView:
         self.hud_font: Optional[pygame.font.Font] = None
         self.prompt_font: Optional[pygame.font.Font] = None
         self.streams_active: set[str] = set()
-        self._node_lookup: Dict[str, InteriorNode] = {node.id: node for node in definition.nodes}
 
     def set_fonts(self, hud_font: Optional[pygame.font.Font], prompt_font: Optional[pygame.font.Font]) -> None:
         self.hud_font = hud_font
@@ -522,108 +443,6 @@ class FirstPersonInteriorView:
                 corrected.y += push.y
         return corrected
 
-    @staticmethod
-    def _loop_points(node: InteriorNode) -> list[Vector3]:
-        points = [Vector3(*pt) for pt in node.points]
-        if len(points) < 2:
-            return []
-        if points[0].distance_to(points[-1]) < 1e-4:
-            points = points[:-1]
-        return points
-
-    def _collect_surfaces(self) -> list[tuple[str, list[Vector3], Optional[str]]]:
-        surfaces: list[tuple[str, list[Vector3], Optional[str]]] = []
-        for node in self.definition.nodes:
-            if node.layer not in {"Floor", "Ceiling"}:
-                continue
-            if len(node.points) < 3:
-                continue
-            closed = node.type.endswith("closed") or node.points[0] == node.points[-1]
-            if not closed:
-                continue
-            loop = self._loop_points(node)
-            if len(loop) < 3:
-                continue
-            surfaces.append((node.layer, loop, node.style))
-
-        for node in self.definition.nodes:
-            if node.layer != "Walls" or not node.id.endswith("_wall_base"):
-                continue
-            top_id = node.id.replace("_wall_base", "_wall_top")
-            top = self._node_lookup.get(top_id)
-            if not top:
-                continue
-            base_loop = self._loop_points(node)
-            top_loop = self._loop_points(top)
-            if len(base_loop) < 2 or len(base_loop) != len(top_loop):
-                continue
-            for index in range(len(base_loop)):
-                next_index = (index + 1) % len(base_loop)
-                b0 = base_loop[index]
-                b1 = base_loop[next_index]
-                t1 = top_loop[next_index]
-                t0 = top_loop[index]
-                quad = [b0, b1, t1, t0]
-                surfaces.append(("Walls", quad, node.style or top.style))
-        return surfaces
-
-    @staticmethod
-    def _polygon_centroid(points: Sequence[Vector3]) -> Vector3:
-        if not points:
-            return Vector3()
-        accum = Vector3()
-        for point in points:
-            accum += point
-        return accum / len(points)
-
-    @staticmethod
-    def _polygon_normal(points: Sequence[Vector3]) -> Optional[Vector3]:
-        if len(points) < 3:
-            return None
-        normal = Vector3()
-        for idx in range(len(points)):
-            current = points[idx]
-            nxt = points[(idx + 1) % len(points)]
-            nxt2 = points[(idx + 2) % len(points)]
-            edge1 = nxt - current
-            edge2 = nxt2 - current
-            cross = edge1.cross(edge2)
-            if cross.length_squared() > 1e-6:
-                normal += cross
-        if normal.length_squared() < 1e-6:
-            return None
-        return normal.normalize()
-
-    def _shade_surface_colour(
-        self,
-        layer: str,
-        base_colour: tuple[int, int, int],
-        points: Sequence[Vector3],
-        camera_pos: Vector3,
-    ) -> tuple[int, int, int, int]:
-        normal = self._polygon_normal(points)
-        centroid = self._polygon_centroid(points)
-        intensity = 0.7
-        if normal and centroid != camera_pos:
-            to_camera = camera_pos - centroid
-            if to_camera.length_squared() > 1e-6:
-                to_camera_n = to_camera.normalize()
-                alignment = abs(normal.dot(to_camera_n))
-                intensity = 0.35 + 0.65 * alignment
-        if layer == "Floor":
-            alpha = 235
-            intensity *= 1.05
-        elif layer == "Ceiling":
-            alpha = 210
-            intensity *= 0.9
-        else:
-            alpha = 225
-        intensity = max(0.25, min(1.0, intensity))
-        r = min(255, int(base_colour[0] * intensity))
-        g = min(255, int(base_colour[1] * intensity))
-        b = min(255, int(base_colour[2] * intensity))
-        return r, g, b, alpha
-
     def _collect_segments(self) -> list[tuple[str, list[Vector3], Optional[str]]]:
         collected: list[tuple[str, list[Vector3], Optional[str]]] = []
         for node in self.definition.nodes:
@@ -643,14 +462,6 @@ class FirstPersonInteriorView:
         camera_pos = Vector3(self.position.x, self.position.y, self.position.z)
         forward = self._forward_vector()
 
-        surfaces_by_layer: Dict[str, list[ProjectedSurface]] = {layer: [] for layer in LAYER_ORDER}
-        for layer, points, style in self._collect_surfaces():
-            base_colour = STYLE_COLOURS.get(style or "", DEFAULT_LAYER_COLOUR.get(layer, (200, 200, 200)))
-            colour = self._shade_surface_colour(layer, base_colour, points, camera_pos)
-            projected_surface = self.projector.project_polygon(camera_pos, forward, points, colour, (width, height))
-            if projected_surface:
-                surfaces_by_layer.setdefault(layer, []).append(projected_surface)
-
         segments_by_layer: Dict[str, list[ProjectedSegment]] = {layer: [] for layer in LAYER_ORDER}
         for layer, points, style in self._collect_segments():
             base_colour = STYLE_COLOURS.get(style or "", DEFAULT_LAYER_COLOUR.get(layer, (200, 200, 200)))
@@ -658,16 +469,8 @@ class FirstPersonInteriorView:
             for seg in projected:
                 segments_by_layer.setdefault(layer, []).append(seg)
 
-        ordered_layers = sorted(
-            set(list(surfaces_by_layer.keys()) + list(segments_by_layer.keys())),
-            key=lambda key: LAYER_ORDER.get(key, 99),
-        )
-
-        for layer in ordered_layers:
-            for surface_proj in sorted(surfaces_by_layer.get(layer, []), key=lambda item: item.depth, reverse=True):
-                pygame.draw.polygon(surface, surface_proj.colour, surface_proj.points)
-
-            for seg in sorted(segments_by_layer.get(layer, []), key=lambda item: item.depth, reverse=True):
+        for layer in sorted(segments_by_layer.keys(), key=lambda key: LAYER_ORDER.get(key, 99)):
+            for seg in sorted(segments_by_layer[layer], key=lambda item: item.depth, reverse=True):
                 colour = seg.colour
                 pygame.draw.line(surface, colour, seg.start, seg.end, seg.thickness)
 
