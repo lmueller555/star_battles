@@ -81,6 +81,43 @@ class InteriorInteractRegion:
 
 
 @dataclass(frozen=True)
+class InteriorDoor:
+    """Door definition with frame and trigger volumes."""
+
+    id: str
+    frame_min: Vec3
+    frame_max: Vec3
+    trigger_min: Vec3
+    trigger_max: Vec3
+    facing: Vec3
+    tags: tuple[str, ...]
+    sign: Optional[str]
+    group: Optional[str]
+
+
+@dataclass(frozen=True)
+class InteriorAabb:
+    """Generic axis-aligned bounding box payload."""
+
+    id: str
+    aabb_min: Vec3
+    aabb_max: Vec3
+    tags: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class InteriorChunk:
+    """Streaming chunk metadata."""
+
+    id: str
+    aabb_min: Vec3
+    aabb_max: Vec3
+    label: Optional[str]
+    stream: Optional[str]
+    tags: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class InteriorDefinition:
     """Fully parsed interior asset."""
 
@@ -89,6 +126,10 @@ class InteriorDefinition:
     labels: tuple[InteriorLabel, ...]
     nav_areas: tuple[InteriorNavArea, ...]
     interact_regions: tuple[InteriorInteractRegion, ...]
+    no_walk_zones: tuple[InteriorAabb, ...]
+    ladders: tuple[InteriorAabb, ...]
+    chunks: tuple[InteriorChunk, ...]
+    doors: tuple[InteriorDoor, ...]
     spawn_point: Optional[Vec3]
     bounds: tuple[float, float, float, float]
 
@@ -138,6 +179,101 @@ class InteriorDefinition:
                 )
             )
 
+        def _parse_aabb_list(entries: Sequence[Dict], *, key: str) -> list[InteriorAabb]:
+            boxes: list[InteriorAabb] = []
+            for entry in entries:
+                aabb_raw = entry.get("aabb") or entry.get("bounds")
+                if not isinstance(aabb_raw, Sequence) or len(aabb_raw) != 2:
+                    continue
+                mins = _as_vec3_list([aabb_raw[0]])
+                maxs = _as_vec3_list([aabb_raw[1]])
+                if not mins or not maxs:
+                    continue
+                meta_raw = entry.get("metadata") or entry.get("tags") or []
+                if isinstance(meta_raw, Sequence) and not isinstance(meta_raw, str):
+                    tags = tuple(str(item) for item in meta_raw)
+                elif isinstance(meta_raw, str):
+                    tags = (meta_raw,)
+                else:
+                    tags = ()
+                boxes.append(
+                    InteriorAabb(
+                        id=str(entry.get("id", key)),
+                        aabb_min=mins[0],
+                        aabb_max=maxs[0],
+                        tags=tags,
+                    )
+                )
+            return boxes
+
+        no_walk_zones = _parse_aabb_list(nav.get("noWalk", []), key="noWalk")
+        ladder_boxes = _parse_aabb_list(nav.get("ladders", []), key="ladder")
+        chunk_boxes: list[InteriorChunk] = []
+        for entry in nav.get("chunks", []):
+            aabb_raw = entry.get("aabb") or entry.get("bounds")
+            if not isinstance(aabb_raw, Sequence) or len(aabb_raw) != 2:
+                continue
+            mins = _as_vec3_list([aabb_raw[0]])
+            maxs = _as_vec3_list([aabb_raw[1]])
+            if not mins or not maxs:
+                continue
+            tags_raw = entry.get("tags") or []
+            if isinstance(tags_raw, Sequence) and not isinstance(tags_raw, str):
+                tags = tuple(str(tag) for tag in tags_raw)
+            elif isinstance(tags_raw, str):
+                tags = (tags_raw,)
+            else:
+                tags = ()
+            chunk_boxes.append(
+                InteriorChunk(
+                    id=str(entry.get("id", "chunk")),
+                    aabb_min=mins[0],
+                    aabb_max=maxs[0],
+                    label=entry.get("label"),
+                    stream=entry.get("stream"),
+                    tags=tags,
+                )
+            )
+
+        doors_raw: Sequence[Dict] = data.get("doors", [])
+        doors: list[InteriorDoor] = []
+        for entry in doors_raw:
+            frame_raw = entry.get("frame")
+            trigger_raw = entry.get("trigger")
+            facing_raw = entry.get("facing")
+            if not isinstance(frame_raw, Sequence) or len(frame_raw) != 2:
+                continue
+            if not isinstance(trigger_raw, Sequence) or len(trigger_raw) != 2:
+                continue
+            frame_min_list = _as_vec3_list([frame_raw[0]])
+            frame_max_list = _as_vec3_list([frame_raw[1]])
+            trigger_min_list = _as_vec3_list([trigger_raw[0]])
+            trigger_max_list = _as_vec3_list([trigger_raw[1]])
+            facing_list = _as_vec3_list([facing_raw]) if isinstance(facing_raw, Sequence) else []
+            if not frame_min_list or not frame_max_list or not trigger_min_list or not trigger_max_list:
+                continue
+            facing = facing_list[0] if facing_list else (0.0, 1.0, 0.0)
+            tags_raw = entry.get("tags") or []
+            if isinstance(tags_raw, Sequence) and not isinstance(tags_raw, str):
+                tags = tuple(str(tag) for tag in tags_raw)
+            elif isinstance(tags_raw, str):
+                tags = (tags_raw,)
+            else:
+                tags = ()
+            doors.append(
+                InteriorDoor(
+                    id=str(entry.get("id", "door")),
+                    frame_min=frame_min_list[0],
+                    frame_max=frame_max_list[0],
+                    trigger_min=trigger_min_list[0],
+                    trigger_max=trigger_max_list[0],
+                    facing=facing,
+                    tags=tags,
+                    sign=entry.get("sign"),
+                    group=entry.get("group"),
+                )
+            )
+
         labels: list[InteriorLabel] = []
         for entry in data.get("labels", []):
             pos_raw = entry.get("pos") or entry.get("position") or []
@@ -178,6 +314,10 @@ class InteriorDefinition:
             labels=tuple(labels),
             nav_areas=tuple(nav_areas),
             interact_regions=tuple(interact_regions),
+            no_walk_zones=tuple(no_walk_zones),
+            ladders=tuple(ladder_boxes),
+            chunks=tuple(chunk_boxes),
+            doors=tuple(doors),
             spawn_point=spawn,
             bounds=bounds,
         )
@@ -220,5 +360,8 @@ __all__ = [
     "InteriorLabel",
     "InteriorNavArea",
     "InteriorNode",
+    "InteriorDoor",
+    "InteriorAabb",
+    "InteriorChunk",
 ]
 
