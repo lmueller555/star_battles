@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from math import radians, tan
-from typing import Optional
+from typing import Optional, Sequence
 
 from dataclasses import dataclass
 
@@ -87,6 +87,13 @@ class TargetOverlay:
     color: tuple[int, int, int]
 
 
+@dataclass
+class WeaponSlotHUDState:
+    label: str
+    active: bool
+    ready: bool
+
+
 class HUD:
     def __init__(self, surface: pygame.Surface) -> None:
         self.surface = surface
@@ -145,6 +152,99 @@ class HUD:
             if index >= 2:
                 # Avoid overcrowding the reticle if many auxiliary groups exist.
                 break
+
+    def draw_ship_wireframe(self, slots: Sequence[WeaponSlotHUDState]) -> None:
+        if not slots:
+            return
+        display_slots = list(slots)[:6]
+        if not display_slots:
+            return
+        _, surface_height = self.surface.get_size()
+        panel_size = 140
+        bottom_margin = 180
+        x = 20
+        y = max(12, surface_height - panel_size - bottom_margin)
+        rect = pygame.Rect(x, y, panel_size, panel_size)
+        pygame.draw.rect(self.surface, (12, 20, 28), rect)
+        pygame.draw.rect(self.surface, (70, 110, 150), rect, 1)
+
+        title = self.font.render("Weapons", True, (170, 210, 240))
+        title_pos = (
+            rect.left,
+            max(4, rect.top - title.get_height() - 4),
+        )
+        self.surface.blit(title, title_pos)
+
+        nose = (rect.centerx, rect.top + 10)
+        left_wing = (rect.left + 16, rect.top + rect.height * 0.48)
+        right_wing = (rect.right - 16, rect.top + rect.height * 0.48)
+        tail_left = (rect.left + rect.width * 0.32, rect.bottom - 18)
+        tail_right = (rect.right - rect.width * 0.32, rect.bottom - 18)
+        tail = (rect.centerx, rect.bottom - 6)
+        outline = [nose, left_wing, tail_left, tail, tail_right, right_wing, nose]
+        pygame.draw.lines(self.surface, (100, 150, 190), False, outline, 2)
+        pygame.draw.line(
+            self.surface,
+            (80, 120, 160),
+            (rect.centerx, rect.top + 14),
+            (rect.centerx, rect.bottom - 18),
+            1,
+        )
+
+        def layout(count: int) -> list[tuple[float, float]]:
+            offsets: list[tuple[float, float]] = []
+            if count <= 0:
+                return offsets
+            front_y = 0.18
+            row_spacing = 0.2
+            remaining = count
+            if count % 2 == 1:
+                offsets.append((0.0, front_y))
+                remaining -= 1
+            row_index = 0
+            while remaining > 0:
+                y_offset = front_y + row_index * row_spacing
+                x_offset = 0.3 + 0.06 * row_index
+                offsets.append((-x_offset, y_offset))
+                if len(offsets) >= count:
+                    break
+                offsets.append((x_offset, y_offset))
+                remaining -= 2
+                row_index += 1
+            return offsets[:count]
+
+        offsets = layout(len(display_slots))
+        usable_height = rect.height - 64
+        base_y = rect.top + 28
+        max_radius = rect.width * 0.32
+        circle_radius = 9
+        active_fill = (255, 210, 120)
+        inactive_fill = (26, 36, 52)
+        active_border = (255, 220, 160)
+        ready_border = (150, 210, 240)
+        cooldown_border = (110, 120, 140)
+
+        for slot, (offset_x, offset_y) in zip(display_slots, offsets):
+            px = rect.centerx + offset_x * max_radius
+            py = base_y + offset_y * usable_height
+            center = (int(px), int(py))
+            if slot.active:
+                pygame.draw.circle(self.surface, active_fill, center, circle_radius)
+                pygame.draw.circle(self.surface, active_border, center, circle_radius, 2)
+            else:
+                pygame.draw.circle(self.surface, inactive_fill, center, circle_radius)
+                border_color = ready_border if slot.ready else cooldown_border
+                pygame.draw.circle(self.surface, border_color, center, circle_radius, 2)
+            if slot.active:
+                label_color = (255, 225, 170)
+            elif slot.ready:
+                label_color = (190, 220, 255)
+            else:
+                label_color = (140, 160, 180)
+            label = self.font.render(slot.label, True, label_color)
+            label_rect = label.get_rect()
+            label_rect.center = (center[0], center[1] + circle_radius + 12)
+            self.surface.blit(label, label_rect)
 
     def draw_cursor_indicator(self, position: Vector2 | tuple[float, float], visible: bool) -> None:
         if not visible:
@@ -306,10 +406,13 @@ class HUD:
         ship_info_open: bool = False,
         ship_button_hovered: bool = False,
         target_overlay: TargetOverlay | None = None,
+        weapon_slots: Sequence[WeaponSlotHUDState] | None = None,
     ) -> None:
         self.draw_lead(camera, player, target, projectile_speed)
         self.draw_target_panel(camera, player, target)
         self.draw_target_overlay(target_overlay)
+        if weapon_slots:
+            self.draw_ship_wireframe(weapon_slots)
         self.draw_meters(player)
         self.draw_lock_ring(camera, player, target)
         self.draw_dradis(dradis)
@@ -516,5 +619,6 @@ class HUD:
 __all__ = [
     "HUD",
     "TargetOverlay",
+    "WeaponSlotHUDState",
     "format_distance",
 ]

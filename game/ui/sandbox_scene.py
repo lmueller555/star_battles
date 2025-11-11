@@ -1,19 +1,21 @@
 """Sandbox combat scene."""
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import pygame
 from pygame.math import Vector2, Vector3
 
 from game.assets.content import ContentManager
-from game.combat.targeting import is_within_gimbal, pick_nearest_target
+from game.combat.targeting import pick_nearest_target
 from game.engine.input import InputMapper
 from game.engine.logger import GameLogger
 from game.engine.scene import Scene
 from game.render.camera import ChaseCamera
-from game.render.hud import HUD, TargetOverlay
+from game.render.hud import HUD, TargetOverlay, WeaponSlotHUDState
 from game.render.renderer import VectorRenderer
 from game.sensors.dradis import DradisSystem
-from game.ships.ship import Ship, ShipControlState
+from game.ships.ship import Ship, ShipControlState, WeaponMount
 from game.world.ai import create_ai_for_ship
 from game.world.asteroids import Asteroid
 from game.world.space import COLLISION_RADII, SpaceWorld
@@ -25,6 +27,17 @@ from game.ui.ship_info import ShipInfoPanel
 
 
 KEY_LOOK_SCALE = 6.0
+
+
+@dataclass
+class WeaponSlotState:
+    index: int
+    action: str
+    mount: WeaponMount
+
+    @property
+    def label(self) -> str:
+        return str(self.index + 1)
 
 
 class SandboxScene(Scene):
@@ -52,7 +65,9 @@ class SandboxScene(Scene):
         self.mining_state: MiningHUDState | None = None
         self.mining_feedback: str = ""
         self.mining_feedback_timer: float = 0.0
-        self.weapon_group_actions: dict[str, str] = {}
+        self.weapon_slots: list[WeaponSlotState] = []
+        self._weapon_action_map: dict[str, WeaponSlotState] = {}
+        self._tracked_weapon_mount_ids: set[int] = set()
         self.combat_feedback: str = ""
         self.combat_feedback_timer: float = 0.0
         self.flank_slider_ratio: float = 0.0
@@ -161,8 +176,7 @@ class SandboxScene(Scene):
         self.mining_state = None
         self.mining_feedback = ""
         self.mining_feedback_timer = 0.0
-        self.weapon_group_actions.clear()
-        self._configure_weapon_groups()
+        self._setup_weapon_slots()
         self.combat_feedback = ""
         self.combat_feedback_timer = 0.0
         if self.player:
@@ -172,7 +186,9 @@ class SandboxScene(Scene):
 
     def on_exit(self) -> None:
         self._enter_ui_cursor()
-        self.weapon_group_actions.clear()
+        self.weapon_slots.clear()
+        self._weapon_action_map.clear()
+        self._tracked_weapon_mount_ids.clear()
         if self.ship_info_panel:
             self.ship_info_panel.close()
         self.ship_info_open = False
@@ -330,6 +346,7 @@ class SandboxScene(Scene):
         self.sim_dt = dt
         if not self.input or not self.player or not self.world or not self.dradis:
             return
+        self._refresh_weapon_slots_if_needed()
         self.input.update_axes()
         self.freelook_delta = (0.0, 0.0)
         scanning = False
@@ -468,14 +485,7 @@ class SandboxScene(Scene):
             if message:
                 self._set_combat_feedback(message, duration=2.5 if success else 2.0)
 
-        if target and self.input.action("fire_primary"):
-            self._fire_group("primary", target)
-        if target and self.input.action("fire_secondary"):
-            self._fire_group("aux", target)
-        if target:
-            for action, group in self.weapon_group_actions.items():
-                if self.input.action(action):
-                    self._fire_group(group, target)
+        self._update_weapon_systems(target)
 
         station, distance = self.world.nearest_station(self.player)
         if station:
@@ -628,6 +638,7 @@ class SandboxScene(Scene):
                 ship_info_open=self.ship_info_open,
                 ship_button_hovered=self._ship_button_hovered,
                 target_overlay=target_overlay,
+                weapon_slots=self._weapon_slot_hud_states(),
             )
         if self.map_open and self.map_view:
             status = self.jump_feedback if self.jump_feedback_timer > 0.0 else None
@@ -827,49 +838,153 @@ class SandboxScene(Scene):
         self.combat_feedback = message
         self.combat_feedback_timer = duration
 
-    def _configure_weapon_groups(self) -> None:
+    def _setup_weapon_slots(self) -> None:
+        self.weapon_slots.clear()
+        self._weapon_action_map.clear()
+        self._tracked_weapon_mount_ids.clear()
         if not self.player:
             return
-        groups: list[str] = []
-        for mount in self.player.mounts:
-            group = getattr(mount.hardpoint, "group", "primary")
-            if group not in groups:
-                groups.append(group)
-        reserved = {"primary", "aux"}
-        extras = [group for group in groups if group not in reserved]
-        actions = ["fire_group_alpha", "fire_group_beta", "fire_group_gamma"]
-        self.weapon_group_actions = {
-            action: group for action, group in zip(actions, extras)
-        }
+        actions = [
+            "toggle_weapon_slot_1",
+            "toggle_weapon_slot_2",
+            "toggle_weapon_slot_3",
+            "toggle_weapon_slot_4",
+            "toggle_weapon_slot_5",
+            "toggle_weapon_slot_6",
+        ]
+        mounts = [mount for mount in self.player.mounts if mount.weapon_id]
+        for index, mount in enumerate(mounts[: len(actions)]):
+            slot = WeaponSlotState(index=index, action=actions[index], mount=mount)
+            self.weapon_slots.append(slot)
+            self._weapon_action_map[slot.action] = slot
+            self._tracked_weapon_mount_ids.add(id(mount))
 
-    def _fire_group(self, group: str, target: Ship) -> bool:
-        if not self.world or not self.player or not target.is_alive():
-            return False
-        fired = False
-        recoil_applied = False
-        launcher_fired = False
-        for mount in self.player.mounts:
-            if getattr(mount.hardpoint, "group", "primary") != group:
+    def _refresh_weapon_slots_if_needed(self) -> None:
+        if not self.player:
+            return
+        current = {id(mount) for mount in self.player.mounts if mount.weapon_id}
+        if current != self._tracked_weapon_mount_ids:
+            self._setup_weapon_slots()
+
+    def _update_weapon_systems(self, target: Ship | None) -> None:
+        if not self.input or not self.player or not self.world or not self.content:
+            return
+        active_slots = [
+            slot for slot in self.weapon_slots if self.input.action(slot.action)
+        ]
+        if not active_slots:
+            return
+        preferred = None
+        if target and target.team != self.player.team and target.is_alive():
+            preferred = target
+        enemies = [
+            ship
+            for ship in self.world.ships
+            if ship.team != self.player.team and ship.is_alive()
+        ]
+        if not enemies and not preferred:
+            return
+        for slot in active_slots:
+            self._auto_fire_slot(slot, preferred, enemies)
+
+    def _auto_fire_slot(
+        self,
+        slot: WeaponSlotState,
+        preferred_target: Ship | None,
+        enemies: list[Ship],
+    ) -> None:
+        if not self.world or not self.player or not self.content:
+            return
+        mount = slot.mount
+        if not mount.weapon_id:
+            return
+        try:
+            weapon = self.content.weapons.get(mount.weapon_id)
+        except KeyError:
+            return
+        if mount.cooldown > 0.0:
+            return
+        if self.player.power < weapon.power_per_shot:
+            return
+        if weapon.slot_type == "launcher" and self.player.lock_progress < 1.0:
+            return
+        target = self._select_weapon_target(mount, weapon, preferred_target, enemies)
+        if not target:
+            return
+        result = self.world.fire_mount(self.player, mount, target)
+        if weapon.slot_type == "launcher" and mount.cooldown > 0.0:
+            self.player.lock_progress = 0.0
+        if result and result.hit and self.camera:
+            self.camera.apply_recoil(0.4)
+
+    def _select_weapon_target(
+        self,
+        mount: WeaponMount,
+        weapon,
+        preferred: Ship | None,
+        enemies: list[Ship],
+    ) -> Ship | None:
+        if not self.player:
+            return None
+        if preferred and self._target_within_weapon_limits(mount, weapon, preferred):
+            return preferred
+        best: Ship | None = None
+        best_distance = float("inf")
+        for enemy in enemies:
+            if not self._target_within_weapon_limits(mount, weapon, enemy):
                 continue
+            distance = enemy.kinematics.position.distance_to(
+                self.player.kinematics.position
+            )
+            if distance < best_distance:
+                best = enemy
+                best_distance = distance
+        return best
+
+    def _target_within_weapon_limits(
+        self, mount: WeaponMount, weapon, target: Ship
+    ) -> bool:
+        if not target.is_alive():
+            return False
+        if not self.player:
+            return False
+        to_target = target.kinematics.position - self.player.kinematics.position
+        distance = to_target.length()
+        if weapon.max_range > 0.0 and distance > weapon.max_range:
+            return False
+        if to_target.length_squared() <= 0.0:
+            return True
+        forward = self.player.kinematics.forward()
+        try:
+            direction = to_target.normalize()
+        except ValueError:
+            return True
+        angle = forward.angle_to(direction)
+        gimbal_limit = min(float(mount.hardpoint.gimbal), float(weapon.gimbal))
+        return angle <= gimbal_limit
+
+    def _weapon_slot_hud_states(self) -> list[WeaponSlotHUDState]:
+        if not self.player or not self.content or not self.input:
+            return []
+        states: list[WeaponSlotHUDState] = []
+        for slot in self.weapon_slots:
+            mount = slot.mount
             if not mount.weapon_id:
                 continue
-            weapon = self.content.weapons.get(mount.weapon_id) if self.content else None
-            slot_type = weapon.slot_type if weapon else mount.hardpoint.slot
-            requires_lock = slot_type == "launcher"
-            if requires_lock and self.player.lock_progress < 1.0:
+            try:
+                weapon = self.content.weapons.get(mount.weapon_id)
+            except KeyError:
                 continue
-            if not is_within_gimbal(mount, self.player, target):
-                continue
-            result = self.world.fire_mount(self.player, mount, target)
-            fired = True
-            if slot_type == "launcher":
-                launcher_fired = True
-            if result and result.hit and self.camera and not recoil_applied:
-                self.camera.apply_recoil(0.4)
-                recoil_applied = True
-        if launcher_fired:
-            self.player.lock_progress = 0.0
-        return fired
+            active = self.input.action(slot.action)
+            ready = mount.cooldown <= 0.0 and self.player.power >= weapon.power_per_shot
+            states.append(
+                WeaponSlotHUDState(
+                    label=slot.label,
+                    active=active,
+                    ready=ready,
+                )
+            )
+        return states
 
     def _blit_feedback(self, surface: pygame.Surface, message: str, offset: float) -> None:
         if not message:
