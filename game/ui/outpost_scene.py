@@ -47,6 +47,14 @@ class _LightSource:
 
 
 @dataclass
+class _RoomLabel:
+    text: str
+    position: Vector2
+    height_offset: float
+    color: Tuple[int, int, int]
+
+
+@dataclass
 class _DockingSequence:
     start: Vector3
     entry: Vector3
@@ -66,112 +74,117 @@ class _InteriorLayout:
         self.rooms: List[pygame.Rect] = []
         self.floor_details: List[pygame.Rect] = []
         self.lights: List[_LightSource] = []
+        self.labels: List[_RoomLabel] = []
         self.spawn_point = Vector2()
         self._build()
 
     def _build(self) -> None:
         tile = self.tile_size
-        # Primary hangar and connected chambers.
-        hangar = pygame.Rect(0, 6, 30, 22)
-        central_spine = pygame.Rect(30, 14, 12, 12)
-        central_hub = pygame.Rect(40, 10, 14, 12)
-        north_hall = pygame.Rect(40, 8, 14, 4)
-        south_hall = pygame.Rect(40, 22, 14, 8)
-        east_connector = pygame.Rect(52, 12, 4, 12)
-        observation = pygame.Rect(52, 6, 4, 10)
-        engineering = pygame.Rect(52, 22, 4, 10)
-        upper_connector = pygame.Rect(46, 6, 6, 6)
-        upper_access = pygame.Rect(48, 2, 6, 4)
-        far_wing = pygame.Rect(52, 0, 4, 6)
-        reactor = pygame.Rect(46, 28, 8, 6)
-        atrium = pygame.Rect(34, 28, 14, 6)
-        south_link = pygame.Rect(24, 26, 12, 6)
-        south_galleria = pygame.Rect(12, 26, 16, 6)
-        western_link = pygame.Rect(10, 10, 12, 10)
-        north_link = pygame.Rect(16, 6, 12, 8)
-        labs = pygame.Rect(16, 0, 12, 6)
-        cargo = pygame.Rect(8, 0, 16, 8)
-        connector_to_hub = pygame.Rect(26, 12, 8, 8)
-        connector_to_labs = pygame.Rect(18, 4, 10, 4)
+        # Primary hangar with adjacent service corridor and rooms.
+        hangar = pygame.Rect(2, 8, 30, 20)
+        hangar_entry = pygame.Rect(30, 14, 6, 8)
+        main_hall = pygame.Rect(36, 12, 16, 12)
+        hall_terminus = pygame.Rect(52, 14, 4, 8)
+        upper_door = pygame.Rect(36, 9, 8, 5)
+        fleet_shop = pygame.Rect(34, 2, 18, 8)
+        lower_door = pygame.Rect(36, 23, 8, 6)
+        weapons_bay = pygame.Rect(34, 28, 18, 8)
+        maintenance = pygame.Rect(32, 20, 4, 8)
+        service_nook = pygame.Rect(48, 18, 4, 8)
 
         rooms = [
             hangar,
-            central_spine,
-            central_hub,
-            north_hall,
-            south_hall,
-            east_connector,
-            observation,
-            engineering,
-            upper_connector,
-            far_wing,
-            reactor,
-            atrium,
-            south_link,
-            south_galleria,
-            western_link,
-            north_link,
-            labs,
-            cargo,
-            connector_to_hub,
-            connector_to_labs,
-            upper_access,
+            hangar_entry,
+            main_hall,
+            hall_terminus,
+            upper_door,
+            fleet_shop,
+            lower_door,
+            weapons_bay,
+            maintenance,
+            service_nook,
         ]
 
         for rect in rooms:
             self._carve(rect)
             self.rooms.append(rect)
 
-        self.spawn_point = self._tile_center(12, 18)
+        self.spawn_point = self._tile_center(hangar.left + hangar.width // 2, hangar.top + hangar.height // 2)
 
         # Decorative floor strips to add visual depth.
-        self.floor_details.extend(
-            [
+        hangar_detail_start = hangar.x * tile + int(tile * 0.6)
+        hangar_detail_width = hangar.width * tile - int(tile * 1.2)
+        for idx in range(8):
+            self.floor_details.append(
                 pygame.Rect(
-                    hangar.x * tile + int(tile * 0.9),
-                    (hangar.y + idx * 2) * tile + int(tile * 0.25),
-                    hangar.width * tile - int(tile * 1.8),
-                    int(tile * 0.32),
+                    hangar_detail_start,
+                    (hangar.y * tile) + idx * int(tile * 2.2) + int(tile * 0.5),
+                    hangar_detail_width,
+                    int(tile * 0.28),
                 )
-                for idx in range(6)
-            ]
-        )
-        self.floor_details.extend(
-            [
-                pygame.Rect(
-                    central_hub.x * tile + int(tile * 0.7),
-                    central_hub.y * tile + int(tile * 0.5) + idx * int(tile * 1.1),
-                    central_hub.width * tile - int(tile * 1.4),
-                    int(tile * 0.2),
-                )
-                for idx in range(6)
-            ]
-        )
+            )
 
-        # Area lights to add atmosphere along the walkways.
+        corridor_strip_left = main_hall.x * tile + int(tile * 0.8)
+        corridor_strip_width = main_hall.width * tile - int(tile * 1.6)
+        for idx in range(3):
+            self.floor_details.append(
+                pygame.Rect(
+                    corridor_strip_left,
+                    (main_hall.y + idx * 4) * tile + int(tile * 0.6),
+                    corridor_strip_width,
+                    int(tile * 0.24),
+                )
+            )
+
+        # Area lights to add atmosphere along the hangar and hallway.
         light_tiles = [
-            (6, 18),
-            (12, 18),
-            (18, 18),
+            (8, 18),
+            (14, 18),
+            (20, 18),
             (26, 18),
             (32, 18),
-            (38, 18),
-            (46, 12),
-            (46, 24),
-            (20, 10),
-            (14, 10),
-            (24, 4),
-            (42, 4),
+            (36, 14),
+            (42, 14),
+            (48, 14),
+            (36, 22),
+            (42, 22),
+            (48, 22),
+            (40, 6),
+            (44, 30),
         ]
         for x, y in light_tiles:
             self.lights.append(
                 _LightSource(
                     position=self._tile_center(x, y),
-                    radius=tile * 5.6,
-                    pulse_speed=0.8 + (x + y) * 0.03,
-                    intensity=0.6 + 0.1 * ((x * 17 + y * 13) % 3),
+                    radius=tile * 5.8,
+                    pulse_speed=0.76 + (x + y) * 0.025,
+                    intensity=0.62 + 0.12 * ((x * 11 + y * 7) % 3),
                 )
             )
+
+        # Room signage anchors for future interactions.
+        self.labels.extend(
+            [
+                _RoomLabel(
+                    text="Hangar Bay",
+                    position=self._tile_center(hangar.left + hangar.width // 2, hangar.top + hangar.height // 2),
+                    height_offset=tile * 2.4,
+                    color=(182, 226, 255),
+                ),
+                _RoomLabel(
+                    text="Fleet Shop",
+                    position=self._tile_center(fleet_shop.left + fleet_shop.width // 2, upper_door.top),
+                    height_offset=tile * 1.9,
+                    color=(180, 220, 255),
+                ),
+                _RoomLabel(
+                    text="Weapons Bay",
+                    position=self._tile_center(weapons_bay.left + weapons_bay.width // 2, lower_door.bottom - 1),
+                    height_offset=tile * 1.9,
+                    color=(220, 200, 180),
+                ),
+            ]
+        )
 
     def _carve(self, rect: pygame.Rect) -> None:
         for ty in range(rect.top, rect.bottom):
@@ -646,6 +659,57 @@ class OutpostInteriorScene(Scene):
 
         surface.blit(overlay, (0, 0), special_flags=pygame.BLEND_ADD)
 
+    def _render_room_labels(
+        self,
+        surface: pygame.Surface,
+        position: Vector2,
+        yaw: float,
+        horizon: int,
+    ) -> None:
+        if not self.layout.labels or not self.status_font:
+            return
+
+        width, height = surface.get_size()
+        overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+        forward = Vector2(math.sin(yaw), -math.cos(yaw))
+        right = Vector2(forward.y, -forward.x)
+        depth_scale = width / (2.0 * math.tan(self._first_person_fov / 2.0))
+
+        for label in self.layout.labels:
+            offset = label.position - position
+            forward_dist = offset.dot(forward)
+            if forward_dist <= 80.0:
+                continue
+            lateral = offset.dot(right)
+            screen_x = width / 2 + (lateral / max(1e-3, forward_dist)) * depth_scale
+            if screen_x < -200 or screen_x > width + 200:
+                continue
+
+            depth_factor = max(0.25, min(1.0, 420.0 / (forward_dist + 60.0)))
+            screen_y = horizon - int(label.height_offset * depth_factor)
+            if screen_y < 40 or screen_y > height - 40:
+                continue
+
+            text_surface = self.status_font.render(label.text.upper(), True, label.color)
+            text_surface = text_surface.convert_alpha()
+            text_surface.set_alpha(int(220 * depth_factor))
+
+            padding_x = 18
+            padding_y = 10
+            panel_rect = text_surface.get_rect()
+            panel_rect.center = (int(screen_x), int(screen_y))
+            panel_rect.inflate_ip(padding_x, padding_y)
+            panel_color = (18, 32, 52, int(160 * depth_factor))
+            border_color = (90, 150, 210, int(200 * depth_factor))
+
+            pygame.draw.rect(overlay, panel_color, panel_rect, border_radius=8)
+            pygame.draw.rect(overlay, border_color, panel_rect, 2, border_radius=8)
+
+            text_rect = text_surface.get_rect(center=panel_rect.center)
+            overlay.blit(text_surface, text_rect)
+
+        surface.blit(overlay, (0, 0))
+
     def _render_first_person_view(
         self,
         surface: pygame.Surface,
@@ -765,6 +829,7 @@ class OutpostInteriorScene(Scene):
             surface.blit(walkway, (0, 0), special_flags=pygame.BLEND_ADD)
 
         self._render_light_markers(surface, position, yaw, horizon)
+        self._render_room_labels(surface, position, yaw, horizon)
         return horizon
 
     def handle_event(self, event: pygame.event.Event) -> None:
@@ -1289,7 +1354,7 @@ class OutpostInteriorScene(Scene):
             label = self.caption_font.render("OUTPOST INTERIOR", True, (162, 208, 246))
             surface.blit(label, (24, 24))
             if self.status_font:
-                location = self.status_font.render("Hangar Wing A", True, (124, 170, 208))
+                location = self.status_font.render("Hangar Bay · Service Concourse", True, (124, 170, 208))
                 surface.blit(location, (26, 24 + label.get_height() + 6))
 
         status_overlay = pygame.Surface((width, height), pygame.SRCALPHA)
