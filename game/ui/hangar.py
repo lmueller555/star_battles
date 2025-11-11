@@ -12,6 +12,7 @@ from game.assets.content import ContentManager
 from game.ships.ship import Ship, WeaponMount
 from game.world.station import DockingStation
 from game.ui.ship_info import DEFAULT_ANCHORS, MODEL_LAYOUTS
+from game.ui.strike_store import ItemCardData, StoreFilters, StoreItem, fitting, store
 
 
 @dataclass
@@ -192,6 +193,23 @@ class HangarView:
         self._hold_rows: List[_HoldRow] = []
         self._sell_dialog: Optional[_SellDialog] = None
         self._current_ship: Optional[Ship] = None
+        self._store_filters = StoreFilters()
+        self._store_toggle_states: Dict[str, bool] = {"weapon": True, "hull": True, "engine": True}
+        self._store_sort_options: List[tuple[str, str, bool]] = [
+            ("price", "Price", False),
+            ("name", "Name", False),
+            ("slot", "Slot", False),
+            ("impact", "Most Impact", True),
+        ]
+        self._store_sort_selection: str = "price"
+        self._store_sort_desc: bool = False
+        self._store_card_rects: Dict[str, pygame.Rect] = {}
+        self._store_buy_rects: Dict[str, pygame.Rect] = {}
+        self._store_toggle_rects: Dict[str, pygame.Rect] = {}
+        self._store_sort_rects: Dict[str, pygame.Rect] = {}
+        self._store_hover_item: Optional[str] = None
+        self._store_preview_data: Optional[Dict[str, Dict[str, float]]] = None
+        self._store_cards: List[ItemCardData] = []
 
     def set_surface(self, surface: pygame.Surface) -> None:
         """Update the target surface when the display size changes."""
@@ -207,6 +225,8 @@ class HangarView:
             pos = getattr(event, "pos", None)
             if not pos:
                 return False
+            if self.active_option == "Store" and self._handle_store_click(pos):
+                return True
             if self.active_option == "Hold":
                 for row in self._hold_rows:
                     if (
@@ -254,12 +274,24 @@ class HangarView:
         inner_rect.y = ribbon_rect.bottom + 16
         inner_rect.height = panel_rect.bottom - inner_rect.y - 24
 
-        left_width = int(inner_rect.width * (1.0 / 3.0))
-        left_rect = pygame.Rect(inner_rect.x, inner_rect.y, left_width, inner_rect.height)
-        right_rect = pygame.Rect(left_rect.right + 16, inner_rect.y, inner_rect.width - left_width - 16, inner_rect.height)
-
-        self._draw_left_panel(surface, left_rect, ship)
-        self._draw_ship_panel(surface, right_rect, ship)
+        if self.active_option == "Store":
+            left_width = int(inner_rect.width * 0.26)
+            preview_width = int(inner_rect.width * 0.28)
+            center_width = inner_rect.width - left_width - preview_width - 24
+            left_rect = pygame.Rect(inner_rect.x, inner_rect.y, left_width, inner_rect.height)
+            center_rect = pygame.Rect(left_rect.right + 12, inner_rect.y, center_width, inner_rect.height)
+            preview_rect = pygame.Rect(center_rect.right + 12, inner_rect.y, preview_width, inner_rect.height)
+            store.bind_ship(ship)
+            self._update_store_filters()
+            self._draw_store_filters(surface, left_rect, ship)
+            self._draw_store_grid(surface, center_rect, ship)
+            self._draw_store_preview(surface, preview_rect, ship)
+        else:
+            left_width = int(inner_rect.width * (1.0 / 3.0))
+            left_rect = pygame.Rect(inner_rect.x, inner_rect.y, left_width, inner_rect.height)
+            right_rect = pygame.Rect(left_rect.right + 16, inner_rect.y, inner_rect.width - left_width - 16, inner_rect.height)
+            self._draw_left_panel(surface, left_rect, ship)
+            self._draw_ship_panel(surface, right_rect, ship)
 
         footer = self.small_font.render("Press H to undock", True, (170, 210, 240))
         surface.blit(footer, (panel_rect.x + panel_rect.width - footer.get_width() - 28, panel_rect.y + panel_rect.height - 32))
@@ -305,6 +337,366 @@ class HangarView:
             for idx, line in enumerate(lines):
                 text = self.small_font.render(line, True, (180, 208, 228))
                 surface.blit(text, (content_rect.x + 16, content_rect.y + 18 + idx * 20))
+
+    def _update_store_filters(self) -> None:
+        active = [slot for slot, enabled in self._store_toggle_states.items() if enabled]
+        if not active:
+            active = list(self._store_toggle_states.keys())
+            for slot in active:
+                self._store_toggle_states[slot] = True
+        self._store_filters = StoreFilters(
+            slot_families=tuple(sorted(active)),
+            sort_by=self._store_sort_selection,
+            descending=self._store_sort_desc,
+        )
+
+    def _toggle_store_family(self, family: str) -> None:
+        current = self._store_toggle_states.get(family, True)
+        self._store_toggle_states[family] = not current
+        if not any(self._store_toggle_states.values()):
+            for key in self._store_toggle_states.keys():
+                self._store_toggle_states[key] = True
+        self._update_store_filters()
+
+    def _select_store_sort(self, sort_key: str) -> None:
+        if sort_key == self._store_sort_selection:
+            # Toggle descending flag on repeated clicks.
+            self._store_sort_desc = not self._store_sort_desc
+        else:
+            self._store_sort_selection = sort_key
+            for key, _, default_desc in self._store_sort_options:
+                if key == sort_key:
+                    self._store_sort_desc = default_desc
+                    break
+        self._update_store_filters()
+
+    def _handle_store_click(self, pos: Tuple[int, int]) -> bool:
+        ship = self._current_ship
+        if ship:
+            store.bind_ship(ship)
+        if not self._store_cards:
+            self._store_cards = store.list_items(self._store_filters)
+        for item_id, rect in self._store_buy_rects.items():
+            if rect.collidepoint(pos):
+                card = next((card for card in self._store_cards if card.item.id == item_id), None)
+                if not card or not card.affordable:
+                    return True
+                result = store.buy(item_id)
+                if result.get("success"):
+                    self._play_confirm_sound()
+                    self._refresh_store_preview(item_id)
+                    self._store_cards = store.list_items(self._store_filters)
+                return True
+        for family, rect in self._store_toggle_rects.items():
+            if rect.collidepoint(pos):
+                self._toggle_store_family(family)
+                return True
+        for sort_key, rect in self._store_sort_rects.items():
+            if rect.collidepoint(pos):
+                self._select_store_sort(sort_key)
+                return True
+        for item_id, rect in self._store_card_rects.items():
+            if rect.collidepoint(pos):
+                store.select(item_id)
+                self._refresh_store_preview(item_id)
+                return True
+        return False
+
+    def _play_confirm_sound(self) -> None:
+        try:
+            if pygame.mixer.get_init():
+                tone = pygame.mixer.Sound(buffer=b"\x00\x00" * 12)
+                tone.set_volume(0.35)
+                tone.play()
+        except pygame.error:
+            return
+
+    def _refresh_store_preview(self, item_id: Optional[str] = None) -> None:
+        if item_id:
+            store.select(item_id)
+        selected = store.selected_item()
+        if not selected:
+            self._store_preview_data = None
+            return
+        try:
+            self._store_preview_data = fitting.preview_with(selected.id)
+        except RuntimeError:
+            self._store_preview_data = None
+
+    def _draw_store_filters(self, surface: pygame.Surface, rect: pygame.Rect, ship: Ship) -> None:
+        self._blit_panel(surface, rect, (14, 24, 32, 210), (70, 108, 148))
+        title = self.font.render("Filters", True, (214, 236, 255))
+        surface.blit(title, (rect.x + 20, rect.y + 16))
+        inner = rect.inflate(-36, -64)
+        inner.y = rect.y + 54
+        self._blit_panel(surface, inner, (10, 18, 26, 210), (56, 90, 126))
+        y = inner.y + 16
+        toggle_height = 36
+        self._store_toggle_rects = {}
+        for idx, (family, label) in enumerate([
+            ("weapon", "Weapons"),
+            ("hull", "Hull"),
+            ("engine", "Engine"),
+        ]):
+            rect_toggle = pygame.Rect(inner.x + 12, y + idx * (toggle_height + 8), inner.width - 24, toggle_height)
+            enabled = self._store_toggle_states.get(family, True)
+            fill = (32, 56, 74, 230) if enabled else (22, 32, 44, 190)
+            border = (120, 200, 255) if enabled else (60, 90, 118)
+            self._blit_panel(surface, rect_toggle, fill, border, 1)
+            text = self.small_font.render(label, True, (220, 236, 255) if enabled else (150, 176, 200))
+            surface.blit(text, (rect_toggle.x + 16, rect_toggle.y + 8))
+            self._store_toggle_rects[family] = rect_toggle
+        y += 3 * (toggle_height + 8) + 12
+        sort_label = self.small_font.render("Sort By", True, (208, 228, 248))
+        surface.blit(sort_label, (inner.x + 12, y))
+        y += 28
+        self._store_sort_rects = {}
+        for idx, (key, label, _default_desc) in enumerate(self._store_sort_options):
+            option_rect = pygame.Rect(inner.x + 12, y + idx * (toggle_height - 4), inner.width - 24, toggle_height - 6)
+            is_selected = key == self._store_sort_selection
+            fill = (40, 66, 92, 230) if is_selected else (20, 32, 44, 200)
+            border = (140, 210, 255) if is_selected else (58, 90, 120)
+            self._blit_panel(surface, option_rect, fill, border, 1)
+            label_text = self.mini_font.render(label, True, (214, 234, 252) if is_selected else (164, 190, 210))
+            surface.blit(label_text, (option_rect.x + 14, option_rect.y + 6))
+            order = "▼" if (is_selected and self._store_sort_desc) else "▲"
+            order_surface = self.mini_font.render(order, True, (214, 234, 252))
+            surface.blit(order_surface, (option_rect.right - 24, option_rect.y + 6))
+            self._store_sort_rects[key] = option_rect
+        y += len(self._store_sort_options) * (toggle_height - 4) + 8
+        currency = self.small_font.render("Cubits", True, (200, 220, 242))
+        surface.blit(currency, (inner.x + 12, y))
+        amount = self.font.render(f"{ship.resources.cubits:,.0f}", True, (220, 238, 255))
+        surface.blit(amount, (inner.x + 12, y + 22))
+        info_lines = [
+            "Hold SHIFT for max preview",
+            "(Strike upgrades not captured)",
+        ]
+        for idx, line in enumerate(info_lines):
+            text = self.mini_font.render(line, True, (150, 178, 200))
+            surface.blit(text, (inner.x + 12, inner.bottom - 40 + idx * 16))
+
+    def _draw_store_grid(self, surface: pygame.Surface, rect: pygame.Rect, ship: Ship) -> None:
+        self._blit_panel(surface, rect, (18, 30, 42, 210), (70, 108, 148))
+        header = self.font.render("Inventory", True, (214, 236, 255))
+        surface.blit(header, (rect.x + 24, rect.y + 18))
+        grid_rect = rect.inflate(-36, -72)
+        grid_rect.y = rect.y + 56
+        self._blit_panel(surface, grid_rect, (12, 20, 30, 210), (60, 96, 134))
+        padding = 16
+        columns = 1 if grid_rect.width < 420 else 2
+        card_width = (grid_rect.width - padding * (columns + 1)) // columns
+        card_height = 240
+        mouse_pos = pygame.mouse.get_pos()
+        self._store_cards = store.list_items(self._store_filters)
+        self._store_card_rects = {}
+        self._store_buy_rects = {}
+        self._store_hover_item = None
+        for index, card in enumerate(self._store_cards):
+            col = index % columns
+            row = index // columns
+            card_rect = pygame.Rect(
+                grid_rect.x + padding + col * (card_width + padding),
+                grid_rect.y + padding + row * (card_height + padding),
+                card_width,
+                card_height,
+            )
+            self._draw_store_card(surface, card_rect, card, mouse_pos)
+            self._store_card_rects[card.item.id] = card_rect
+        if not self._store_cards:
+            empty_text = self.small_font.render("No items match the current filters.", True, (170, 196, 214))
+            surface.blit(empty_text, (grid_rect.x + 18, grid_rect.y + 24))
+
+    def _draw_store_card(
+        self,
+        surface: pygame.Surface,
+        rect: pygame.Rect,
+        card: ItemCardData,
+        mouse_pos: Tuple[int, int],
+    ) -> None:
+        selected = card.selected
+        hovered = rect.collidepoint(mouse_pos)
+        fill = (34, 52, 70, 230) if selected or hovered else (22, 34, 46, 210)
+        border = (140, 210, 255) if selected else (72, 110, 148)
+        self._blit_panel(surface, rect, fill, border, 1)
+        icon = self._slot_icons.get(card.item.slot_family)
+        name_color = (220, 240, 255)
+        title = self.small_font.render(card.item.name, True, name_color)
+        surface.blit(title, (rect.x + 16, rect.y + 12))
+        slot_label = f"{card.item.slot_family.title()} • Strike only"
+        subtitle = self.mini_font.render(slot_label, True, (172, 198, 220))
+        surface.blit(subtitle, (rect.x + 16, rect.y + 32))
+        if icon:
+            icon_rect = icon.get_rect()
+            icon_rect.topright = (rect.right - 16, rect.y + 12)
+            surface.blit(icon, icon_rect.topleft)
+        stats_y = rect.y + 58
+        highlight_lines = self._store_highlight_lines(card.item)
+        for idx, line in enumerate(highlight_lines):
+            text = self.mini_font.render(line, True, (204, 226, 248))
+            surface.blit(text, (rect.x + 16, stats_y + idx * 16))
+        cursor_y = stats_y + len(highlight_lines) * 16 + 8
+        bottom_limit = rect.y + rect.height - 110
+        cursor_y = min(cursor_y, bottom_limit)
+        upgrades = ", ".join(axis.replace("_", " ").title() for axis in card.item.upgrades)
+        if upgrades:
+            upgrade_text = self.mini_font.render(f"Upgrades: {upgrades}", True, (186, 208, 230))
+            surface.blit(upgrade_text, (rect.x + 16, cursor_y))
+            cursor_y = min(cursor_y + 18, rect.y + rect.height - 96)
+        tags_text = ", ".join(card.item.tags)
+        if tags_text:
+            cursor_y = min(cursor_y, rect.y + rect.height - 82)
+            tags = self.mini_font.render(tags_text.upper(), True, (150, 182, 210))
+            surface.blit(tags, (rect.x + 16, cursor_y))
+            cursor_y += 18
+        price_text = self.small_font.render(f"Price: {card.item.price:,.0f}", True, (214, 232, 252))
+        surface.blit(price_text, (rect.x + 16, rect.y + rect.height - 54))
+        dura_text = self.mini_font.render(
+            f"Durability: {card.item.durability:,.0f} / {card.item.durability_max:,.0f}",
+            True,
+            (168, 194, 214),
+        )
+        surface.blit(dura_text, (rect.x + 16, rect.y + rect.height - 38))
+        buy_rect = pygame.Rect(rect.right - 96, rect.y + rect.height - 46, 80, 32)
+        can_buy = card.affordable
+        buy_fill = (58, 112, 150, 230) if can_buy else (32, 46, 58, 180)
+        buy_border = (160, 220, 255) if can_buy else (68, 96, 122)
+        self._blit_panel(surface, buy_rect, buy_fill, buy_border, 1)
+        label = self.small_font.render("Buy", True, (220, 240, 255) if can_buy else (136, 160, 182))
+        surface.blit(
+            label,
+            (
+                buy_rect.centerx - label.get_width() // 2,
+                buy_rect.centery - label.get_height() // 2,
+            ),
+        )
+        if not can_buy:
+            tooltip = self.mini_font.render("Insufficient funds", True, (180, 102, 102))
+            surface.blit(tooltip, (rect.x + 16, rect.y + rect.height - 20))
+        self._store_buy_rects[card.item.id] = buy_rect
+        if hovered:
+            self._store_hover_item = card.item.id
+        if pygame.key.get_mods() & pygame.KMOD_SHIFT:
+            badge = self.mini_font.render("Higher levels: data not captured", True, (214, 232, 252))
+            surface.blit(badge, (rect.x + 16, rect.y + rect.height - 88))
+
+    def _store_highlight_lines(self, item: ItemCardData | StoreItem) -> List[str]:
+        data = item.item if isinstance(item, ItemCardData) else item
+        stats = data.stats
+        if data.slot_family == "weapon":
+            damage = f"Damage {stats['damage_min']:.0f}–{stats['damage_max']:.0f}"
+            if "critical_offense" in data.upgrades:
+                special = f"Critical Offense {stats['critical_offense']:.0f}"
+            else:
+                special = f"Optimal Range {stats['optimal_range']:.0f} m"
+            return [
+                damage,
+                special,
+                f"Reload {stats['reload']:.2f} s",
+                f"AP {stats['armor_piercing']:.0f}",
+                f"Accuracy {stats['accuracy']:.0f}",
+                f"Firing Arc {stats['firing_arc']:.0f}°",
+                f"Power {stats['power']:.0f}",
+            ]
+        if data.slot_family == "hull":
+            lines = []
+            if "armor" in stats:
+                lines.append(f"Armor +{stats['armor']:.2f}")
+            if "hull_hp" in stats:
+                lines.append(f"Hull +{stats['hull_hp']:.1f}")
+            if "acceleration" in stats:
+                lines.append(f"Accel {stats['acceleration']:+.1f}")
+            if "turn_accel" in stats:
+                lines.append(f"Turn Accel {stats['turn_accel']:+.2f}")
+            return lines
+        if data.slot_family == "engine":
+            lines = []
+            if "max_speed" in stats:
+                lines.append(f"Speed +{stats['max_speed']:.2f} m/s")
+            if "boost_speed" in stats:
+                lines.append(f"Boost +{stats['boost_speed']:.2f} m/s")
+            if "acceleration" in stats:
+                lines.append(f"Accel {stats['acceleration']:+.2f}")
+            if "turn_rate" in stats:
+                lines.append(f"Turn {stats['turn_rate']:+.2f}°/s")
+            if "turn_accel" in stats:
+                lines.append(f"Turn Accel {stats['turn_accel']:+.2f}°/s²")
+            if "avoidance_rating" in stats:
+                lines.append(f"Avoidance +{stats['avoidance_rating']:.0f}")
+            return lines
+        return []
+
+    def _draw_store_preview(self, surface: pygame.Surface, rect: pygame.Rect, ship: Ship) -> None:
+        self._blit_panel(surface, rect, (18, 32, 44, 210), (70, 110, 150))
+        header = self.font.render("Preview", True, (214, 236, 255))
+        surface.blit(header, (rect.x + 22, rect.y + 18))
+        inner = rect.inflate(-32, -72)
+        inner.y = rect.y + 56
+        self._blit_panel(surface, inner, (12, 20, 28, 210), (60, 92, 130))
+        selected = store.selected_item()
+        if not selected:
+            message = self.small_font.render("Select a Strike item to preview", True, (176, 204, 222))
+            surface.blit(message, (inner.x + 12, inner.y + 12))
+            return
+        if not self._store_preview_data:
+            self._refresh_store_preview(selected.id)
+        preview_data = self._store_preview_data or {"deltas_by_stat": {}, "current": {}, "preview": {}}
+        y = inner.y + 12
+        title = self.small_font.render(selected.name, True, (220, 240, 255))
+        surface.blit(title, (inner.x + 12, y))
+        y += 26
+        lines = self._preview_lines_for_item(selected, preview_data)
+        for label, current_value, preview_value in lines:
+            delta = preview_value - current_value
+            base_text = self.mini_font.render(f"{label}: {current_value:.2f}", True, (176, 202, 222))
+            surface.blit(base_text, (inner.x + 12, y))
+            delta_color = (120, 210, 150) if delta >= 0 else (210, 110, 110)
+            delta_text = self.mini_font.render(f"{delta:+.2f}", True, delta_color)
+            surface.blit(delta_text, (inner.x + inner.width - delta_text.get_width() - 12, y))
+            y += 20
+        if pygame.key.get_mods() & pygame.KMOD_SHIFT:
+            badge = self.mini_font.render("Higher levels: data not captured", True, (214, 234, 252))
+            surface.blit(badge, (inner.x + 12, inner.bottom - 24))
+
+    def _preview_lines_for_item(
+        self, item: StoreItem, preview_data: Dict[str, Dict[str, float]]
+    ) -> List[Tuple[str, float, float]]:
+        deltas = preview_data.get("deltas_by_stat", {})
+        current = preview_data.get("current", {})
+        preview_stats = preview_data.get("preview", {})
+        lines: List[Tuple[str, float, float]] = []
+        if item.slot_family == "hull":
+            for key, label in (
+                ("hull_hp", "Hull"),
+                ("armor", "Armor"),
+                ("acceleration", "Acceleration"),
+                ("turn_accel", "Turn Accel"),
+            ):
+                if key in deltas:
+                    lines.append((label, current.get(key, 0.0), preview_stats.get(key, 0.0)))
+        elif item.slot_family == "engine":
+            for key, label in (
+                ("max_speed", "Speed"),
+                ("boost_speed", "Boost"),
+                ("acceleration", "Acceleration"),
+                ("turn_rate", "Turn"),
+                ("turn_accel", "Turn Accel"),
+                ("avoidance_rating", "Avoidance"),
+            ):
+                if key in deltas:
+                    lines.append((label, current.get(key, 0.0), preview_stats.get(key, 0.0)))
+        else:
+            # Weapons preview: show damage values directly.
+            stats = item.stats
+            lines.extend(
+                [
+                    ("Damage Min", stats.get("damage_min", 0.0), stats.get("damage_min", 0.0)),
+                    ("Damage Max", stats.get("damage_max", 0.0), stats.get("damage_max", 0.0)),
+                    ("Optimal Range", stats.get("optimal_range", 0.0), stats.get("optimal_range", 0.0)),
+                    ("Crit Offense", stats.get("critical_offense", 0.0), stats.get("critical_offense", 0.0)),
+                ]
+            )
+        return lines
 
     def _draw_hold_panel(self, surface: pygame.Surface, rect: pygame.Rect, ship: Ship) -> None:
         items = self._gather_hold_items(ship)
