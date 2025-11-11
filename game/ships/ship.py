@@ -22,6 +22,8 @@ class ShipResources:
     titanium: float = 0.0
     water: float = 0.0
     cubits: float = 0.0
+    merits: float = 0.0
+    tuning_kits: float = 0.0
 
     def spend(self, resource: str, amount: float) -> bool:
         current = getattr(self, resource)
@@ -118,7 +120,12 @@ class Ship:
         )
         self.control = ShipControlState()
         self.resources = ShipResources(
-            tylium=1_000_000.0, titanium=180.0, water=40.0, cubits=1_000_000.0
+            tylium=1_000_000.0,
+            titanium=180.0,
+            water=40.0,
+            cubits=1_000_000.0,
+            merits=2_000.0,
+            tuning_kits=50.0,
         )
         self.tylium_capacity = self.resources.tylium
         self.power = self.stats.power_cap
@@ -134,6 +141,7 @@ class Ship:
         self.modules_by_slot: Dict[str, list[ItemData]] = defaultdict(list)
         self._module_stat_cache: Dict[str, float] = defaultdict(float)
         self.hold_items: Dict[str, int] = {}
+        self.equipment_levels: Dict[str, int] = {}
         self.hold_capacity: int = 30
         self.countermeasure_cooldown: float = 0.0
         self.auto_throttle_enabled: bool = False
@@ -262,6 +270,7 @@ class Ship:
         if not self.can_store_in_hold(quantity):
             return False
         self.hold_items[item_id] = self.hold_items.get(item_id, 0) + quantity
+        self.equipment_levels.setdefault(item_id, 1)
         return True
 
     def remove_hold_item(self, item_id: str, quantity: int = 1) -> bool:
@@ -276,6 +285,12 @@ class Ship:
         else:
             self.hold_items.pop(item_id, None)
         return True
+
+    def item_level(self, item_id: str) -> int:
+        return max(1, self.equipment_levels.get(item_id, 1))
+
+    def set_item_level(self, item_id: str, level: int) -> None:
+        self.equipment_levels[item_id] = max(1, level)
 
     def apply_default_loadout(self, content: "ContentManager") -> None:
         """Equip the frame's default modules and weapons when available."""
