@@ -269,7 +269,7 @@ class SpaceWorld:
         power_cost = weapon.power_cost
         is_strike = _is_strike_ship(ship)
         if is_strike:
-            power_cost = 1.5
+            power_cost = 1.2
         if ship.power < power_cost:
             return None
         ship.power -= power_cost
