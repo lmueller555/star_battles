@@ -243,8 +243,17 @@ class HUD:
         self.surface.blit(progress_text, (screen.x - 30, screen.y + radius + 4))
 
     def draw_dradis(self, dradis: DradisSystem) -> None:
+        surface_size = self.surface.get_size()
+        map_rect = map_display_rect(surface_size)
         center = Vector2(self.surface.get_width() - 140, self.surface.get_height() - 140)
         radius = 110
+        if map_rect.width > 0 and map_rect.height > 0:
+            center = Vector2(map_rect.centerx, map_rect.centery)
+            max_radius = min(map_rect.width, map_rect.height) / 2.0 - 12.0
+            if max_radius > 0.0:
+                radius = min(radius, int(max_radius))
+        if radius <= 0:
+            return
         pygame.draw.circle(self.surface, (60, 90, 110), center, radius, 1)
         for tick in (0.25, 0.5, 0.75, 1.0):
             pygame.draw.circle(self.surface, (40, 70, 90), center, radius * tick, 1)
