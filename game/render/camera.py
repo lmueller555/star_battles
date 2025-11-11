@@ -8,6 +8,17 @@ from pygame.math import Vector3
 
 from game.ships.ship import Ship
 
+# Approximate longitudinal lengths for each ship size in the wireframe renderer.
+# These values were derived from the existing wireframe definitions so the
+# camera can scale its follow distance without needing to import the renderer
+# module (avoiding circular imports).
+DEFAULT_SHIP_LENGTHS: dict[str, float] = {
+    "Strike": 4.5,
+    "Escort": 184.0,
+    "Line": 658.0,
+    "Outpost": 1270.0,
+}
+
 
 def _approach(value: float, target: float, rate: float) -> float:
     if value < target:
@@ -21,6 +32,34 @@ def _lerp_vector(a: Vector3, b: Vector3, t: float) -> Vector3:
     """Linear interpolate between two vectors with clamped factor."""
     t = max(0.0, min(1.0, t))
     return a + (b - a) * t
+
+
+def _ship_length(ship: Ship) -> float:
+    """Estimate the ship's nose-to-tail length in render units."""
+
+    length_override = getattr(ship.frame, "length", None)
+    if isinstance(length_override, (int, float)) and length_override > 0.0:
+        return float(length_override)
+
+    size_length = DEFAULT_SHIP_LENGTHS.get(ship.frame.size)
+    if size_length is not None:
+        return size_length
+
+    # Fallback: approximate from available hardpoint positions if we do not
+    # recognize the hull size. This maintains compatibility with custom frames.
+    if ship.frame.hardpoints:
+        z_values = [hp.position.z for hp in ship.frame.hardpoints]
+        extent = max(z_values) - min(z_values)
+        if extent > 0.0:
+            return extent
+
+    return DEFAULT_SHIP_LENGTHS.get("Strike", 12.0)
+
+
+def _ship_follow_distance(ship: Ship) -> float:
+    """Calculate the desired chase distance for the provided ship."""
+
+    return max(12.0, _ship_length(ship) * 2.0 + 12.0)
 
 
 class ChaseCamera:
@@ -140,6 +179,8 @@ class ChaseCamera:
             self._lock_distance = lock_distance
 
         self.lock_blend = _approach(self.lock_blend, 1.0 if lock_active else 0.0, self.lock_response * dt)
+
+        self.distance = _ship_follow_distance(ship)
 
         base_target_pos = (
             ship.kinematics.position
