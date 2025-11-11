@@ -1,0 +1,815 @@
+{
+  "metadata": {
+    "name": "outpost_interior_v1",
+    "units": "m",
+    "version": 1
+  },
+  "inputs": {
+    "player_ship_wireframe": "POLYLINES_OR_SVG_STRING"
+  },
+  "nodes": [
+    {
+      "id": "hangar_floor",
+      "layer": "FLOOR",
+      "type": "polyline_closed",
+      "style": "primary",
+      "points": [[-40, -40, 0], [40, -40, 0], [40, 40, 0], [-40, 40, 0]]
+    },
+    {
+      "id": "hangar_floor_grid_x",
+      "layer": "FLOOR",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[-40, 0, 0], [40, 0, 0]]
+    },
+    {
+      "id": "hangar_floor_grid_y",
+      "layer": "FLOOR",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[0, -40, 0], [0, 40, 0]]
+    },
+    {
+      "id": "hangar_wall_south",
+      "layer": "STRUCTURE",
+      "type": "polyline_closed",
+      "style": "primary",
+      "points": [[-40, -40, 0], [40, -40, 0], [40, -40, 30], [-40, -40, 30]]
+    },
+    {
+      "id": "hangar_wall_north_west",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "primary",
+      "points": [[-40, 40, 0], [-3, 40, 0], [-3, 40, 30], [-40, 40, 30], [-40, 40, 0]]
+    },
+    {
+      "id": "hangar_wall_north_east",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "primary",
+      "points": [[3, 40, 0], [40, 40, 0], [40, 40, 30], [3, 40, 30], [3, 40, 0]]
+    },
+    {
+      "id": "hangar_wall_east",
+      "layer": "STRUCTURE",
+      "type": "polyline_closed",
+      "style": "primary",
+      "points": [[40, -40, 0], [40, 40, 0], [40, 40, 30], [40, -40, 30]]
+    },
+    {
+      "id": "hangar_wall_west",
+      "layer": "STRUCTURE",
+      "type": "polyline_closed",
+      "style": "primary",
+      "points": [[-40, -40, 0], [-40, 40, 0], [-40, 40, 30], [-40, -40, 30]]
+    },
+    {
+      "id": "hangar_vertical_post_sw",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[-40, -40, 0], [-40, -40, 30]]
+    },
+    {
+      "id": "hangar_vertical_post_se",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[40, -40, 0], [40, -40, 30]]
+    },
+    {
+      "id": "hangar_vertical_post_ne",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[40, 40, 0], [40, 40, 30]]
+    },
+    {
+      "id": "hangar_vertical_post_nw",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[-40, 40, 0], [-40, 40, 30]]
+    },
+    {
+      "id": "hangar_ceiling",
+      "layer": "CEILING",
+      "type": "polyline_closed",
+      "style": "secondary",
+      "points": [[-40, -40, 30], [40, -40, 30], [40, 40, 30], [-40, 40, 30]]
+    },
+    {
+      "id": "hangar_ceiling_beam_a",
+      "layer": "CEILING",
+      "type": "polyline",
+      "style": "primary",
+      "points": [[-40, -20, 30], [40, -20, 30]]
+    },
+    {
+      "id": "hangar_ceiling_beam_b",
+      "layer": "CEILING",
+      "type": "polyline",
+      "style": "primary",
+      "points": [[-40, 20, 30], [40, 20, 30]]
+    },
+    {
+      "id": "hangar_catwalk_frame",
+      "layer": "FIXTURES",
+      "type": "polyline_closed",
+      "style": "secondary",
+      "points": [[-30, -30, 12], [30, -30, 12], [30, 30, 12], [-30, 30, 12]]
+    },
+    {
+      "id": "hangar_bay_door_outline",
+      "layer": "PORTALS",
+      "type": "polyline_closed",
+      "style": "primary",
+      "points": [[-12, -36, 0], [12, -36, 0], [12, -36, 12], [-12, -36, 12]]
+    },
+    {
+      "id": "hangar_door_jamb_left",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "emphasis",
+      "points": [[-3, 40, 0], [-3, 40, 6], [-3.3, 40, 6], [-3.3, 40, 0]]
+    },
+    {
+      "id": "hangar_door_jamb_right",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "emphasis",
+      "points": [[3, 40, 0], [3, 40, 6], [3.3, 40, 6], [3.3, 40, 0]]
+    },
+    {
+      "id": "hangar_door_header",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[-3.3, 40, 6], [3.3, 40, 6]]
+    },
+    {
+      "id": "hangar_door_sill",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[-3.3, 40, 0], [3.3, 40, 0]]
+    },
+    {
+      "id": "hangar_ceiling_vestibule_frame",
+      "layer": "CEILING",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[-3, 40, 30], [-3, 43, 30], [3, 43, 30], [3, 40, 30]]
+    },
+    {
+      "id": "hangar_clamp_pad_nw",
+      "layer": "FLOOR",
+      "type": "polyline_closed",
+      "style": "emphasis",
+      "points": [[-14, -18, 0], [-12, -18, 0], [-12, -16, 0], [-14, -16, 0]]
+    },
+    {
+      "id": "hangar_clamp_pad_ne",
+      "layer": "FLOOR",
+      "type": "polyline_closed",
+      "style": "emphasis",
+      "points": [[12, -18, 0], [14, -18, 0], [14, -16, 0], [12, -16, 0]]
+    },
+    {
+      "id": "hangar_clamp_pad_sw",
+      "layer": "FLOOR",
+      "type": "polyline_closed",
+      "style": "emphasis",
+      "points": [[-14, 16, 0], [-12, 16, 0], [-12, 18, 0], [-14, 18, 0]]
+    },
+    {
+      "id": "hangar_clamp_pad_se",
+      "layer": "FLOOR",
+      "type": "polyline_closed",
+      "style": "emphasis",
+      "points": [[12, 16, 0], [14, 16, 0], [14, 18, 0], [12, 18, 0]]
+    },
+    {
+      "id": "vestibule_floor",
+      "layer": "FLOOR",
+      "type": "polyline_closed",
+      "style": "secondary",
+      "points": [[-4, 40, 0], [4, 40, 0], [4, 43, 0], [-4, 43, 0]]
+    },
+    {
+      "id": "hallway_floor",
+      "layer": "FLOOR",
+      "type": "polyline_closed",
+      "style": "primary",
+      "points": [[-4, 43, 0], [4, 43, 0], [4, 83, 0], [-4, 83, 0]]
+    },
+    {
+      "id": "hallway_wall_west",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "primary",
+      "points": [[-4, 43, 0], [-4, 83, 0], [-4, 83, 4], [-4, 43, 4], [-4, 43, 0]]
+    },
+    {
+      "id": "hallway_wall_east",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "primary",
+      "points": [[4, 43, 0], [4, 83, 0], [4, 83, 4], [4, 43, 4], [4, 43, 0]]
+    },
+    {
+      "id": "hallway_wall_north",
+      "layer": "STRUCTURE",
+      "type": "polyline_closed",
+      "style": "primary",
+      "points": [[-4, 83, 0], [4, 83, 0], [4, 83, 4], [-4, 83, 4]]
+    },
+    {
+      "id": "hallway_wall_south",
+      "layer": "STRUCTURE",
+      "type": "polyline_closed",
+      "style": "primary",
+      "points": [[-4, 43, 0], [4, 43, 0], [4, 43, 4], [-4, 43, 4]]
+    },
+    {
+      "id": "hallway_posts_entrance_left",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[-4, 43, 0], [-4, 43, 4]]
+    },
+    {
+      "id": "hallway_posts_entrance_right",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[4, 43, 0], [4, 43, 4]]
+    },
+    {
+      "id": "hallway_posts_far_left",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[-4, 83, 0], [-4, 83, 4]]
+    },
+    {
+      "id": "hallway_posts_far_right",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[4, 83, 0], [4, 83, 4]]
+    },
+    {
+      "id": "hallway_skirting_west",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[-4, 43, 0.2], [-4, 83, 0.2]]
+    },
+    {
+      "id": "hallway_skirting_east",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[4, 43, 0.2], [4, 83, 0.2]]
+    },
+    {
+      "id": "hallway_ceiling_outline",
+      "layer": "CEILING",
+      "type": "polyline_closed",
+      "style": "secondary",
+      "points": [[-4, 43, 4], [4, 43, 4], [4, 83, 4], [-4, 83, 4]]
+    },
+    {
+      "id": "hallway_ceiling_beam_0",
+      "layer": "CEILING",
+      "type": "polyline",
+      "style": "primary",
+      "points": [[-4, 43, 4], [4, 43, 4]]
+    },
+    {
+      "id": "hallway_ceiling_beam_1",
+      "layer": "CEILING",
+      "type": "polyline",
+      "style": "primary",
+      "points": [[-4, 47, 4], [4, 47, 4]]
+    },
+    {
+      "id": "hallway_ceiling_beam_2",
+      "layer": "CEILING",
+      "type": "polyline",
+      "style": "primary",
+      "points": [[-4, 51, 4], [4, 51, 4]]
+    },
+    {
+      "id": "hallway_ceiling_beam_3",
+      "layer": "CEILING",
+      "type": "polyline",
+      "style": "primary",
+      "points": [[-4, 55, 4], [4, 55, 4]]
+    },
+    {
+      "id": "hallway_ceiling_beam_4",
+      "layer": "CEILING",
+      "type": "polyline",
+      "style": "primary",
+      "points": [[-4, 59, 4], [4, 59, 4]]
+    },
+    {
+      "id": "hallway_ceiling_beam_5",
+      "layer": "CEILING",
+      "type": "polyline",
+      "style": "primary",
+      "points": [[-4, 63, 4], [4, 63, 4]]
+    },
+    {
+      "id": "hallway_ceiling_beam_6",
+      "layer": "CEILING",
+      "type": "polyline",
+      "style": "primary",
+      "points": [[-4, 67, 4], [4, 67, 4]]
+    },
+    {
+      "id": "hallway_ceiling_beam_7",
+      "layer": "CEILING",
+      "type": "polyline",
+      "style": "primary",
+      "points": [[-4, 71, 4], [4, 71, 4]]
+    },
+    {
+      "id": "hallway_ceiling_beam_8",
+      "layer": "CEILING",
+      "type": "polyline",
+      "style": "primary",
+      "points": [[-4, 75, 4], [4, 75, 4]]
+    },
+    {
+      "id": "hallway_ceiling_beam_9",
+      "layer": "CEILING",
+      "type": "polyline",
+      "style": "primary",
+      "points": [[-4, 79, 4], [4, 79, 4]]
+    },
+    {
+      "id": "hallway_ceiling_beam_10",
+      "layer": "CEILING",
+      "type": "polyline",
+      "style": "primary",
+      "points": [[-4, 83, 4], [4, 83, 4]]
+    },
+    {
+      "id": "hallway_door_threshold",
+      "layer": "STRUCTURE",
+      "type": "polyline_closed",
+      "style": "secondary",
+      "points": [[-3, 43, 0], [3, 43, 0], [3, 43.5, 0], [-3, 43.5, 0]]
+    },
+    {
+      "id": "hallway_door_header_light",
+      "layer": "FIXTURES",
+      "type": "polyline",
+      "style": "emphasis",
+      "points": [[-3, 43, 3.5], [3, 43, 3.5]]
+    },
+    {
+      "id": "fleet_shop_floor",
+      "layer": "FLOOR",
+      "type": "polyline_closed",
+      "style": "primary",
+      "points": [[-14, 58, 0], [-4, 58, 0], [-4, 68, 0], [-14, 68, 0]]
+    },
+    {
+      "id": "fleet_shop_wall_south",
+      "layer": "STRUCTURE",
+      "type": "polyline_closed",
+      "style": "primary",
+      "points": [[-14, 58, 0], [-4, 58, 0], [-4, 58, 3.5], [-14, 58, 3.5]]
+    },
+    {
+      "id": "fleet_shop_wall_east",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "primary",
+      "points": [[-4, 58, 0], [-4, 61.5, 0], [-4, 61.5, 3.5], [-4, 58, 3.5], [-4, 58, 0]]
+    },
+    {
+      "id": "fleet_shop_wall_east_rear",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "primary",
+      "points": [[-4, 64.5, 0], [-4, 68, 0], [-4, 68, 3.5], [-4, 64.5, 3.5], [-4, 64.5, 0]]
+    },
+    {
+      "id": "fleet_shop_wall_north",
+      "layer": "STRUCTURE",
+      "type": "polyline_closed",
+      "style": "primary",
+      "points": [[-14, 68, 0], [-4, 68, 0], [-4, 68, 3.5], [-14, 68, 3.5]]
+    },
+    {
+      "id": "fleet_shop_wall_west",
+      "layer": "STRUCTURE",
+      "type": "polyline_closed",
+      "style": "primary",
+      "points": [[-14, 58, 0], [-14, 68, 0], [-14, 68, 3.5], [-14, 58, 3.5]]
+    },
+    {
+      "id": "fleet_shop_alcove_floor",
+      "layer": "FLOOR",
+      "type": "polyline_closed",
+      "style": "secondary",
+      "points": [[-12.5, 67, 0], [-10.5, 67, 0], [-10.5, 68, 0], [-12.5, 68, 0]]
+    },
+    {
+      "id": "fleet_shop_wall_alcove_left",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[-12.5, 67, 0], [-12.5, 67, 3.5]]
+    },
+    {
+      "id": "fleet_shop_wall_alcove_right",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[-10.5, 67, 0], [-10.5, 67, 3.5]]
+    },
+    {
+      "id": "fleet_shop_wall_alcove_back",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[-12.5, 68, 0], [-10.5, 68, 0], [-10.5, 68, 3.5], [-12.5, 68, 3.5], [-12.5, 68, 0]]
+    },
+    {
+      "id": "fleet_shop_ceiling_outline",
+      "layer": "CEILING",
+      "type": "polyline_closed",
+      "style": "secondary",
+      "points": [[-14, 58, 3.5], [-4, 58, 3.5], [-4, 68, 3.5], [-14, 68, 3.5]]
+    },
+    {
+      "id": "fleet_shop_ceiling_beam_a",
+      "layer": "CEILING",
+      "type": "polyline",
+      "style": "primary",
+      "points": [[-14, 60, 3.5], [-4, 60, 3.5]]
+    },
+    {
+      "id": "fleet_shop_ceiling_beam_b",
+      "layer": "CEILING",
+      "type": "polyline",
+      "style": "primary",
+      "points": [[-14, 64, 3.5], [-4, 64, 3.5]]
+    },
+    {
+      "id": "fleet_shop_vertical_post_se",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[-4, 58, 0], [-4, 58, 3.5]]
+    },
+    {
+      "id": "fleet_shop_vertical_post_ne",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[-4, 68, 0], [-4, 68, 3.5]]
+    },
+    {
+      "id": "fleet_shop_vertical_post_sw",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[-14, 58, 0], [-14, 58, 3.5]]
+    },
+    {
+      "id": "fleet_shop_vertical_post_nw",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[-14, 68, 0], [-14, 68, 3.5]]
+    },
+    {
+      "id": "weapons_bay_floor",
+      "layer": "FLOOR",
+      "type": "polyline_closed",
+      "style": "primary",
+      "points": [[4, 62, 0], [14, 62, 0], [14, 72, 0], [4, 72, 0]]
+    },
+    {
+      "id": "weapons_bay_wall_south",
+      "layer": "STRUCTURE",
+      "type": "polyline_closed",
+      "style": "primary",
+      "points": [[4, 62, 0], [14, 62, 0], [14, 62, 3.5], [4, 62, 3.5]]
+    },
+    {
+      "id": "weapons_bay_wall_west_front",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "primary",
+      "points": [[4, 62, 0], [4, 65.5, 0], [4, 65.5, 3.5], [4, 62, 3.5], [4, 62, 0]]
+    },
+    {
+      "id": "weapons_bay_wall_west_rear",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "primary",
+      "points": [[4, 68.5, 0], [4, 72, 0], [4, 72, 3.5], [4, 68.5, 3.5], [4, 68.5, 0]]
+    },
+    {
+      "id": "weapons_bay_wall_north",
+      "layer": "STRUCTURE",
+      "type": "polyline_closed",
+      "style": "primary",
+      "points": [[4, 72, 0], [14, 72, 0], [14, 72, 3.5], [4, 72, 3.5]]
+    },
+    {
+      "id": "weapons_bay_wall_east",
+      "layer": "STRUCTURE",
+      "type": "polyline_closed",
+      "style": "primary",
+      "points": [[14, 62, 0], [14, 72, 0], [14, 72, 3.5], [14, 62, 3.5]]
+    },
+    {
+      "id": "weapons_bay_ceiling_outline",
+      "layer": "CEILING",
+      "type": "polyline_closed",
+      "style": "secondary",
+      "points": [[4, 62, 3.5], [14, 62, 3.5], [14, 72, 3.5], [4, 72, 3.5]]
+    },
+    {
+      "id": "weapons_bay_ceiling_beam_a",
+      "layer": "CEILING",
+      "type": "polyline",
+      "style": "primary",
+      "points": [[4, 64, 3.5], [14, 64, 3.5]]
+    },
+    {
+      "id": "weapons_bay_ceiling_beam_b",
+      "layer": "CEILING",
+      "type": "polyline",
+      "style": "primary",
+      "points": [[4, 68, 3.5], [14, 68, 3.5]]
+    },
+    {
+      "id": "weapons_bay_vertical_post_sw",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[4, 62, 0], [4, 62, 3.5]]
+    },
+    {
+      "id": "weapons_bay_vertical_post_nw",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[4, 72, 0], [4, 72, 3.5]]
+    },
+    {
+      "id": "weapons_bay_vertical_post_se",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[14, 62, 0], [14, 62, 3.5]]
+    },
+    {
+      "id": "weapons_bay_vertical_post_ne",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[14, 72, 0], [14, 72, 3.5]]
+    },
+    {
+      "id": "weapons_bay_crane_rail",
+      "layer": "FIXTURES",
+      "type": "polyline",
+      "style": "emphasis",
+      "points": [[5, 63, 3.3], [13, 63, 3.3], [13, 71, 3.3], [5, 71, 3.3], [5, 63, 3.3]]
+    },
+    {
+      "id": "fleet_shop_door_frame_inner",
+      "layer": "PORTALS",
+      "type": "polyline_closed",
+      "style": "primary",
+      "points": [[-4, 61.5, 0], [-4, 64.5, 0], [-4, 64.5, 3], [-4, 61.5, 3]]
+    },
+    {
+      "id": "fleet_shop_door_frame_outer",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[-4, 61.5, 0], [-4, 61.5, 3], [-4.3, 61.5, 3], [-4.3, 61.5, 0]]
+    },
+    {
+      "id": "fleet_shop_door_frame_outer_rear",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[-4, 64.5, 0], [-4, 64.5, 3], [-4.3, 64.5, 3], [-4.3, 64.5, 0]]
+    },
+    {
+      "id": "fleet_shop_threshold",
+      "layer": "FLOOR",
+      "type": "polyline_closed",
+      "style": "secondary",
+      "points": [[-4, 61.5, 0], [-4, 64.5, 0], [-4.5, 64.5, 0], [-4.5, 61.5, 0]]
+    },
+    {
+      "id": "fleet_shop_header_light",
+      "layer": "FIXTURES",
+      "type": "polyline",
+      "style": "emphasis",
+      "points": [[-4, 61.5, 3.2], [-4, 64.5, 3.2]]
+    },
+    {
+      "id": "weapons_bay_door_frame_inner",
+      "layer": "PORTALS",
+      "type": "polyline_closed",
+      "style": "primary",
+      "points": [[4, 65.5, 0], [4, 68.5, 0], [4, 68.5, 3], [4, 65.5, 3]]
+    },
+    {
+      "id": "weapons_bay_door_frame_outer",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[4, 65.5, 0], [4, 65.5, 3], [4.3, 65.5, 3], [4.3, 65.5, 0]]
+    },
+    {
+      "id": "weapons_bay_door_frame_outer_front",
+      "layer": "STRUCTURE",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[4, 68.5, 0], [4, 68.5, 3], [4.3, 68.5, 3], [4.3, 68.5, 0]]
+    },
+    {
+      "id": "weapons_bay_threshold",
+      "layer": "FLOOR",
+      "type": "polyline_closed",
+      "style": "secondary",
+      "points": [[4, 65.5, 0], [4, 68.5, 0], [4.5, 68.5, 0], [4.5, 65.5, 0]]
+    },
+    {
+      "id": "weapons_bay_header_light",
+      "layer": "FIXTURES",
+      "type": "polyline",
+      "style": "emphasis",
+      "points": [[4, 65.5, 3.2], [4, 68.5, 3.2]]
+    },
+    {
+      "id": "camera_rail",
+      "layer": "NAV",
+      "type": "polyline",
+      "style": "secondary",
+      "points": [[25, -10, 5], [20, 0, 5], [0, 10, 5], [-20, 0, 5], [-25, -10, 5]]
+    },
+    {
+      "id": "ship_safety_bbox",
+      "layer": "FIXTURES",
+      "type": "polyline_closed",
+      "style": "secondary",
+      "points": [[-16, -20, 0], [16, -20, 0], [16, 20, 0], [-16, 20, 0]]
+    }
+  ],
+  "portals": [
+    {
+      "id": "door_hangar_to_hall",
+      "from": "hangar",
+      "to": "hallway",
+      "frame": [[-3, 40, 0], [3, 40, 6]],
+      "layer": "PORTALS"
+    },
+    {
+      "id": "door_hall_to_fleet",
+      "from": "hallway",
+      "to": "fleet_shop",
+      "frame": [[-4, 61.5, 0], [-1, 64.5, 3]],
+      "layer": "PORTALS"
+    },
+    {
+      "id": "door_hall_to_weapons",
+      "from": "hallway",
+      "to": "weapons_bay",
+      "frame": [[1, 65.5, 0], [4, 68.5, 3]],
+      "layer": "PORTALS"
+    }
+  ],
+  "placements": [
+    {
+      "id": "player_ship",
+      "layer": "SHIPS",
+      "type": "wireframe_embed",
+      "source": "player_ship_wireframe",
+      "position": [0, 0, 0],
+      "rotation_deg": 0,
+      "uniform_scale_fit_clearance_m": 5.0
+    }
+  ],
+  "nav": {
+    "spawn": {
+      "id": "player_spawn",
+      "position": [0, -10, 0]
+    },
+    "camera_rails": [
+      {
+        "id": "hangar_arc",
+        "layer": "NAV",
+        "type": "polyline",
+        "points": [[25, -10, 5], [20, 0, 5], [0, 10, 5], [-20, 0, 5], [-25, -10, 5]]
+      }
+    ],
+    "navmesh": [
+      {
+        "id": "hangar_nav_west",
+        "layer": "NAV",
+        "type": "polyline_closed",
+        "points": [[-38, -38, 0], [-16, -38, 0], [-16, 38, 0], [-38, 38, 0]]
+      },
+      {
+        "id": "hangar_nav_east",
+        "layer": "NAV",
+        "type": "polyline_closed",
+        "points": [[16, -38, 0], [38, -38, 0], [38, 38, 0], [16, 38, 0]]
+      },
+      {
+        "id": "hangar_nav_south",
+        "layer": "NAV",
+        "type": "polyline_closed",
+        "points": [[-16, -38, 0], [16, -38, 0], [16, -5, 0], [-16, -5, 0]]
+      },
+      {
+        "id": "hangar_nav_north",
+        "layer": "NAV",
+        "type": "polyline_closed",
+        "points": [[-16, 5, 0], [16, 5, 0], [16, 38, 0], [-16, 38, 0]]
+      },
+      {
+        "id": "hall_nav",
+        "layer": "NAV",
+        "type": "polyline_closed",
+        "points": [[-4, 43, 0], [4, 43, 0], [4, 83, 0], [-4, 83, 0]]
+      },
+      {
+        "id": "vestibule_nav",
+        "layer": "NAV",
+        "type": "polyline_closed",
+        "points": [[-3, 40, 0], [3, 40, 0], [3, 43, 0], [-3, 43, 0]]
+      },
+      {
+        "id": "fleet_shop_nav",
+        "layer": "NAV",
+        "type": "polyline_closed",
+        "points": [[-14, 59, 0], [-5, 59, 0], [-5, 67, 0], [-14, 67, 0]]
+      },
+      {
+        "id": "weapons_bay_nav",
+        "layer": "NAV",
+        "type": "polyline_closed",
+        "points": [[5, 64, 0], [13, 64, 0], [13, 70, 0], [5, 70, 0]]
+      }
+    ],
+    "interact": [
+      {
+        "id": "bay_door",
+        "aabb": [[-6, -37, 0], [6, -35, 6]]
+      },
+      {
+        "id": "hallway_door",
+        "aabb": [[-3, 39.5, 0], [3, 40.5, 6]]
+      },
+      {
+        "id": "fleet_shop_entry",
+        "aabb": [[-8, 61, 0], [-4, 65, 3]]
+      },
+      {
+        "id": "weapons_bay_entry",
+        "aabb": [[4, 65, 0], [8, 69, 3]]
+      }
+    ]
+  },
+  "labels": [
+    {
+      "text": "HANGAR BAY",
+      "layer": "TEXT",
+      "pos": [-35, -35, 2]
+    },
+    {
+      "text": "HALLWAY",
+      "layer": "TEXT",
+      "pos": [-2, 60, 3.2]
+    },
+    {
+      "text": "FLEET SHOP",
+      "layer": "TEXT",
+      "pos": [-10, 63, 3.0]
+    },
+    {
+      "text": "WEAPONS BAY",
+      "layer": "TEXT",
+      "pos": [10, 67, 3.0]
+    }
+  ]
+}
