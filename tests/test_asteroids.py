@@ -78,3 +78,35 @@ def test_space_world_scanning_marks_asteroid() -> None:
         total += 0.5
 
     assert asteroid.scanned
+
+
+def test_weapons_can_destroy_asteroid() -> None:
+    content = _load_content()
+    logger = _quiet_logger()
+    world = SpaceWorld(content.weapons, content.sector, content.stations, content.mining, logger)
+
+    frame = content.ships.get("viper_mk_vii")
+    ship = Ship(frame, team="player")
+    ship.apply_default_loadout(content)
+    world.add_ship(ship)
+
+    asteroid = next(a for a in world.asteroids_in_current_system() if not a.is_destroyed())
+    ship.kinematics.position = Vector3(asteroid.position.x, asteroid.position.y, asteroid.position.z - 250.0)
+    ship.kinematics.rotation = Vector3(0.0, 0.0, 0.0)
+    ship.power = 1000.0
+
+    mount = next(m for m in ship.mounts if m.weapon_id)
+
+    initial_health = asteroid.health
+    result = world.fire_mount(ship, mount, asteroid)
+    assert result is not None
+    assert asteroid.health < initial_health
+
+    while not asteroid.is_destroyed():
+        mount.cooldown = 0.0
+        ship.power = 1000.0
+        world.fire_mount(ship, mount, asteroid)
+
+    world.asteroids.prune_destroyed()
+    assert asteroid.is_destroyed()
+    assert asteroid not in world.asteroids_in_current_system()

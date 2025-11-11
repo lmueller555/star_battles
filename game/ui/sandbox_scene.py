@@ -486,7 +486,13 @@ class SandboxScene(Scene):
             if message:
                 self._set_combat_feedback(message, duration=2.5 if success else 2.0)
 
-        self._update_weapon_systems(target)
+        preferred_target: Ship | Asteroid | None = None
+        if isinstance(self.selected_object, (Ship, Asteroid)):
+            preferred_target = self.selected_object
+        else:
+            preferred_target = target
+
+        self._update_weapon_systems(preferred_target)
 
         station, distance = self.world.nearest_station(self.player)
         if station:
@@ -881,7 +887,7 @@ class SandboxScene(Scene):
             if self.input.consume_action(slot.action):
                 slot.active = not slot.active
 
-    def _update_weapon_systems(self, target: Ship | None) -> None:
+    def _update_weapon_systems(self, target: Ship | Asteroid | None) -> None:
         if not self.input or not self.player or not self.world or not self.content:
             return
         self._refresh_weapon_slots_if_needed()
@@ -889,9 +895,13 @@ class SandboxScene(Scene):
         active_slots = [slot for slot in self.weapon_slots if slot.active]
         if not active_slots:
             return
-        preferred = None
-        if target and target.team != self.player.team and target.is_alive():
-            preferred = target
+        preferred: Ship | Asteroid | None = None
+        if isinstance(target, Ship):
+            if target.team != self.player.team and target.is_alive():
+                preferred = target
+        elif isinstance(target, Asteroid):
+            if not target.is_destroyed():
+                preferred = target
         enemies = [
             ship
             for ship in self.world.ships
@@ -905,7 +915,7 @@ class SandboxScene(Scene):
     def _auto_fire_slot(
         self,
         slot: WeaponSlotState,
-        preferred_target: Ship | None,
+        preferred_target: Ship | Asteroid | None,
         enemies: list[Ship],
     ) -> None:
         if not self.world or not self.player or not self.content:
@@ -922,10 +932,14 @@ class SandboxScene(Scene):
         power_cost = weapon.power_cost
         if self.player.power < power_cost:
             return
-        if weapon.slot_type == "launcher" and self.player.lock_progress < 1.0:
-            return
         target = self._select_weapon_target(mount, weapon, preferred_target, enemies)
         if not target:
+            return
+        if (
+            weapon.slot_type == "launcher"
+            and self.player.lock_progress < 1.0
+            and not isinstance(target, Asteroid)
+        ):
             return
         result = self.world.fire_mount(self.player, mount, target)
         if weapon.slot_type == "launcher" and mount.cooldown > 0.0:
@@ -937,9 +951,9 @@ class SandboxScene(Scene):
         self,
         mount: WeaponMount,
         weapon,
-        preferred: Ship | None,
+        preferred: Ship | Asteroid | None,
         enemies: list[Ship],
-    ) -> Ship | None:
+    ) -> Ship | Asteroid | None:
         if not self.player:
             return None
         if preferred and self._target_within_weapon_limits(mount, weapon, preferred):
@@ -958,13 +972,19 @@ class SandboxScene(Scene):
         return best
 
     def _target_within_weapon_limits(
-        self, mount: WeaponMount, weapon, target: Ship
+        self, mount: WeaponMount, weapon, target: Ship | Asteroid
     ) -> bool:
-        if not target.is_alive():
-            return False
         if not self.player:
             return False
-        to_target = target.kinematics.position - self.player.kinematics.position
+        if isinstance(target, Ship):
+            if not target.is_alive():
+                return False
+            target_position = target.kinematics.position
+        else:
+            if target.is_destroyed():
+                return False
+            target_position = target.position
+        to_target = target_position - self.player.kinematics.position
         distance = to_target.length()
         if weapon.max_range > 0.0 and distance > weapon.max_range:
             return False

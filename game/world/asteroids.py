@@ -102,6 +102,20 @@ class Asteroid:
         if self._scan_effect_timer > 0.0:
             self._scan_effect_timer = max(0.0, self._scan_effect_timer - dt)
 
+    def take_damage(self, amount: float) -> float:
+        """Apply damage to the asteroid and return the effective amount."""
+
+        if amount <= 0.0 or self.is_destroyed():
+            return 0.0
+        applied = min(self.health, amount)
+        self.health = max(0.0, self.health - applied)
+        if self.is_destroyed():
+            self.halt_scan()
+        return applied
+
+    def is_destroyed(self) -> bool:
+        return self.health <= 0.0
+
 
 class AsteroidField:
     """Generates and manages asteroids per sector."""
@@ -129,6 +143,7 @@ class AsteroidField:
         self._current = self._fields[system_id]
         for asteroid in self._current:
             asteroid.halt_scan()
+        self._prune_destroyed()
 
     def current_field(self) -> List[Asteroid]:
         return self._current
@@ -136,6 +151,7 @@ class AsteroidField:
     def update(self, dt: float) -> None:
         for asteroid in self._current:
             asteroid.update(dt)
+        self._prune_destroyed()
 
     def _generate_field(self, system_id: str) -> List[Asteroid]:
         asteroids: List[Asteroid] = []
@@ -175,7 +191,7 @@ class AsteroidField:
             asteroid.halt_scan()
         position = ship.kinematics.position
         for asteroid in self._current:
-            if asteroid.scanned:
+            if asteroid.scanned or asteroid.is_destroyed():
                 asteroid.update(dt)
                 continue
             distance = asteroid.position.distance_to(position)
@@ -185,6 +201,19 @@ class AsteroidField:
     def halt_scanning(self) -> None:
         for asteroid in self._current:
             asteroid.halt_scan()
+
+    def prune_destroyed(self) -> None:
+        self._prune_destroyed()
+
+    def _prune_destroyed(self) -> None:
+        if not self._current:
+            return
+        remaining = [asteroid for asteroid in self._current if not asteroid.is_destroyed()]
+        if len(remaining) == len(self._current):
+            return
+        self._current[:] = remaining
+        if self._current_system:
+            self._fields[self._current_system] = self._current
 
 
 __all__ = ["Asteroid", "AsteroidField"]

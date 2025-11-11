@@ -132,19 +132,33 @@ class SpaceWorld:
             if not projectile.alive():
                 self.projectiles.remove(projectile)
                 continue
+            target_ship = None
+            target_asteroid = None
             if projectile.target_id is not None:
-                target = next((s for s in self.ships if id(s) == projectile.target_id), None)
-            else:
-                target = None
-            if target and target.is_alive():
-                to_target = target.kinematics.position - projectile.position
+                target_ship = next((s for s in self.ships if id(s) == projectile.target_id), None)
+                if target_ship is None:
+                    target_asteroid = self._find_asteroid_by_id(projectile.target_id)
+            if target_ship and target_ship.is_alive():
+                to_target = target_ship.kinematics.position - projectile.position
                 distance = to_target.length()
                 if distance < 5.0:
                     if not projectile.visual_only:
-                        self._apply_damage(target, projectile.weapon.base_damage)
+                        self._apply_damage(target_ship, projectile.weapon.base_damage)
                     self.projectiles.remove(projectile)
                     continue
-                if projectile.weapon.wclass == "missile":
+                if projectile.weapon.wclass == "missile" and to_target.length_squared() > 0.0:
+                    desired = to_target.normalize() * projectile.weapon.projectile_speed
+                    projectile.velocity += (desired - projectile.velocity) * min(1.0, 3.5 * dt)
+            elif target_asteroid and not target_asteroid.is_destroyed():
+                to_target = target_asteroid.position - projectile.position
+                distance = to_target.length()
+                hit_radius = max(5.0, target_asteroid.radius)
+                if distance <= hit_radius:
+                    if not projectile.visual_only:
+                        self._apply_asteroid_damage(target_asteroid, projectile.weapon.base_damage)
+                    self.projectiles.remove(projectile)
+                    continue
+                if projectile.weapon.wclass == "missile" and to_target.length_squared() > 0.0:
                     desired = to_target.normalize() * projectile.weapon.projectile_speed
                     projectile.velocity += (desired - projectile.velocity) * min(1.0, 3.5 * dt)
 
@@ -223,7 +237,12 @@ class SpaceWorld:
             return True, "Countermeasures disrupted hostile locks"
         return True, "Countermeasures deployed"
 
-    def fire_mount(self, ship: Ship, mount: WeaponMount, target: Optional[Ship]) -> Optional[HitResult]:
+    def fire_mount(
+        self,
+        ship: Ship,
+        mount: WeaponMount,
+        target: Ship | Asteroid | None,
+    ) -> Optional[HitResult]:
         if not mount.weapon_id:
             return None
         weapon = self.weapons.get(mount.weapon_id)
@@ -238,31 +257,54 @@ class SpaceWorld:
         right = ship.kinematics.right()
         up = ship.kinematics.up()
         muzzle = self._weapon_muzzle_position(ship, mount, forward, right, up)
-        to_target = None
+        target_ship: Ship | None = None
+        target_asteroid: Asteroid | None = None
+        if isinstance(target, Ship):
+            if not target.is_alive():
+                return None
+            target_ship = target
+        elif isinstance(target, Asteroid):
+            if target.is_destroyed():
+                return None
+            target_asteroid = target
+        target_position: Vector3 | None = None
+        target_velocity = Vector3()
+        if target_ship:
+            target_position = target_ship.kinematics.position
+            target_velocity = target_ship.kinematics.velocity
+        elif target_asteroid:
+            target_position = target_asteroid.position
         distance = 0.0
         angle_error = 0.0
         aim_direction = forward
         effective_gimbal = weapon.gimbal
         if mount.hardpoint:
             effective_gimbal = min(effective_gimbal, mount.hardpoint.gimbal)
-        if target:
-            to_target = target.kinematics.position - muzzle
+        if target_position is not None:
+            to_target = target_position - muzzle
             distance = to_target.length()
             if distance > 0.0:
                 aim_direction = to_target.normalize()
                 angle_error = forward.angle_to(aim_direction)
             if angle_error > effective_gimbal:
                 return None
-        if weapon.wclass == "hitscan" and target:
+        if weapon.wclass == "hitscan" and target_position is not None:
+            avoidance = 0.0
+            crit_defense = 0.0
+            armor = 0.0
+            if target_ship:
+                avoidance = target_ship.stats.avoidance + target_ship.module_stat_total("avoidance")
+                crit_defense = target_ship.stats.crit_defense + target_ship.module_stat_total("crit_defense")
+                armor = target_ship.stats.armor + target_ship.module_stat_total("armor")
             result = resolve_hitscan(
                 muzzle,
                 forward,
                 weapon,
-                target.kinematics.position,
-                target.kinematics.velocity,
-                target.stats.avoidance + target.module_stat_total("avoidance"),
-                target.stats.crit_defense + target.module_stat_total("crit_defense"),
-                target.stats.armor + target.module_stat_total("armor"),
+                target_position,
+                target_velocity,
+                avoidance,
+                crit_defense,
+                armor,
                 self.rng,
                 distance=distance,
                 angle_error=angle_error,
@@ -271,18 +313,26 @@ class SpaceWorld:
                 crit_bonus=ship.module_stat_total("weapon_crit"),
             )
             if result.hit:
-                self._apply_damage(target, result.damage)
-                if ship.team == "player" or target.team == "player":
-                    self.threat_timer = max(self.threat_timer, 12.0)
+                if target_ship:
+                    self._apply_damage(target_ship, result.damage)
+                    if ship.team == "player" or target_ship.team == "player":
+                        self.threat_timer = max(self.threat_timer, 12.0)
+                elif target_asteroid:
+                    self._apply_asteroid_damage(target_asteroid, result.damage)
             bullet_speed = weapon.projectile_speed if weapon.projectile_speed > 0.0 else HITSCAN_BULLET_SPEED
             bullet_velocity = aim_direction * bullet_speed + ship.kinematics.velocity
             travel_distance = distance if distance > 0.0 else weapon.max_range
             ttl = max(0.1, travel_distance / max(1.0, bullet_speed))
+            target_id = None
+            if target_ship:
+                target_id = id(target_ship)
+            elif target_asteroid:
+                target_id = id(target_asteroid)
             tracer = Projectile(
                 weapon=weapon,
                 position=muzzle,
                 velocity=bullet_velocity,
-                target_id=id(target),
+                target_id=target_id,
                 ttl=ttl,
                 team=ship.team,
                 visual_only=True,
@@ -291,29 +341,34 @@ class SpaceWorld:
             return result
         else:
             launch_direction = aim_direction
-            if target and weapon.projectile_speed > 0.0:
+            if target_ship and weapon.projectile_speed > 0.0:
                 lead_point = compute_lead(
                     muzzle,
-                    target.kinematics.position,
-                    target.kinematics.velocity,
+                    target_ship.kinematics.position,
+                    target_ship.kinematics.velocity,
                     weapon.projectile_speed,
                 )
                 to_lead = lead_point - muzzle
                 if to_lead.length_squared() > 0:
                     launch_direction = to_lead.normalize()
-            if target and angle_error > effective_gimbal:
+            if target_position is not None and angle_error > effective_gimbal:
                 return None
             velocity = launch_direction * weapon.projectile_speed + ship.kinematics.velocity
+            target_id = None
+            if target_ship:
+                target_id = id(target_ship)
+            elif target_asteroid:
+                target_id = id(target_asteroid)
             projectile = Projectile(
                 weapon=weapon,
                 position=muzzle,
                 velocity=velocity,
-                target_id=id(target) if target else None,
+                target_id=target_id,
                 ttl=weapon.max_range / max(1.0, weapon.projectile_speed),
                 team=ship.team,
             )
             self.projectiles.append(projectile)
-            if target and (ship.team == "player" or target.team == "player"):
+            if target_ship and (ship.team == "player" or target_ship.team == "player"):
                 self.threat_timer = max(self.threat_timer, 12.0)
             return None
 
@@ -330,6 +385,12 @@ class SpaceWorld:
             return ship.kinematics.position
         return ship.kinematics.position + right * local.x + up * local.y + forward * local.z
 
+    def _find_asteroid_by_id(self, target_id: int) -> Asteroid | None:
+        for asteroid in self.asteroids.current_field():
+            if id(asteroid) == target_id:
+                return asteroid
+        return None
+
     def _apply_damage(self, target: Ship, damage: float) -> None:
         if target.durability > 0.0:
             absorbed = min(target.durability, damage * 0.5)
@@ -339,6 +400,13 @@ class SpaceWorld:
         target.hull_regen_cooldown = 3.0
         if target.team == "player":
             self.threat_timer = max(self.threat_timer, 12.0)
+
+    def _apply_asteroid_damage(self, target: Asteroid, damage: float) -> None:
+        if damage <= 0.0:
+            return
+        applied = target.take_damage(damage)
+        if applied > 0.0:
+            self.asteroids.prune_destroyed()
 
     def _apply_collision_damage(self, target: Ship, damage: float) -> None:
         if damage <= 0.0:
