@@ -160,10 +160,10 @@ class HUD:
         display_slots = list(slots)[:6]
         if not display_slots:
             return
-        _, surface_height = self.surface.get_size()
+        surface_width, surface_height = self.surface.get_size()
         panel_size = 140
         bottom_margin = 180
-        x = 20
+        x = max(20, surface_width - panel_size - 20)
         y = max(12, surface_height - panel_size - bottom_margin)
         rect = pygame.Rect(x, y, panel_size, panel_size)
         pygame.draw.rect(self.surface, (12, 20, 28), rect)
