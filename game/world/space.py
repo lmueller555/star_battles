@@ -95,7 +95,7 @@ class SpaceWorld:
         self.logger = logger
         self.ships: List[Ship] = []
         self.projectiles: List[Projectile] = []
-        self.rng = rng or random.Random()
+        self.rng = rng or random.Random(42)
         default_system = sector.default_system()
         self.current_system_id: Optional[str] = default_system.id if default_system else None
         self.pending_jump_id: Optional[str] = None
