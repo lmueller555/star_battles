@@ -23,7 +23,6 @@ if TYPE_CHECKING:
 
 MAGNETISM_ANGLE = 5.5
 MAGNETISM_STRENGTH = 0.45
-POWER_COST_SCALE = 0.5
 
 
 def _range_accuracy_modifier(distance: float, optimal: float, max_range: float) -> float:
@@ -113,7 +112,7 @@ class WeaponData:
 
     @property
     def power_cost(self) -> float:
-        return self.power_per_shot * POWER_COST_SCALE
+        return self.power_per_shot
 
 
 class WeaponDatabase:

@@ -45,6 +45,14 @@ if TYPE_CHECKING:
     from game.world.ai import ShipAI
 
 
+def _is_strike_ship(ship: "Ship | None") -> bool:
+    return ship is not None and ship.frame.size.lower() == "strike"
+
+
+def _strike_damage_adjustment(damage: float) -> float:
+    return min(8.0, max(1.0, damage))
+
+
 class SpaceWorld:
     def __init__(
         self,
@@ -143,7 +151,10 @@ class SpaceWorld:
                 distance = to_target.length()
                 if distance < 5.0:
                     if not projectile.visual_only:
-                        self._apply_damage(target_ship, projectile.weapon.base_damage)
+                        damage = projectile.weapon.base_damage
+                        if _is_strike_ship(projectile.source_ship):
+                            damage = _strike_damage_adjustment(damage)
+                        self._apply_damage(target_ship, damage)
                     self.projectiles.remove(projectile)
                     continue
                 if projectile.weapon.wclass == "missile" and to_target.length_squared() > 0.0:
@@ -155,9 +166,12 @@ class SpaceWorld:
                 hit_radius = max(5.0, target_asteroid.radius)
                 if distance <= hit_radius:
                     if not projectile.visual_only:
+                        damage = projectile.weapon.base_damage
+                        if _is_strike_ship(projectile.source_ship):
+                            damage = _strike_damage_adjustment(damage)
                         self._apply_asteroid_damage(
                             target_asteroid,
-                            projectile.weapon.base_damage,
+                            damage,
                             projectile.source_ship,
                         )
                     self.projectiles.remove(projectile)
@@ -253,10 +267,15 @@ class SpaceWorld:
         if mount.cooldown > 0.0:
             return None
         power_cost = weapon.power_cost
+        is_strike = _is_strike_ship(ship)
+        if is_strike:
+            power_cost = 0.6
         if ship.power < power_cost:
             return None
         ship.power -= power_cost
         mount.cooldown = weapon.cooldown
+        if is_strike:
+            mount.cooldown = 0.6
         forward = ship.kinematics.forward()
         right = ship.kinematics.right()
         up = ship.kinematics.up()
@@ -316,6 +335,8 @@ class SpaceWorld:
                 accuracy_bonus=ship.module_stat_total("weapon_accuracy"),
                 crit_bonus=ship.module_stat_total("weapon_crit"),
             )
+            if is_strike and result.hit:
+                result.damage = _strike_damage_adjustment(result.damage)
             if result.hit:
                 if target_ship:
                     self._apply_damage(target_ship, result.damage)
