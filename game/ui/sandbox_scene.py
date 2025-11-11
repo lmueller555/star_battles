@@ -174,6 +174,9 @@ class SandboxScene(Scene):
                     outpost.apply_default_loadout(self.content)
                     self.world.add_ship(outpost)
 
+                if self.player:
+                    self.world.place_ship_near_outpost(self.player, zero_velocity=True)
+
         if not self.world or not self.player:
             raise RuntimeError("SandboxScene requires an active world and player ship")
 
