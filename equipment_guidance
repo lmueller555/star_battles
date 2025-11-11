@@ -1,0 +1,262 @@
+Scope: Items usable by Strike ships. Units: meters (m), m/s, deg/s, deg/s², seconds, currency shown as the UI displays (e.g., 10,000). Durability values are the item’s max at L1.
+
+Global combat/stat rules (for the engine to use consistently)
+
+Hit chance: hit_chance = clamp01( (AttackerAccuracy - DefenderAvoidance) / accuracy_scale )
+– Use your game’s accuracy_scale (e.g., 400 = baseline). Negative values clamp to 0.
+– Avoidance comes from the ship + modules (e.g., Light RCS Ducting +15).
+
+Armor & AP: EffectiveArmor = max(0, Armor - ArmorPiercing);
+DamageTaken = RawDamage * (1 - EffectiveArmor/100) (clamped ≥ 0).
+
+Criticals: On hit, compute crit using attacker’s Critical Offense vs defender’s Critical Defense (already defined in your combat model).
+
+Firing arc: Degrees the hardpoint can legally fire within (don’t roll the mount beyond this).
+
+Reload: Cooldown between shots.
+
+Power cost: Energy removed from the ship per shot/activation.
+
+Upgrade axes: For the L1 items below, note which fields upgrade. If not listed as “(upgrades)”, keep the value constant across levels unless you later capture higher-level screenshots.
+
+Weapons (Light hardpoints – Strike only)
+MEC-A6 “Fang” — Light Autocannon (L1)
+
+Damage: 1–10 (upgrades)
+
+Armor Piercing: 5
+
+Range: 0–750 m
+
+Optimal Range: 300 m (upgrades)
+
+Accuracy: 400
+
+Critical Offense: 100
+
+Reload: 0.5 s
+
+Power Cost: 1
+
+Firing Arc: 75°
+
+Cost: 10,000
+
+Durability: 2500 / 2500
+
+Upgrade model: Increase Damage and Optimal Range per level. All other fields fixed unless you collect higher-level data.
+
+MEC-A6P “Fang-P” — Light Autocannon (L1)
+
+Damage: 1–10 (upgrades)
+
+Armor Piercing: 5
+
+Range: 0–750 m
+
+Optimal Range: 300 m
+
+Accuracy: 400
+
+Critical Offense: 100 (upgrades)
+
+Reload: 0.5 s
+
+Power Cost: 1
+
+Firing Arc: 75°
+
+Cost: 10,000
+
+Durability: 2500 / 2500
+
+Upgrade model: Increase Damage and Critical Offense per level. Others fixed.
+
+MEC-A8 “Tornado” — Light Autocannon (L1)
+
+Damage: 1–10 (upgrades)
+
+Armor Piercing: 5
+
+Range: 0–600 m
+
+Optimal Range: 250 m (upgrades)
+
+Accuracy: 400
+
+Critical Offense: 100
+
+Reload: 0.4 s
+
+Power Cost: 1
+
+Firing Arc: 75°
+
+Cost: 10,000
+
+Durability: 2500 / 2500
+
+Upgrade model: Increase Damage and Optimal Range. Fast ROF variant.
+
+MEC-A8P “Tornado-P” — Light Autocannon (L1)
+
+Damage: 1–10 (upgrades)
+
+Armor Piercing: 5
+
+Range: 0–600 m
+
+Optimal Range: 250 m
+
+Accuracy: 400
+
+Critical Offense: 100 (upgrades)
+
+Reload: 0.4 s
+
+Power Cost: 1
+
+Firing Arc: 75°
+
+Cost: 10,000
+
+Durability: 2500 / 2500
+
+Upgrade model: Increase Damage and Critical Offense. Fast, crit-leaning variant.
+
+Implementation notes (all four autocannons):
+
+Use Optimal Range to apply your standard range falloff (e.g., peak DPS near optimal, degrade toward max).
+
+Accuracy 400 plugs into your hit formula; AP 5 into armor math.
+
+If multiple identical cannons are mounted, track independent reloads.
+
+Hull systems (Strike / Light hull slot, passive)
+Strike Composite Plating (L1)
+
+Armor Value: +2.25
+
+Hull Points: +22.5
+
+Acceleration: −0.3
+
+Turn Acceleration: −0.75 deg/s²
+
+Cost: 8,000
+
+Durability: 2500 / 2500
+
+Effect: Mixed survivability (armor + hull) with small maneuver penalties.
+
+Upgrade axis: If you capture higher levels, expect Armor and Hull to scale; penalties typically remain constant per level unless UI shows otherwise.
+
+Strike Hull Plating (L1)
+
+Hull Points: +45
+
+Acceleration: −0.2
+
+Turn Acceleration: −1.0 deg/s²
+
+Cost: 8,000
+
+Durability: 2500 / 2500
+
+Effect: Larger flat hull buffer; slightly heavier turn-accel penalty.
+
+Upgrade axis: Hull Points scale with level.
+
+Strike Armor Plating (L1)
+
+Armor Value: +4.5
+
+Acceleration: −0.4
+
+Turn Acceleration: −0.5 deg/s²
+
+Cost: 8,000
+
+Durability: 2500 / 2500
+
+Effect: Stronger Armor boost; biggest linear accel penalty of the three.
+
+Upgrade axis: Armor Value scales with level.
+
+Hull module application order (recommended):
+
+Recompute max_hull = base + sum(hull_points_mods); clamp current hull to new max.
+
+armor = base + sum(armor_value_mods)
+
+Add kinematic penalties/bonuses: lin_accel += sum(accel_deltas); turn_accel += sum(turn_accel_deltas).
+
+Engine systems (Strike / Light engine slot, passive)
+Light Drive Overcharger (L1)
+
+Speed: +1.25 m/s
+
+Boost Speed: +1.25 m/s
+
+Cost: 5,000
+
+Durability: 2500 / 2500
+
+Effect: Flat increases to cruise & boost top speeds.
+
+Upgrade axis: Speed and Boost Speed scale.
+
+Light Turbo Boosters (L1)
+
+Acceleration: +1.0
+
+Boost Speed: +2.5 m/s
+
+Cost: 5,000
+
+Durability: 2500 / 2500
+
+Effect: Better sprint; adds linear acceleration and higher boost cap.
+
+Upgrade axis: Acceleration and Boost Speed scale.
+
+Light Gyro-Stabilization (L1)
+
+Turn Speed: +2.5 deg/s
+
+Turn Acceleration: +2.5 deg/s²
+
+Cost: 5,000
+
+Durability: 2500 / 2500
+
+Effect: Improves rotational performance.
+
+Upgrade axis: Turn Speed & Turn Acceleration scale.
+
+Light RCS Ducting (L1) — NEW
+
+Avoidance: +15
+
+Cost: 5,000
+
+Durability: 2500 / 2500
+
+Effect: Increases Avoidance (harder to hit with cannons).
+
+Upgrade axis: Avoidance scales with level.
+
+Engine module application order (recommended):
+max_speed += sum(speed_bonus); boost_speed += sum(boost_bonus); lin_accel += sum(accel_bonus); turn_rate += sum(turn_speed_bonus); turn_accel += sum(turn_accel_bonus); avoidance += sum(avoidance_bonus).
+
+Store/fit rules for Strike items
+
+Eligibility: Ship class must be Strike (enforce in Store & Fitting).
+
+Stacking: Same family modules stack additively unless you later add DR (diminishing returns).
+
+Durability & cost: Show item Durability and Price on the card. Items at 0% cannot function until repaired.
+
+Preview deltas: On hover/select, compute the delta vs current ship (+X / −Y) and show it in green/red for: Speed, Boost Speed, Accel, Turn Speed/Accel, Avoidance, Armor, Hull, etc.
+
+Upgrade preview: If the user holds the “Max Upgrade” hotkey (your UI shows [SHIFT]), switch the stat block to show the level-cap values (once you’ve captured them).
