@@ -580,6 +580,21 @@ class SandboxScene(Scene):
                 if self.hangar_open:
                     self.flank_slider_dragging = False
         if self.station_contact and self.input.consume_action("dock_explore"):
+            station, distance = self.station_contact
+            if distance <= station.docking_radius:
+                if self.hangar_open:
+                    self.hangar_open = False
+                    self._enter_game_cursor()
+                self.manager.activate(
+                    "outpost_interior",
+                    content=self.content,
+                    input=self.input,
+                    logger=self.logger,
+                    world=self.world,
+                    player=self.player,
+                    station=station,
+                    distance=distance,
+                )
             return
         if self.hangar_open:
             if self.hangar_view:
