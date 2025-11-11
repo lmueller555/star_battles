@@ -125,7 +125,7 @@ class SandboxScene(Scene):
             if self.content:
                 primary_enemy_spawn = (
                     "enemy",
-                    "vanir_command",
+                    "viper_mk_vii",
                     (0.0, 0.0, 820.0),
                     (0.0, 0.0, -8.0),
                 )
@@ -150,12 +150,12 @@ class SandboxScene(Scene):
                     self.dummy = last_enemy_spawn
 
                 additional_spawns: list[tuple[str, str, tuple[float, float, float], tuple[float, float, float]]] = [
-                    ("player", "glaive_command", (-340.0, -32.0, -210.0), (0.0, 0.0, 0.0)),
-                    ("player", "vanir_command", (280.0, -24.0, -300.0), (0.0, 0.0, 0.0)),
+                    ("player", "viper_mk_vii", (-340.0, -32.0, -210.0), (0.0, 0.0, 0.0)),
+                    ("player", "viper_mk_vii", (280.0, -24.0, -300.0), (0.0, 0.0, 0.0)),
                     ("enemy", "viper_mk_vii", (420.0, 60.0, 700.0), (-6.0, 0.0, -20.0)),
                     ("enemy", "viper_mk_vii", (-460.0, 48.0, 780.0), (7.0, 0.0, -18.0)),
-                    ("enemy", "glaive_command", (60.0, -36.0, 940.0), (0.0, 0.0, -14.0)),
-                    ("enemy", "brimir_carrier", (0.0, -80.0, 1280.0), (0.0, 0.0, -6.0)),
+                    ("enemy", "viper_mk_vii", (60.0, -36.0, 940.0), (0.0, 0.0, -14.0)),
+                    ("enemy", "viper_mk_vii", (0.0, -80.0, 1280.0), (0.0, 0.0, -6.0)),
                 ]
                 spawn_subset = additional_spawns[: max(1, len(additional_spawns) // 2)]
                 for offset in SHIP_FORMATION_OFFSETS:
