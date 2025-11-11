@@ -137,8 +137,8 @@ class Asteroid:
 class AsteroidField:
     """Generates and manages asteroids per sector."""
 
-    ASTEROID_COUNT = 150
-    FIELD_RADIUS = 4000.0
+    ASTEROID_COUNT = 450
+    FIELD_RADIUS = 20000.0
     HEALTH_RANGE = (Asteroid.MIN_HEALTH, Asteroid.MAX_HEALTH)
     RESOURCE_OPTIONS: Tuple[Optional[str], ...] = (None, "water", "titanium", "tyllium")
     RESOURCE_RATIO_RANGE = (0.25, 0.35)

@@ -17,7 +17,7 @@ from game.render.renderer import VectorRenderer
 from game.sensors.dradis import DradisSystem
 from game.ships.ship import Ship, ShipControlState, WeaponMount
 from game.world.ai import create_ai_for_ship
-from game.world.asteroids import Asteroid
+from game.world.asteroids import Asteroid, AsteroidField
 from game.world.space import COLLISION_RADII, SpaceWorld
 from game.world.mining import MiningHUDState
 from game.world.station import DockingStation
@@ -27,6 +27,13 @@ from game.ui.ship_info import ShipInfoPanel
 
 
 KEY_LOOK_SCALE = 6.0
+SECTOR_SCALE = 5.0
+FORMATION_SPACING = 1200.0 * SECTOR_SCALE
+SHIP_FORMATION_OFFSETS = (
+    Vector3(-FORMATION_SPACING, 0.0, -FORMATION_SPACING),
+    Vector3(0.0, 0.0, 0.0),
+    Vector3(FORMATION_SPACING, 0.0, FORMATION_SPACING),
+)
 
 
 @dataclass
@@ -112,36 +119,52 @@ class SandboxScene(Scene):
             self.player.set_flank_speed_ratio(self.flank_slider_ratio)
             self.world.add_ship(self.player)
 
-            dummy_frame = self.content.ships.get("vanir_command")
-            self.dummy = Ship(dummy_frame, team="enemy")
             if self.content:
-                self.dummy.apply_default_loadout(self.content)
-            self.dummy.kinematics.position = Vector3(0.0, 0.0, 820.0)
-            self.dummy.kinematics.velocity = Vector3(0.0, 0.0, -8.0)
-            enemy_ai = create_ai_for_ship(self.dummy)
-            self.world.add_ship(self.dummy, ai=enemy_ai)
-
-            if self.content:
-                additional_spawns: list[tuple[str, str, Vector3, Vector3]] = [
-                    ("player", "glaive_command", Vector3(-340.0, -32.0, -210.0), Vector3(0.0, 0.0, 0.0)),
-                    ("player", "vanir_command", Vector3(280.0, -24.0, -300.0), Vector3(0.0, 0.0, 0.0)),
-                    ("enemy", "viper_mk_vii", Vector3(420.0, 60.0, 700.0), Vector3(-6.0, 0.0, -20.0)),
-                    ("enemy", "viper_mk_vii", Vector3(-460.0, 48.0, 780.0), Vector3(7.0, 0.0, -18.0)),
-                    ("enemy", "glaive_command", Vector3(60.0, -36.0, 940.0), Vector3(0.0, 0.0, -14.0)),
-                    ("enemy", "brimir_carrier", Vector3(0.0, -80.0, 1280.0), Vector3(0.0, 0.0, -6.0)),
-                ]
-                for team, frame_id, position, velocity in additional_spawns:
-                    frame = self.content.ships.get(frame_id)
-                    ship = Ship(frame, team=team)
-                    ship.kinematics.position = position
-                    ship.kinematics.velocity = velocity
+                primary_enemy_spawn = (
+                    "enemy",
+                    "vanir_command",
+                    (0.0, 0.0, 820.0),
+                    (0.0, 0.0, -8.0),
+                )
+                self.dummy = None
+                last_enemy_spawn: Ship | None = None
+                for index, offset in enumerate(SHIP_FORMATION_OFFSETS):
+                    frame = self.content.ships.get(primary_enemy_spawn[1])
+                    ship = Ship(frame, team=primary_enemy_spawn[0])
                     ship.apply_default_loadout(self.content)
+                    ship.kinematics.position = Vector3(primary_enemy_spawn[2]) * SECTOR_SCALE + offset
+                    ship.kinematics.velocity = Vector3(primary_enemy_spawn[3])
                     ai = create_ai_for_ship(ship)
                     self.world.add_ship(ship, ai=ai)
+                    last_enemy_spawn = ship
+                    if index == 1:
+                        self.dummy = ship
 
+                if self.dummy is None:
+                    self.dummy = last_enemy_spawn
+
+                additional_spawns: list[tuple[str, str, tuple[float, float, float], tuple[float, float, float]]] = [
+                    ("player", "glaive_command", (-340.0, -32.0, -210.0), (0.0, 0.0, 0.0)),
+                    ("player", "vanir_command", (280.0, -24.0, -300.0), (0.0, 0.0, 0.0)),
+                    ("enemy", "viper_mk_vii", (420.0, 60.0, 700.0), (-6.0, 0.0, -20.0)),
+                    ("enemy", "viper_mk_vii", (-460.0, 48.0, 780.0), (7.0, 0.0, -18.0)),
+                    ("enemy", "glaive_command", (60.0, -36.0, 940.0), (0.0, 0.0, -14.0)),
+                    ("enemy", "brimir_carrier", (0.0, -80.0, 1280.0), (0.0, 0.0, -6.0)),
+                ]
+                for offset in SHIP_FORMATION_OFFSETS:
+                    for team, frame_id, position, velocity in additional_spawns:
+                        frame = self.content.ships.get(frame_id)
+                        ship = Ship(frame, team=team)
+                        ship.kinematics.position = Vector3(position) * SECTOR_SCALE + offset
+                        ship.kinematics.velocity = Vector3(velocity)
+                        ship.apply_default_loadout(self.content)
+                        ai = create_ai_for_ship(ship)
+                        self.world.add_ship(ship, ai=ai)
+
+                edge_distance = AsteroidField.FIELD_RADIUS * 0.95
                 outpost_spawns: list[tuple[str, str, Vector3]] = [
-                    ("player", "outpost_regular", Vector3(-720.0, 0.0, -1400.0)),
-                    ("enemy", "outpost_regular", Vector3(720.0, 0.0, 1600.0)),
+                    ("player", "outpost_regular", Vector3(-edge_distance, 0.0, -edge_distance)),
+                    ("enemy", "outpost_regular", Vector3(edge_distance, 0.0, edge_distance)),
                 ]
                 for team, frame_id, position in outpost_spawns:
                     frame = self.content.ships.get(frame_id)
