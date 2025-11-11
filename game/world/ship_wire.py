@@ -35,8 +35,20 @@ class ShipWireEmbed:
             if len(segment) != 2:
                 continue
             start_raw, end_raw = segment
-            start = Vector3(float(start_raw[0]), float(start_raw[1]), float(start_raw[2]))
-            end = Vector3(float(end_raw[0]), float(end_raw[1]), float(end_raw[2]))
+            # Ship wireframes in the exterior renderer use Y as the up axis and Z as
+            # the forward axis.  Interior scenes, however, treat Z as up so the ship
+            # sits on the hangar floor.  Re-orient points as we ingest them so the
+            # embedded wireframe matches the interior coordinate system.
+            start = Vector3(
+                float(start_raw[0]),
+                float(start_raw[2]),
+                float(start_raw[1]),
+            )
+            end = Vector3(
+                float(end_raw[0]),
+                float(end_raw[2]),
+                float(end_raw[1]),
+            )
             points.append(start)
             points.append(end)
             normalised_segments.append((start, end))
