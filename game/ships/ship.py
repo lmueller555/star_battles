@@ -108,6 +108,7 @@ class Ship:
     ) -> None:
         self.frame = frame
         self.team = team
+        self.base_stats: ShipStats = replace(frame.stats)
         self.stats: ShipStats = replace(frame.stats)
         self.kinematics = ShipKinematics(
             position=Vector3(0.0, 0.0, 0.0),
@@ -144,6 +145,45 @@ class Ship:
         if modules:
             for module in modules:
                 self.equip_module(module)
+
+    # Internal helpers --------------------------------------------------
+
+    def _recompute_stats(self) -> None:
+        """Rebuild runtime stats from the frame baseline and module bonuses."""
+
+        previous = self.stats
+        stats = replace(self.base_stats)
+
+        special_keys = {"avoidance", "avoidance_rating"}
+        for key, bonus in self._module_stat_cache.items():
+            if key in special_keys:
+                continue
+            if hasattr(stats, key):
+                setattr(stats, key, getattr(stats, key) + bonus)
+
+        # Avoidance is expressed both as a raw rating and a normalised 0-1 value.
+        rating_bonus = self._module_stat_cache.get("avoidance_rating", 0.0)
+        direct_avoidance_bonus = self._module_stat_cache.get("avoidance", 0.0)
+        new_rating = stats.avoidance_rating + rating_bonus
+        stats.avoidance_rating = new_rating
+        normalised = new_rating / 1000.0 if new_rating > 1.0 else new_rating
+        stats.avoidance = normalised + direct_avoidance_bonus
+
+        self.stats = stats
+
+        def preserve_ratio(current: float, previous_max: float, new_max: float) -> float:
+            if new_max <= 0.0:
+                return 0.0
+            if previous_max <= 0.0:
+                ratio = 1.0 if current > 0.0 else 0.0
+            else:
+                ratio = current / previous_max
+            ratio = max(0.0, min(1.0, ratio))
+            return new_max * ratio
+
+        self.hull = preserve_ratio(self.hull, previous.hull_hp, stats.hull_hp)
+        self.durability = preserve_ratio(self.durability, previous.durability, stats.durability)
+        self.power = preserve_ratio(self.power, previous.power_cap, stats.power_cap)
 
     def is_alive(self) -> bool:
         return self.hull > 0
@@ -195,6 +235,7 @@ class Ship:
         installed.append(module)
         for key, value in module.stats.items():
             self._module_stat_cache[key] += float(value)
+        self._recompute_stats()
         return True
 
     def unequip_module(self, slot_type: str, index: int) -> ItemData | None:
@@ -206,6 +247,7 @@ class Ship:
         module = modules.pop(index)
         for key, value in module.stats.items():
             self._module_stat_cache[key] -= float(value)
+        self._recompute_stats()
         return module
 
     def hold_item_count(self) -> int:
