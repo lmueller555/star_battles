@@ -15,7 +15,7 @@ from game.engine.input import InputMapper
 from game.engine.logger import GameLogger
 from game.engine.scene import Scene
 from game.ships.ship import Ship, ShipControlState
-from game.world.space import SpaceWorld
+from game.world.space import SpaceWorld, SpaceWorldState
 from game.world.station import DockingStation
 from game.render.camera import ChaseCamera, DEFAULT_SHIP_LENGTHS
 from game.render.renderer import VectorRenderer
@@ -23,8 +23,10 @@ from game.render.renderer import VectorRenderer
 
 class _InteriorState(Enum):
     DOCKING = auto()
+    LOADING_IN = auto()
     DISEMBARK = auto()
     EXPLORE = auto()
+    LOADING_OUT = auto()
 
 
 @dataclass
@@ -247,6 +249,7 @@ class OutpostInteriorScene(Scene):
         self.state_timer: float = 0.0
         self.docking_duration = 5.2
         self.disembark_duration = 4.2
+        self.loading_duration = 1.25
         self.layout = _InteriorLayout(cols=56, rows=36, tile_size=96)
         self.player_position = Vector2(self.layout.spawn_point)
         self.player_velocity = Vector2()
@@ -273,6 +276,9 @@ class OutpostInteriorScene(Scene):
         self._hangar_ship_ghost: Optional[Ship] = None
         self._hangar_ship_center = Vector3()
         self._initial_forward = Vector2(1.0, 0.0)
+        self._loading_in_started = False
+        self._loading_out_started = False
+        self._suspended_world_state: Optional[SpaceWorldState] = None
 
     def _build_starfield(self) -> None:
         rng = random.Random(20240217)
@@ -301,6 +307,11 @@ class OutpostInteriorScene(Scene):
         self.player = context.player
         self.station = context.station
         self.distance = context.distance
+        self.state = _InteriorState.DOCKING
+        self.state_timer = 0.0
+        self._loading_in_started = False
+        self._loading_out_started = False
+        self._suspended_world_state = None
         surface = pygame.display.get_surface()
         if surface:
             self.viewport_size = Vector2(surface.get_width(), surface.get_height())
@@ -863,7 +874,8 @@ class OutpostInteriorScene(Scene):
             self.input.handle_event(event)
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
-                self._undock()
+                if self.state == _InteriorState.EXPLORE:
+                    self._undock()
                 return
             if self.state in (_InteriorState.DOCKING, _InteriorState.DISEMBARK):
                 if event.key in (pygame.K_SPACE, pygame.K_RETURN):
@@ -876,6 +888,14 @@ class OutpostInteriorScene(Scene):
             self.state_timer += dt
             self._update_docking_animation(dt)
             if self.state_timer >= self.docking_duration:
+                self.state = _InteriorState.LOADING_IN
+                self.state_timer = 0.0
+            return
+        if self.state == _InteriorState.LOADING_IN:
+            if not self._loading_in_started:
+                self._start_loading_in()
+            self.state_timer += dt
+            if self.state_timer >= self.loading_duration:
                 self.state = _InteriorState.DISEMBARK
                 self.state_timer = 0.0
             return
@@ -885,6 +905,13 @@ class OutpostInteriorScene(Scene):
             if self.state_timer >= self.disembark_duration:
                 self.state = _InteriorState.EXPLORE
                 self.state_timer = 0.0
+            return
+        if self.state == _InteriorState.LOADING_OUT:
+            if not self._loading_out_started:
+                self._start_loading_out()
+            self.state_timer += dt
+            if self.state_timer >= self.loading_duration:
+                self._complete_undock()
             return
 
         if not self.input:
@@ -962,14 +989,78 @@ class OutpostInteriorScene(Scene):
                 return True
         return False
 
+    def _start_loading_in(self) -> None:
+        if self._loading_in_started:
+            return
+        self._loading_in_started = True
+        if self.world:
+            self._suspended_world_state = self.world.suspend_simulation()
+
+    def _start_loading_out(self) -> None:
+        if self._loading_out_started:
+            return
+        self._loading_out_started = True
+        if self.world and self._suspended_world_state:
+            self.world.resume_simulation(self._suspended_world_state)
+            self._suspended_world_state = None
+
+    def _complete_undock(self) -> None:
+        if not self.world or not self.player or not self.station:
+            self.manager.activate(
+                "sandbox",
+                content=self.content,
+                input=self.input,
+                logger=self.logger,
+            )
+            return
+        station_pos = Vector3(*self.station.position)
+        exit_offset = Vector3(0.0, 0.0, max(360.0, self.station.docking_radius * 0.6))
+        self.player.kinematics.position = station_pos + exit_offset
+        self.player.kinematics.velocity = Vector3()
+        self.player.kinematics.angular_velocity = Vector3()
+        self.player.kinematics.rotation = Vector3(0.0, 0.0, 0.0)
+        self.player.control = ShipControlState()
+        self.player.target_id = None
+        self.world.add_ship(self.player)
+        self.manager.activate(
+            "sandbox",
+            content=self.content,
+            input=self.input,
+            logger=self.logger,
+            world=self.world,
+            player=self.player,
+        )
+
     def render(self, surface: pygame.Surface, alpha: float) -> None:
         width, height = surface.get_size()
         self.viewport_size = Vector2(width, height)
         if self.state == _InteriorState.DOCKING:
             self._render_docking_cutscene(surface)
             return
+        if self.state == _InteriorState.LOADING_IN:
+            progress = 0.0
+            if self.loading_duration > 0.0:
+                progress = max(0.0, min(1.0, self.state_timer / self.loading_duration))
+            self._render_loading_screen(
+                surface,
+                "Sequencing Outpost Interior",
+                "Despawning exterior traffic lanes",
+                progress,
+            )
+            return
         if self.state == _InteriorState.DISEMBARK:
             self._render_disembark_cutscene(surface)
+            return
+        if self.state == _InteriorState.LOADING_OUT:
+            progress = 0.0
+            if self.loading_duration > 0.0:
+                progress = max(0.0, min(1.0, self.state_timer / self.loading_duration))
+            self._render_loading_screen(
+                surface,
+                "Restoring Local Space",
+                "Repopulating ships and asteroids",
+                progress,
+            )
             return
         self._render_exploration(surface)
         if self.status_font:
@@ -1388,27 +1479,47 @@ class OutpostInteriorScene(Scene):
         pygame.draw.rect(status_overlay, (0, 0, 0, vignette_alpha), status_overlay.get_rect(), 8)
         surface.blit(status_overlay, (0, 0), special_flags=pygame.BLEND_RGBA_SUB)
 
-    def _undock(self) -> None:
-        if not self.world or not self.player or not self.station:
-            self.manager.activate("sandbox", content=self.content, input=self.input, logger=self.logger)
-            return
-        station_pos = Vector3(*self.station.position)
-        exit_offset = Vector3(0.0, 0.0, max(360.0, self.station.docking_radius * 0.6))
-        self.player.kinematics.position = station_pos + exit_offset
-        self.player.kinematics.velocity = Vector3()
-        self.player.kinematics.angular_velocity = Vector3()
-        self.player.kinematics.rotation = Vector3(0.0, 0.0, 0.0)
-        self.player.control = ShipControlState()
-        self.player.target_id = None
-        self.world.add_ship(self.player)
-        self.manager.activate(
-            "sandbox",
-            content=self.content,
-            input=self.input,
-            logger=self.logger,
-            world=self.world,
-            player=self.player,
+    def _render_loading_screen(
+        self, surface: pygame.Surface, title: str, subtitle: str, progress: float
+    ) -> None:
+        surface.fill((6, 12, 22))
+        width, height = surface.get_size()
+        if self.caption_font:
+            caption = self.caption_font.render(title, True, (206, 236, 255))
+            surface.blit(
+                caption,
+                (width // 2 - caption.get_width() // 2, int(height * 0.38)),
+            )
+            caption_bottom = int(height * 0.38) + caption.get_height() + 12
+        else:
+            caption_bottom = int(height * 0.4)
+        if self.status_font:
+            detail = self.status_font.render(subtitle, True, (156, 196, 230))
+            surface.blit(
+                detail,
+                (width // 2 - detail.get_width() // 2, caption_bottom),
+            )
+        bar_width = int(width * 0.34)
+        bar_height = 16
+        bar_rect = pygame.Rect(
+            width // 2 - bar_width // 2,
+            int(height * 0.58),
+            bar_width,
+            bar_height,
         )
+        pygame.draw.rect(surface, (26, 52, 88), bar_rect)
+        progress = max(0.0, min(1.0, progress))
+        fill_rect = bar_rect.copy()
+        fill_rect.width = int(bar_rect.width * progress)
+        pygame.draw.rect(surface, (112, 210, 255), fill_rect)
+        pygame.draw.rect(surface, (182, 224, 255), bar_rect, 2)
+
+    def _undock(self) -> None:
+        if self.state == _InteriorState.LOADING_OUT:
+            return
+        self.state = _InteriorState.LOADING_OUT
+        self.state_timer = 0.0
+        self._loading_out_started = False
 
 
 __all__ = ["OutpostInteriorScene"]

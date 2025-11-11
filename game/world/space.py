@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import math
 import random
+from dataclasses import dataclass
 from typing import Iterable, List, Optional, TYPE_CHECKING
 
 from pygame.math import Vector3
@@ -20,9 +21,14 @@ from game.ships.flight import update_ship_flight
 from game.ships.ship import Ship, WeaponMount
 from game.world.sector import SectorMap
 from game.world.station import DockingStation, StationDatabase
-from game.world.mining import MiningDatabase, MiningManager, MiningHUDState
+from game.world.mining import (
+    MiningDatabase,
+    MiningHUDState,
+    MiningManager,
+    MiningManagerState,
+)
 from game.ftl.utils import compute_ftl_charge, compute_ftl_cost
-from game.world.asteroids import Asteroid, AsteroidField
+from game.world.asteroids import Asteroid, AsteroidField, AsteroidFieldState
 
 COLLISION_RADII = {
     "Strike": 9.0,
@@ -66,6 +72,25 @@ OUTPOST_SPAWN_OFFSETS: tuple[Vector3, ...] = tuple(
     )
     for angle, radius, height in _OUTPOST_SPAWN_PATTERN
 )
+
+
+@dataclass
+class SpaceWorldState:
+    """Snapshot of the active space instance."""
+
+    current_system_id: Optional[str]
+    ships: List[Ship]
+    projectiles: List[Projectile]
+    ai_controllers: dict[int, "ShipAI"]
+    pending_jump_id: Optional[str]
+    pending_jump_cost: float
+    jump_charge_remaining: float
+    jump_ship: Optional[Ship]
+    ftl_cooldown: float
+    threat_timer: float
+    mining: MiningManagerState
+    asteroids: AsteroidFieldState
+
 
 if TYPE_CHECKING:
     from game.world.ai import ShipAI
@@ -165,6 +190,54 @@ class SpaceWorld:
         for candidate in self.ships:
             if candidate.target_id == id(ship):
                 candidate.target_id = None
+
+    def suspend_simulation(self) -> SpaceWorldState:
+        """Detach active entities so the world can be suspended."""
+
+        mining_state = self.mining.suspend()
+        asteroid_state = self.asteroids.suspend()
+        state = SpaceWorldState(
+            current_system_id=self.current_system_id,
+            ships=list(self.ships),
+            projectiles=list(self.projectiles),
+            ai_controllers=dict(self._ai),
+            pending_jump_id=self.pending_jump_id,
+            pending_jump_cost=self.pending_jump_cost,
+            jump_charge_remaining=self.jump_charge_remaining,
+            jump_ship=self.jump_ship,
+            ftl_cooldown=self.ftl_cooldown,
+            threat_timer=self.threat_timer,
+            mining=mining_state,
+            asteroids=asteroid_state,
+        )
+        self.ships = []
+        self.projectiles = []
+        self._ai = {}
+        self.pending_jump_id = None
+        self.pending_jump_cost = 0.0
+        self.jump_charge_remaining = 0.0
+        self.jump_ship = None
+        self.ftl_cooldown = 0.0
+        self.threat_timer = 0.0
+        return state
+
+    def resume_simulation(self, state: Optional[SpaceWorldState]) -> None:
+        """Restore ships, projectiles, and timers after suspension."""
+
+        if state is None:
+            return
+        self.current_system_id = state.current_system_id
+        self.ships = list(state.ships)
+        self.projectiles = list(state.projectiles)
+        self._ai = dict(state.ai_controllers)
+        self.pending_jump_id = state.pending_jump_id
+        self.pending_jump_cost = state.pending_jump_cost
+        self.jump_charge_remaining = state.jump_charge_remaining
+        self.jump_ship = state.jump_ship
+        self.ftl_cooldown = state.ftl_cooldown
+        self.threat_timer = state.threat_timer
+        self.mining.resume(state.mining)
+        self.asteroids.resume(state.asteroids)
 
     def update(self, dt: float) -> None:
         physics_log = self.logger.channel("physics")
@@ -786,4 +859,4 @@ class SpaceWorld:
         return state
 
 
-__all__ = ["SpaceWorld"]
+__all__ = ["SpaceWorld", "SpaceWorldState"]
