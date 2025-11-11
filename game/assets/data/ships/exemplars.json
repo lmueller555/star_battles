@@ -57,9 +57,9 @@
         "utility": ["point_defense_mk1", "flare_launcher_mk1"]
       },
       "weapons": {
-        "hp_viper_port": "light_cannon_mk1",
-        "hp_viper_starboard": "light_cannon_mk1",
-        "hp_viper_center": "light_cannon_mk1",
+        "hp_viper_port": "mec_a6",
+        "hp_viper_starboard": "mec_a6",
+        "hp_viper_center": "mec_a6",
         "hp_viper_missile": "missile_launcher_mk1"
       }
     },
