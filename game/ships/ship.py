@@ -21,6 +21,7 @@ class ShipResources:
     tylium: float = 0.0
     titanium: float = 0.0
     water: float = 0.0
+    cubits: float = 0.0
 
     def spend(self, resource: str, amount: float) -> bool:
         current = getattr(self, resource)
@@ -115,7 +116,7 @@ class Ship:
             angular_velocity=Vector3(0.0, 0.0, 0.0),
         )
         self.control = ShipControlState()
-        self.resources = ShipResources(tylium=320.0, titanium=180.0, water=40.0)
+        self.resources = ShipResources(tylium=320.0, titanium=180.0, water=40.0, cubits=28.0)
         self.tylium_capacity = self.resources.tylium
         self.power = self.stats.power_cap
         self.boost_meter = self.tylium_capacity
