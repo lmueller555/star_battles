@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
-from typing import Dict, Iterable, List, Tuple
+from dataclasses import dataclass, field
+from typing import Dict, Iterable, List, Optional, Tuple
 
 import pygame
 from pygame.math import Vector2
@@ -22,6 +22,40 @@ class _SlotDisplay:
     filled: bool
     category: str
     slot_type: str
+
+
+@dataclass
+class _HoldItem:
+    key: str
+    name: str
+    amount: float
+    icon_key: str
+    can_sell: bool = False
+    sell_rate: float | None = None
+    sell_currency: Optional[str] = None
+    price_icon_key: Optional[str] = None
+    description: Optional[str] = None
+
+
+@dataclass
+class _HoldRow:
+    item: _HoldItem
+    rect: pygame.Rect
+    button_rect: Optional[pygame.Rect]
+
+
+@dataclass
+class _SellDialog:
+    item_key: str
+    item_name: str
+    sell_currency: str
+    sell_rate: float
+    price_icon_key: str
+    input_value: str = "1"
+    rect: pygame.Rect = field(default_factory=lambda: pygame.Rect(0, 0, 0, 0))
+    confirm_rect: pygame.Rect = field(default_factory=lambda: pygame.Rect(0, 0, 0, 0))
+    cancel_rect: pygame.Rect = field(default_factory=lambda: pygame.Rect(0, 0, 0, 0))
+    available: float = 0.0
 
 
 class _HangarInteriorAnimator:
@@ -153,6 +187,11 @@ class HangarView:
         self._ribbon_rects: Dict[str, pygame.Rect] = {}
         self._interior = _HangarInteriorAnimator()
         self._slot_icons = self._create_slot_icons()
+        self._hold_icons = self._create_hold_icons()
+        self._price_icons = self._create_price_icons()
+        self._hold_rows: List[_HoldRow] = []
+        self._sell_dialog: Optional[_SellDialog] = None
+        self._current_ship: Optional[Ship] = None
 
     def set_surface(self, surface: pygame.Surface) -> None:
         """Update the target surface when the display size changes."""
@@ -162,10 +201,22 @@ class HangarView:
     def handle_event(self, event: pygame.event.Event) -> bool:
         """Allow ribbon selection via mouse input."""
 
+        if self._sell_dialog and self._handle_sell_dialog_event(event):
+            return True
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             pos = getattr(event, "pos", None)
             if not pos:
                 return False
+            if self.active_option == "Hold":
+                for row in self._hold_rows:
+                    if (
+                        row.button_rect
+                        and row.item.can_sell
+                        and row.item.amount > 0.0
+                        and row.button_rect.collidepoint(pos)
+                    ):
+                        self._open_sell_dialog(row.item)
+                        return True
             for option, rect in self._ribbon_rects.items():
                 if rect.collidepoint(pos):
                     self.active_option = option
@@ -178,6 +229,7 @@ class HangarView:
         self._interior.update(dt)
 
     def draw(self, surface: pygame.Surface, ship: Ship, station: DockingStation, distance: float) -> None:
+        self._current_ship = ship
         width, height = surface.get_size()
         self._interior.draw(surface)
         panel_width = int(width * 0.78)
@@ -206,11 +258,14 @@ class HangarView:
         left_rect = pygame.Rect(inner_rect.x, inner_rect.y, left_width, inner_rect.height)
         right_rect = pygame.Rect(left_rect.right + 16, inner_rect.y, inner_rect.width - left_width - 16, inner_rect.height)
 
-        self._draw_left_panel(surface, left_rect)
+        self._draw_left_panel(surface, left_rect, ship)
         self._draw_ship_panel(surface, right_rect, ship)
 
         footer = self.small_font.render("Press H to undock", True, (170, 210, 240))
         surface.blit(footer, (panel_rect.x + panel_rect.width - footer.get_width() - 28, panel_rect.y + panel_rect.height - 32))
+
+        if self._sell_dialog:
+            self._draw_sell_dialog(surface)
 
     # ------------------------------------------------------------------
     def _draw_ribbon(self, surface: pygame.Surface, rect: pygame.Rect) -> None:
@@ -234,7 +289,7 @@ class HangarView:
             )
             self._ribbon_rects[option] = button_rect
 
-    def _draw_left_panel(self, surface: pygame.Surface, rect: pygame.Rect) -> None:
+    def _draw_left_panel(self, surface: pygame.Surface, rect: pygame.Rect, ship: Ship) -> None:
         self._blit_panel(surface, rect, (14, 24, 32, 210), (60, 98, 134))
         title = self.font.render(self.active_option, True, (210, 230, 250))
         surface.blit(title, (rect.x + 20, rect.y + 16))
@@ -242,11 +297,337 @@ class HangarView:
         content_rect = rect.inflate(-40, -72)
         content_rect.y = rect.y + 54
         self._blit_panel(surface, content_rect, (10, 18, 26, 200), (50, 88, 120))
+        if self.active_option == "Hold":
+            self._draw_hold_panel(surface, content_rect, ship)
+        else:
+            self._hold_rows = []
+            lines = self._panel_lines_for_option(self.active_option)
+            for idx, line in enumerate(lines):
+                text = self.small_font.render(line, True, (180, 208, 228))
+                surface.blit(text, (content_rect.x + 16, content_rect.y + 18 + idx * 20))
 
-        lines = self._panel_lines_for_option(self.active_option)
-        for idx, line in enumerate(lines):
-            text = self.small_font.render(line, True, (180, 208, 228))
-            surface.blit(text, (content_rect.x + 16, content_rect.y + 18 + idx * 20))
+    def _draw_hold_panel(self, surface: pygame.Surface, rect: pygame.Rect, ship: Ship) -> None:
+        items = self._gather_hold_items(ship)
+        self._hold_rows = []
+        row_height = 76
+        spacing = 10
+        y = rect.y + 12
+        for item in items:
+            row_rect = pygame.Rect(rect.x + 12, y, rect.width - 24, row_height)
+            fill = (18, 30, 44, 220) if item.can_sell else (14, 24, 34, 200)
+            border = (90, 150, 210) if item.can_sell else (58, 86, 112)
+            self._blit_panel(surface, row_rect, fill, border, 1)
+
+            icon = self._hold_icons.get(item.icon_key)
+            if icon:
+                icon_rect = icon.get_rect()
+                icon_rect.x = row_rect.x + 16
+                icon_rect.centery = row_rect.centery
+                surface.blit(icon, icon_rect.topleft)
+            text_x = row_rect.x + 72
+            name_text = self.small_font.render(item.name, True, (214, 232, 255))
+            surface.blit(name_text, (text_x, row_rect.y + 12))
+
+            amount_display = self._format_amount_display(item.amount)
+            amount_text = self.mini_font.render(f"Amount: {amount_display}", True, (182, 210, 228))
+            surface.blit(amount_text, (text_x, row_rect.y + 36))
+
+            if item.description:
+                desc_text = self.mini_font.render(item.description, True, (148, 178, 200))
+                surface.blit(desc_text, (text_x, row_rect.y + 54))
+
+            button_rect: Optional[pygame.Rect] = None
+            if item.can_sell and item.sell_rate and item.sell_currency and item.price_icon_key:
+                price_icon = self._price_icons.get(item.price_icon_key)
+                currency_name = self._format_currency_name(item.sell_currency)
+                price_value = self._format_amount_display(item.sell_rate or 0.0)
+                price_text = self.mini_font.render(f"{price_value} {currency_name}", True, (220, 230, 200))
+                if price_icon:
+                    combo_width = price_icon.get_width() + 6 + price_text.get_width()
+                    start_x = row_rect.centerx - combo_width // 2
+                    icon_rect = price_icon.get_rect()
+                    icon_rect.x = start_x
+                    icon_rect.bottom = row_rect.bottom - 10
+                    text_pos = (icon_rect.right + 6, row_rect.bottom - price_text.get_height() - 12)
+                    surface.blit(price_icon, icon_rect.topleft)
+                    surface.blit(price_text, text_pos)
+                else:
+                    text_pos = (
+                        row_rect.centerx - price_text.get_width() // 2,
+                        row_rect.bottom - price_text.get_height() - 12,
+                    )
+                    surface.blit(price_text, text_pos)
+
+                button_rect = pygame.Rect(row_rect.right - 96, row_rect.centery - 18, 84, 36)
+                button_color = (46, 88, 126) if item.amount > 0.0 else (32, 44, 56)
+                border_color = (150, 220, 255) if item.amount > 0.0 else (68, 96, 120)
+                self._blit_panel(surface, button_rect, (*button_color, 220), border_color, 1)
+                label_color = (214, 236, 255) if item.amount > 0.0 else (130, 160, 180)
+                label = self.small_font.render("Sell", True, label_color)
+                surface.blit(
+                    label,
+                    (
+                        button_rect.centerx - label.get_width() // 2,
+                        button_rect.centery - label.get_height() // 2,
+                    ),
+                )
+            else:
+                note = "Not for sale"
+                if item.key == "cubits":
+                    note = "Station currency balance"
+                elif item.key == "tylium":
+                    note = "Fuel and trade reserve"
+                status_text = self.mini_font.render(note, True, (132, 158, 182))
+                surface.blit(
+                    status_text,
+                    (
+                        row_rect.centerx - status_text.get_width() // 2,
+                        row_rect.bottom - status_text.get_height() - 12,
+                    ),
+                )
+
+            self._hold_rows.append(_HoldRow(item=item, rect=row_rect, button_rect=button_rect))
+            y += row_height + spacing
+
+    def _gather_hold_items(self, ship: Ship) -> List[_HoldItem]:
+        resources = ship.resources
+        items: List[_HoldItem] = [
+            _HoldItem(
+                key="tylium",
+                name="Tylium",
+                amount=float(resources.tylium),
+                icon_key="tylium",
+                description="Primary fuel and trade stock.",
+            ),
+            _HoldItem(
+                key="water",
+                name="Water",
+                amount=float(resources.water),
+                icon_key="water",
+                can_sell=True,
+                sell_rate=0.2,
+                sell_currency="cubits",
+                price_icon_key="gem",
+                description="Fresh reserves collected from mining.",
+            ),
+            _HoldItem(
+                key="titanium",
+                name="Titanium",
+                amount=float(resources.titanium),
+                icon_key="titanium",
+                can_sell=True,
+                sell_rate=0.5,
+                sell_currency="tylium",
+                price_icon_key="coin",
+                description="Structural alloy cargo.",
+            ),
+            _HoldItem(
+                key="cubits",
+                name="Cubits",
+                amount=float(resources.cubits),
+                icon_key="cubits",
+                description="Station exchange currency.",
+            ),
+        ]
+        return items
+
+    def _handle_sell_dialog_event(self, event: pygame.event.Event) -> bool:
+        if not self._sell_dialog:
+            return False
+        dialog = self._sell_dialog
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                self._sell_dialog = None
+                return True
+            if event.key == pygame.K_RETURN:
+                self._confirm_sell()
+                return True
+            if event.key == pygame.K_BACKSPACE:
+                dialog.input_value = dialog.input_value[:-1]
+                if not dialog.input_value:
+                    dialog.input_value = "0"
+                return True
+            char = event.unicode
+            if char.isdigit():
+                if dialog.input_value == "0":
+                    dialog.input_value = char
+                else:
+                    dialog.input_value += char
+                return True
+            if char == "." and "." not in dialog.input_value:
+                dialog.input_value = dialog.input_value + "." if dialog.input_value else "0."
+                return True
+            return False
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            pos = getattr(event, "pos", None)
+            if not pos:
+                return False
+            if dialog.confirm_rect.collidepoint(pos):
+                self._confirm_sell()
+                return True
+            if dialog.cancel_rect.collidepoint(pos):
+                self._sell_dialog = None
+                return True
+            if not dialog.rect.collidepoint(pos):
+                self._sell_dialog = None
+                return True
+        return False
+
+    def _open_sell_dialog(self, item: _HoldItem) -> None:
+        initial_amount = max(0.0, min(item.amount, 1.0 if item.amount >= 1.0 else item.amount))
+        input_value = self._format_amount_string(initial_amount if initial_amount > 0.0 else 0.0)
+        self._sell_dialog = _SellDialog(
+            item_key=item.key,
+            item_name=item.name,
+            sell_currency=item.sell_currency or "tylium",
+            sell_rate=item.sell_rate or 0.0,
+            price_icon_key=item.price_icon_key or "coin",
+            input_value=input_value,
+            available=item.amount,
+        )
+
+    def _draw_sell_dialog(self, surface: pygame.Surface) -> None:
+        if not self._sell_dialog:
+            return
+        dialog = self._sell_dialog
+        width, height = surface.get_size()
+        overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+        overlay.fill((6, 10, 16, 180))
+        surface.blit(overlay, (0, 0))
+
+        box_width = max(340, int(width * 0.3))
+        box_height = max(260, int(height * 0.32))
+        rect = pygame.Rect((width - box_width) // 2, (height - box_height) // 2, box_width, box_height)
+        self._blit_panel(surface, rect, (18, 30, 44, 240), (120, 200, 255), 2)
+        dialog.rect = rect
+
+        available = self._resource_amount(dialog.item_key)
+        dialog.available = available
+        amount = self._sanitize_dialog_input(dialog, available)
+        expected = amount * dialog.sell_rate
+        currency_name = self._format_currency_name(dialog.sell_currency)
+
+        title = self.font.render(f"Sell {dialog.item_name}", True, (220, 238, 255))
+        surface.blit(title, (rect.x + 28, rect.y + 22))
+
+        available_text = self.mini_font.render(
+            f"In hold: {self._format_amount_display(available)}",
+            True,
+            (190, 214, 232),
+        )
+        surface.blit(available_text, (rect.x + 28, rect.y + 62))
+
+        amount_label = self.small_font.render("Amount to sell", True, (210, 230, 248))
+        surface.blit(amount_label, (rect.x + 28, rect.y + 92))
+
+        input_rect = pygame.Rect(rect.x + 28, rect.y + 120, rect.width - 56, 44)
+        self._blit_panel(surface, input_rect, (10, 20, 32, 230), (120, 200, 255), 1)
+        value_display = dialog.input_value or "0"
+        input_text = self.font.render(value_display, True, (220, 236, 255))
+        surface.blit(
+            input_text,
+            (
+                input_rect.centerx - input_text.get_width() // 2,
+                input_rect.centery - input_text.get_height() // 2,
+            ),
+        )
+
+        expected_text = self.small_font.render(
+            f"Receive: {self._format_amount_display(expected)} {currency_name}",
+            True,
+            (230, 236, 210) if dialog.sell_currency == "tylium" else (214, 236, 255),
+        )
+        expected_y = input_rect.bottom + 30
+        if dialog.price_icon_key in self._price_icons:
+            icon = self._price_icons[dialog.price_icon_key]
+            icon_rect = icon.get_rect()
+            icon_rect.x = rect.x + 28
+            icon_rect.centery = expected_y + expected_text.get_height() // 2
+            surface.blit(icon, icon_rect.topleft)
+            surface.blit(expected_text, (icon_rect.right + 8, expected_y))
+        else:
+            surface.blit(expected_text, (rect.x + 28, expected_y))
+
+        button_y = rect.bottom - 58
+        cancel_rect = pygame.Rect(rect.x + 32, button_y, 104, 40)
+        confirm_rect = pygame.Rect(rect.right - 136, button_y, 104, 40)
+        self._blit_panel(surface, cancel_rect, (26, 36, 48, 220), (100, 140, 180), 1)
+        cancel_label = self.small_font.render("Cancel", True, (182, 208, 224))
+        surface.blit(
+            cancel_label,
+            (
+                cancel_rect.centerx - cancel_label.get_width() // 2,
+                cancel_rect.centery - cancel_label.get_height() // 2,
+            ),
+        )
+
+        confirm_fill = (46, 92, 132, 240) if amount > 0.0 else (24, 32, 44, 220)
+        confirm_border = (150, 220, 255) if amount > 0.0 else (88, 120, 150)
+        self._blit_panel(surface, confirm_rect, confirm_fill, confirm_border, 1)
+        confirm_label = self.small_font.render("Confirm", True, (214, 236, 255) if amount > 0.0 else (144, 170, 188))
+        surface.blit(
+            confirm_label,
+            (
+                confirm_rect.centerx - confirm_label.get_width() // 2,
+                confirm_rect.centery - confirm_label.get_height() // 2,
+            ),
+        )
+
+        dialog.confirm_rect = confirm_rect
+        dialog.cancel_rect = cancel_rect
+
+    def _confirm_sell(self) -> None:
+        if not self._sell_dialog or not self._current_ship:
+            return
+        dialog = self._sell_dialog
+        ship = self._current_ship
+        available = self._resource_amount(dialog.item_key)
+        amount = self._sanitize_dialog_input(dialog, available)
+        if amount <= 0.0:
+            self._sell_dialog = None
+            return
+        if hasattr(ship.resources, dialog.item_key):
+            current_value = getattr(ship.resources, dialog.item_key)
+            setattr(ship.resources, dialog.item_key, max(0.0, current_value - amount))
+        ship.resources.add(dialog.sell_currency, amount * dialog.sell_rate)
+        self._sell_dialog = None
+
+    def _sanitize_dialog_input(self, dialog: _SellDialog, available: float) -> float:
+        amount = max(0.0, self._parse_amount(dialog.input_value))
+        if available >= 0.0 and amount > available:
+            formatted = self._format_amount_string(available)
+            if dialog.input_value != formatted:
+                dialog.input_value = formatted
+            amount = available
+        return amount
+
+    def _parse_amount(self, value: str) -> float:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return 0.0
+
+    def _resource_amount(self, resource: str) -> float:
+        if not self._current_ship:
+            return 0.0
+        if hasattr(self._current_ship.resources, resource):
+            return float(getattr(self._current_ship.resources, resource))
+        return 0.0
+
+    def _format_amount_display(self, value: float) -> str:
+        return self._format_amount_string(value)
+
+    def _format_amount_string(self, value: float) -> str:
+        if math.isclose(value, round(value), abs_tol=1e-4):
+            return str(int(round(value)))
+        return f"{value:.2f}".rstrip("0").rstrip(".")
+
+    def _format_currency_name(self, currency: str) -> str:
+        if currency == "tylium":
+            return "Tylium"
+        if currency == "cubits":
+            return "Cubits"
+        return currency.title()
 
     def _draw_ship_panel(self, surface: pygame.Surface, rect: pygame.Rect, ship: Ship) -> None:
         self._blit_panel(surface, rect, (18, 28, 40, 210), (70, 110, 150))
@@ -526,6 +907,68 @@ class HangarView:
         scale_x = available_width / denom_x if available_width > 0 else 1.0
         scale_y = available_height / denom_y if available_height > 0 else 1.0
         return max(0.25, min(scale_x, scale_y))
+
+    def _create_hold_icons(self) -> Dict[str, pygame.Surface]:
+        icons: Dict[str, pygame.Surface] = {}
+
+        def surface() -> pygame.Surface:
+            return pygame.Surface((48, 48), pygame.SRCALPHA)
+
+        tylium = surface()
+        pygame.draw.rect(tylium, (220, 196, 112), pygame.Rect(10, 18, 28, 16))
+        pygame.draw.rect(tylium, (140, 110, 48), pygame.Rect(10, 18, 28, 16), 2)
+        pygame.draw.rect(tylium, (255, 232, 150), pygame.Rect(14, 20, 20, 8))
+        pygame.draw.polygon(tylium, (186, 150, 60), [(12, 18), (18, 12), (30, 12), (36, 18)])
+        icons["tylium"] = tylium
+
+        water = surface()
+        drop_points = [(24, 10), (34, 24), (28, 36), (20, 36), (14, 24)]
+        pygame.draw.polygon(water, (100, 170, 255), drop_points)
+        highlight = [(24, 12), (30, 22), (24, 28)]
+        pygame.draw.polygon(water, (200, 230, 255), highlight)
+        pygame.draw.polygon(water, (60, 100, 170), drop_points, 2)
+        icons["water"] = water
+
+        titanium = surface()
+        pygame.draw.polygon(
+            titanium,
+            (170, 180, 190),
+            [(10, 28), (18, 16), (38, 16), (30, 28)],
+        )
+        pygame.draw.polygon(
+            titanium,
+            (210, 220, 232),
+            [(14, 26), (20, 18), (34, 18), (28, 26)],
+        )
+        pygame.draw.polygon(titanium, (110, 126, 138), [(10, 28), (18, 16), (38, 16), (30, 28)], 2)
+        icons["titanium"] = titanium
+
+        cubits = surface()
+        gem_points = [(24, 10), (36, 22), (24, 38), (12, 22)]
+        pygame.draw.polygon(cubits, (160, 120, 240), gem_points)
+        pygame.draw.polygon(cubits, (210, 180, 255), [(24, 12), (32, 22), (24, 34), (16, 22)])
+        pygame.draw.polygon(cubits, (90, 60, 150), gem_points, 2)
+        icons["cubits"] = cubits
+
+        return icons
+
+    def _create_price_icons(self) -> Dict[str, pygame.Surface]:
+        icons: Dict[str, pygame.Surface] = {}
+
+        coin = pygame.Surface((20, 20), pygame.SRCALPHA)
+        pygame.draw.circle(coin, (220, 186, 90), (10, 10), 9)
+        pygame.draw.circle(coin, (255, 232, 160), (10, 10), 6)
+        pygame.draw.circle(coin, (138, 98, 40), (10, 10), 9, 2)
+        icons["coin"] = coin
+
+        gem = pygame.Surface((20, 20), pygame.SRCALPHA)
+        points = [(10, 2), (18, 10), (10, 18), (2, 10)]
+        pygame.draw.polygon(gem, (150, 190, 255), points)
+        pygame.draw.polygon(gem, (210, 236, 255), [(10, 4), (16, 10), (10, 16), (4, 10)])
+        pygame.draw.polygon(gem, (90, 130, 200), points, 2)
+        icons["gem"] = gem
+
+        return icons
 
     def _create_slot_icons(self) -> Dict[str, pygame.Surface]:
         def base_surface() -> pygame.Surface:

@@ -347,6 +347,7 @@ class HUD:
             f"Tylium: {player.resources.tylium:.0f}",
             f"Titanium: {player.resources.titanium:.0f}",
             f"Water: {player.resources.water:.0f}",
+            f"Cubits: {player.resources.cubits:.0f}",
         ]
         base_y = self.surface.get_height() - 80 + 48
         for i, text in enumerate(resources):
