@@ -83,7 +83,7 @@ class ChaseCamera:
         self.freelook_max_yaw = 28.0
         self.freelook_max_pitch = 18.0
         self.freelook_return = 80.0
-        self.freelook_snap_delay = 3.0
+        self.freelook_snap_delay = 2.0
         self.look_ahead_distance = 0.0
         self.look_ahead_direction = Vector3(0.0, 0.0, 1.0)
         self.look_ahead_response = 4.0

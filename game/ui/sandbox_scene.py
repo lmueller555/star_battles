@@ -88,6 +88,8 @@ class SandboxScene(Scene):
         self.ship_info_open: bool = False
         self._ship_button_hovered: bool = False
         self.selected_object: Ship | Asteroid | None = None
+        self._mouse_freelook_active: bool = False
+        self._mouse_freelook_dragging: bool = False
 
     def on_enter(self, **kwargs) -> None:
         self.content = kwargs["content"]
@@ -211,6 +213,8 @@ class SandboxScene(Scene):
         self._setup_weapon_slots()
         self.combat_feedback = ""
         self.combat_feedback_timer = 0.0
+        self._mouse_freelook_active = False
+        self._mouse_freelook_dragging = False
         if self.player:
             self.flank_slider_ratio = getattr(self.player, "flank_speed_ratio", 0.0)
         self._enter_game_cursor()
@@ -244,6 +248,14 @@ class SandboxScene(Scene):
                             payload[key] = getattr(event, key)
                 payload["pos"] = converted
                 ui_event = pygame.event.Event(event.type, payload)
+        if (
+            event.type == pygame.MOUSEMOTION
+            and self._mouse_freelook_active
+            and not (self.map_open or self.hangar_open or self.ship_info_open)
+        ):
+            rel = getattr(event, "rel", None)
+            if rel and (rel[0] != 0 or rel[1] != 0):
+                self._mouse_freelook_dragging = True
         if (
             event.type == pygame.MOUSEMOTION
             and self.cursor_indicator_visible
@@ -306,6 +318,8 @@ class SandboxScene(Scene):
                         and button_rect.height > 0
                         and button_rect.collidepoint(mouse_pos)
                     ):
+                        self._mouse_freelook_active = False
+                        self._mouse_freelook_dragging = False
                         self._toggle_ship_info_panel()
                         return
         if self.player and self.hud and not (self.map_open or self.hangar_open or self.ship_info_open):
@@ -318,9 +332,12 @@ class SandboxScene(Scene):
                 if slider_rect.width > 0 and slider_rect.height > 0:
                     if slider_rect.collidepoint(mouse_pos):
                         self.flank_slider_dragging = True
+                        self._mouse_freelook_active = False
+                        self._mouse_freelook_dragging = False
                         self._update_flank_slider_from_mouse(mouse_pos)
             elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 self.flank_slider_dragging = False
+                self._mouse_freelook_dragging = False
             elif (
                 event.type == pygame.MOUSEMOTION
                 and self.flank_slider_dragging
@@ -340,10 +357,19 @@ class SandboxScene(Scene):
                     and slider_rect.collidepoint(mouse_pos)
                 ):
                     pass
-                else:
+                elif not self._mouse_freelook_dragging:
                     picked = self._pick_target_at(mouse_pos)
                     if picked:
                         self._set_selected_object(picked)
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            self._mouse_freelook_dragging = False
+            if self._should_begin_camera_drag(mouse_pos):
+                self._mouse_freelook_active = True
+            else:
+                self._mouse_freelook_active = False
+        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            self._mouse_freelook_active = False
+            self._mouse_freelook_dragging = False
         if (
             event.type in (pygame.MOUSEBUTTONUP, pygame.MOUSEBUTTONDOWN)
             and not (self.player and self.hud)
@@ -403,6 +429,8 @@ class SandboxScene(Scene):
             self.player.control.brake = False
             self.player.control.roll_input = 0.0
             self.freelook_active = False
+            self._mouse_freelook_active = False
+            self._mouse_freelook_dragging = False
         elif self.hangar_open:
             self.player.control.look_delta = Vector3()
             self.player.control.strafe = Vector3()
@@ -413,6 +441,8 @@ class SandboxScene(Scene):
             self.freelook_active = False
             scanning = False
             stabilizing = False
+            self._mouse_freelook_active = False
+            self._mouse_freelook_dragging = False
         elif self.ship_info_open:
             self.player.control.look_delta = Vector3()
             self.player.control.strafe = Vector3()
@@ -423,9 +453,12 @@ class SandboxScene(Scene):
             self.freelook_active = False
             scanning = False
             stabilizing = False
+            self._mouse_freelook_active = False
+            self._mouse_freelook_dragging = False
         else:
             mouse_dx, mouse_dy = self.input.mouse()
             freelook_held = self.input.action("freelook")
+            freelook_drag = self._mouse_freelook_active
             look_input = Vector3(
                 self.input.axis_state.get("look_x", 0.0),
                 self.input.axis_state.get("look_y", 0.0),
@@ -433,7 +466,7 @@ class SandboxScene(Scene):
             )
             if look_input.length_squared() > 0.0:
                 look_input = look_input.normalize() * KEY_LOOK_SCALE
-            if freelook_held:
+            if freelook_held or freelook_drag:
                 self.freelook_active = True
                 self.freelook_delta = (mouse_dx, mouse_dy)
                 self.player.control.look_delta = Vector3()
@@ -707,6 +740,21 @@ class SandboxScene(Scene):
         ratio = max(0.0, min(1.0, ratio))
         self.flank_slider_ratio = ratio
         self.player.set_flank_speed_ratio(ratio)
+
+    def _should_begin_camera_drag(self, mouse_pos: tuple[int, int] | None) -> bool:
+        if self.map_open or self.hangar_open or self.ship_info_open:
+            return False
+        if mouse_pos is None:
+            return True
+        if not self.hud:
+            return True
+        slider_rect = self.hud.flank_slider_hit_rect
+        if slider_rect.width > 0 and slider_rect.height > 0 and slider_rect.collidepoint(mouse_pos):
+            return False
+        button_rect = self.hud.ship_info_button_rect
+        if button_rect.width > 0 and button_rect.height > 0 and button_rect.collidepoint(mouse_pos):
+            return False
+        return True
 
     def _surface_mouse_pos(self, pos: tuple[int, int]) -> tuple[int, int]:
         surface = pygame.display.get_surface()
