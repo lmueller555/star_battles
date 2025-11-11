@@ -134,6 +134,12 @@ class Asteroid:
         return self.health <= 0.0
 
 
+@dataclass
+class AsteroidFieldState:
+    system_id: Optional[str]
+    field: List[Asteroid]
+
+
 class AsteroidField:
     """Generates and manages asteroids per sector."""
 
@@ -164,6 +170,26 @@ class AsteroidField:
 
     def current_field(self) -> List[Asteroid]:
         return self._current
+
+    def suspend(self) -> AsteroidFieldState:
+        """Capture the active asteroid field and clear it from the simulation."""
+
+        state = AsteroidFieldState(system_id=self._current_system, field=list(self._current))
+        self._current = []
+        return state
+
+    def resume(self, state: AsteroidFieldState) -> None:
+        """Restore a previously captured asteroid field back into the simulation."""
+
+        self._current_system = state.system_id
+        if state.system_id:
+            self._fields[state.system_id] = list(state.field)
+            self._current = self._fields[state.system_id]
+        else:
+            self._current = []
+
+    def clear_current(self) -> None:
+        self._current = []
 
     def update(self, dt: float) -> None:
         for asteroid in self._current:
@@ -233,4 +259,4 @@ class AsteroidField:
             self._fields[self._current_system] = self._current
 
 
-__all__ = ["Asteroid", "AsteroidField"]
+__all__ = ["Asteroid", "AsteroidField", "AsteroidFieldState"]

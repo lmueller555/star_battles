@@ -110,6 +110,14 @@ class MiningHUDState:
     alert_triggered: bool = False
 
 
+@dataclass
+class MiningManagerState:
+    nodes: List[MiningNodeRuntime]
+    active_index: Optional[int]
+    status: str
+    status_timer: float
+
+
 class MiningManager:
     """Controls scanning and extraction mini-game."""
 
@@ -252,6 +260,44 @@ class MiningManager:
             alert_triggered=alert,
         )
 
+    def suspend(self) -> MiningManagerState:
+        """Capture the current mining state for later restoration."""
+
+        active_index = None
+        if self._active:
+            for idx, node in enumerate(self._nodes):
+                if node is self._active:
+                    active_index = idx
+                    break
+        state = MiningManagerState(
+            nodes=list(self._nodes),
+            active_index=active_index,
+            status=self._status,
+            status_timer=self._status_timer,
+        )
+        self.clear()
+        return state
+
+    def resume(self, state: Optional[MiningManagerState]) -> None:
+        """Restore a previously captured mining state."""
+
+        if state is None:
+            self.clear()
+            return
+        self._nodes = list(state.nodes)
+        if state.active_index is not None and 0 <= state.active_index < len(self._nodes):
+            self._active = self._nodes[state.active_index]
+        else:
+            self._active = None
+        self._status = state.status
+        self._status_timer = state.status_timer
+
+    def clear(self) -> None:
+        self._nodes = []
+        self._active = None
+        self._status = ""
+        self._status_timer = 0.0
+
     def _build_views(self, ship: "Ship") -> List[MiningNodeView]:
         views: List[MiningNodeView] = []
         for node in self._nodes:
@@ -300,6 +346,7 @@ __all__ = [
     "MiningDatabase",
     "MiningManager",
     "MiningHUDState",
+    "MiningManagerState",
     "MiningNodeData",
     "MiningNodeRuntime",
     "MiningNodeView",
