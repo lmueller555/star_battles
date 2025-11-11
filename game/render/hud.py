@@ -14,11 +14,11 @@ from game.sensors.dradis import DradisSystem
 from game.ui.sector_map import map_display_rect
 from game.world.mining import MiningHUDState
 from game.ships.ship import Ship
+from game.ships.flight import effective_thruster_speed
 
 
 FLANK_SLIDER_WIDTH = 18
 FLANK_SLIDER_SPACING = 24
-THRUSTER_SPEED_MULTIPLIER = 1.5
 SHIP_INFO_BUTTON_SIZE = 48
 SHIP_INFO_BUTTON_SPACING = 18
 
@@ -580,7 +580,7 @@ class HUD:
         self.surface.blit(label, label_pos)
 
         flank_speed = player.stats.max_speed * ratio
-        thruster_speed = flank_speed * THRUSTER_SPEED_MULTIPLIER
+        thruster_speed = effective_thruster_speed(player.stats)
         speed_text = self.font.render(
             f"{flank_speed:.0f} m/s | {thruster_speed:.0f} m/s",
             True,
