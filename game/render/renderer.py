@@ -1,6 +1,7 @@
 """Vector renderer built on pygame."""
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from math import ceil, floor
 import math
 import random
@@ -46,6 +47,118 @@ ENGINE_LAYOUTS: dict[str, list[Vector3]] = {
     ],
     "Outpost": [],
 }
+
+
+@dataclass
+class HullGeometry:
+    segments: list[tuple[Vector3, Vector3]]
+    sections: list[list[Vector3]] = field(default_factory=list)
+    caps: list[list[Vector3]] = field(default_factory=list)
+
+
+LIGHT_DIRECTION = Vector3(0.35, 0.9, -0.4)
+if LIGHT_DIRECTION.length_squared() > 1e-6:
+    LIGHT_DIRECTION = LIGHT_DIRECTION.normalize()
+else:
+    LIGHT_DIRECTION = Vector3(0.0, 1.0, -0.25)
+
+
+_PALETTE_PRESETS: dict[str, tuple[tuple[int, int, int], tuple[int, int, int]]] = {
+    "viper_mk_vii": ((120, 184, 248), (252, 112, 96)),
+    "glaive_command": ((214, 172, 116), (255, 214, 138)),
+    "vanir_command": ((132, 208, 180), (88, 238, 196)),
+    "brimir_carrier": ((162, 154, 226), (124, 206, 255)),
+    "outpost_regular": ((186, 208, 232), (248, 228, 152)),
+}
+
+_PALETTE_CACHE: dict[str, tuple[tuple[int, int, int], tuple[int, int, int]]] = {}
+
+
+def _shade_color(color: tuple[int, int, int], shade: float) -> tuple[int, int, int]:
+    shade = max(0.1, min(1.4, shade))
+    return tuple(
+        int(max(0, min(255, round(component * shade))))
+        for component in color
+    )
+
+
+def _palette_for_frame(frame_id: str) -> tuple[tuple[int, int, int], tuple[int, int, int]]:
+    palette = _PALETTE_CACHE.get(frame_id)
+    if palette is not None:
+        return palette
+    preset = _PALETTE_PRESETS.get(frame_id)
+    if preset is not None:
+        palette = preset
+    else:
+        seed = (hash(frame_id) ^ 0xACE11235) & 0xFFFFFFFF
+        rng = random.Random(seed)
+        base = tuple(rng.randint(96, 196) for _ in range(3))
+        accent_channels = []
+        for component in base:
+            factor = 1.15 + rng.random() * 0.4
+            offset = rng.randint(-18, 28)
+            accent_channels.append(
+                int(max(0, min(255, round(component * factor + offset))))
+            )
+        accent = tuple(accent_channels)
+        if sum(abs(a - b) for a, b in zip(base, accent)) < 60:
+            accent = tuple(min(255, max(0, channel + 72)) for channel in accent)
+        palette = (base, accent)
+    _PALETTE_CACHE[frame_id] = palette
+    return palette
+
+
+def _build_mesh_triangles(geometry: HullGeometry) -> list[list[Vector3]]:
+    surfaces: list[list[Vector3]] = []
+    sections = geometry.sections
+    if sections:
+        for ring_a, ring_b in zip(sections[:-1], sections[1:]):
+            limit = min(len(ring_a), len(ring_b))
+            if limit < 2:
+                continue
+            for index in range(limit):
+                next_index = (index + 1) % limit
+                surfaces.append(
+                    [ring_a[index], ring_b[index], ring_b[next_index]]
+                )
+                surfaces.append(
+                    [ring_a[index], ring_b[next_index], ring_a[next_index]]
+                )
+    for cap in geometry.caps:
+        if len(cap) < 3:
+            continue
+        anchor = cap[0]
+        for index in range(1, len(cap) - 1):
+            surfaces.append([anchor, cap[index], cap[index + 1]])
+    return surfaces
+
+
+def _build_strike_skin_mesh() -> list[list[Vector3]]:
+    nose_top = Vector3(0.0, 0.34, 2.6)
+    nose_bottom = Vector3(0.0, -0.36, 2.55)
+    mid_top = Vector3(0.0, 0.3, 1.1)
+    mid_bottom = Vector3(0.0, -0.3, 1.1)
+    tail_top = Vector3(0.0, 0.22, -2.15)
+    tail_bottom = Vector3(0.0, -0.24, -2.15)
+    dorsal_spine = Vector3(0.0, 0.4, -0.35)
+    ventral_keel = Vector3(0.0, -0.42, -0.9)
+    left_wing_front = Vector3(-0.95, 0.04, 0.3)
+    right_wing_front = Vector3(0.95, 0.04, 0.3)
+    left_tail = Vector3(-0.68, -0.14, -2.05)
+    right_tail = Vector3(0.68, -0.14, -2.05)
+
+    return [
+        [nose_top, left_wing_front, dorsal_spine],
+        [nose_top, dorsal_spine, right_wing_front],
+        [dorsal_spine, left_wing_front, tail_top],
+        [dorsal_spine, tail_top, right_wing_front],
+        [left_wing_front, mid_top, right_wing_front],
+        [nose_bottom, ventral_keel, left_tail],
+        [nose_bottom, right_tail, ventral_keel],
+        [ventral_keel, left_tail, tail_bottom],
+        [ventral_keel, tail_bottom, right_tail],
+        [left_tail, mid_bottom, right_tail],
+    ]
 
 
 def _blend(color_a: tuple[int, int, int], color_b: tuple[int, int, int], amount: float) -> tuple[int, int, int]:
@@ -116,10 +229,11 @@ def _elliptical_ring(
     ]
 
 
-def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
+def _build_outpost_geometry() -> HullGeometry:
     """Construct a capital-ship silhouette for Outposts."""
 
     segments: list[tuple[Vector3, Vector3]] = []
+    caps: list[list[Vector3]] = []
 
     hull_profile: list[tuple[float, float, float]] = [
         (-520.0, 90.0, 55.0),
@@ -166,6 +280,8 @@ def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
     for point in final_section[::2]:
         segments.append((point, nose_tip))
         segments.append((point, ventral_spear))
+    caps.append([nose_tip] + final_section)
+    caps.append([ventral_spear] + list(reversed(final_section)))
 
     dorsal_spine_points: list[Vector3] = []
     ventral_keel_points: list[Vector3] = []
@@ -273,13 +389,22 @@ def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
     for point in bay_frame:
         segments.append((point, ventral_keel_points[len(ventral_keel_points) // 2]))
 
-    return segments
+    tail_section = hull_sections[0] if hull_sections else []
+    if tail_section:
+        tail_center = Vector3()
+        for point in tail_section:
+            tail_center += point
+        tail_center /= len(tail_section)
+        caps.append([tail_center] + tail_section)
+
+    return HullGeometry(segments=segments, sections=hull_sections, caps=caps)
 
 
-def _build_line_wireframe() -> list[tuple[Vector3, Vector3]]:
+def _build_line_geometry() -> HullGeometry:
     """Construct a heavy line-ship silhouette with rich surface detail."""
 
     segments: list[tuple[Vector3, Vector3]] = []
+    caps: list[list[Vector3]] = []
 
     hull_profile: list[tuple[float, float, float]] = [
         (-260.0, 70.0, 35.0),
@@ -321,6 +446,8 @@ def _build_line_wireframe() -> list[tuple[Vector3, Vector3]]:
     for point in final_section[::2]:
         segments.append((point, prow_tip))
         segments.append((point, prow_keel))
+    caps.append([prow_tip] + final_section)
+    caps.append([prow_keel] + list(reversed(final_section)))
 
     dorsal_spine: list[Vector3] = []
     ventral_keel: list[Vector3] = []
@@ -400,13 +527,22 @@ def _build_line_wireframe() -> list[tuple[Vector3, Vector3]]:
             hull_anchor = hull_sections[0][hull_anchor_index % ring_sides]
             segments.append((center, hull_anchor))
 
-    return segments
+    tail_section = hull_sections[0] if hull_sections else []
+    if tail_section:
+        tail_center = Vector3()
+        for point in tail_section:
+            tail_center += point
+        tail_center /= len(tail_section)
+        caps.append([tail_center] + tail_section)
+
+    return HullGeometry(segments=segments, sections=hull_sections, caps=caps)
 
 
-def _build_escort_wireframe() -> list[tuple[Vector3, Vector3]]:
+def _build_escort_geometry() -> HullGeometry:
     """Construct an escort-class silhouette with layered armor panels."""
 
     segments: list[tuple[Vector3, Vector3]] = []
+    caps: list[list[Vector3]] = []
 
     hull_profile: list[tuple[float, float, float]] = [
         (-72.0, 22.0, 12.0),
@@ -448,6 +584,8 @@ def _build_escort_wireframe() -> list[tuple[Vector3, Vector3]]:
     for point in final_section[::2]:
         segments.append((point, canopy_tip))
         segments.append((point, intake))
+    caps.append([canopy_tip] + final_section)
+    caps.append([intake] + list(reversed(final_section)))
 
     dorsal_line: list[Vector3] = []
     ventral_line: list[Vector3] = []
@@ -503,7 +641,19 @@ def _build_escort_wireframe() -> list[tuple[Vector3, Vector3]]:
     _loop_segments(segments, dorsal_fins)
     segments.append((dorsal_fins[1], dorsal_line[len(dorsal_line) // 2]))
 
-    return segments
+    tail_section = hull_sections[0] if hull_sections else []
+    if tail_section:
+        tail_center = Vector3()
+        for point in tail_section:
+            tail_center += point
+        tail_center /= len(tail_section)
+        caps.append([tail_center] + tail_section)
+
+    return HullGeometry(segments=segments, sections=hull_sections, caps=caps)
+
+_ESCORT_GEOMETRY = _build_escort_geometry()
+_LINE_GEOMETRY = _build_line_geometry()
+_OUTPOST_GEOMETRY = _build_outpost_geometry()
 
 
 WIREFRAMES = {
@@ -515,10 +665,20 @@ WIREFRAMES = {
         (Vector3(0.9, 0, -2.0), Vector3(-0.9, 0, -2.0)),
         (Vector3(0.9, 0, -2.0), Vector3(0, 0.3, 2.5)),
     ],
-    "Escort": _build_escort_wireframe(),
-    "Line": _build_line_wireframe(),
-    "Outpost": _build_outpost_wireframe(),
+    "Escort": _ESCORT_GEOMETRY.segments,
+    "Line": _LINE_GEOMETRY.segments,
+    "Outpost": _OUTPOST_GEOMETRY.segments,
 }
+
+
+SKIN_MESHES = {
+    "Strike": _build_strike_skin_mesh(),
+    "Escort": _build_mesh_triangles(_ESCORT_GEOMETRY),
+    "Line": _build_mesh_triangles(_LINE_GEOMETRY),
+    "Outpost": _build_mesh_triangles(_OUTPOST_GEOMETRY),
+}
+
+SKIN_OVERRIDES: dict[str, list[list[Vector3]]] = {}
 
 
 class VectorRenderer:
@@ -535,6 +695,105 @@ class VectorRenderer:
         local: Vector3,
     ) -> Vector3:
         return origin + right * local.x + up * local.y + forward * local.z
+
+    def _draw_skin(
+        self,
+        camera: ChaseCamera,
+        origin: Vector3,
+        right: Vector3,
+        up: Vector3,
+        forward: Vector3,
+        ship: Ship,
+    ) -> None:
+        mesh = SKIN_OVERRIDES.get(ship.frame.id)
+        if mesh is None:
+            mesh = SKIN_MESHES.get(ship.frame.size, [])
+        if not mesh:
+            return
+
+        base_color, accent_color = _palette_for_frame(ship.frame.id)
+        screen_size = self.surface.get_size()
+
+        local_min_z = min((point.z for triangle in mesh for point in triangle), default=0.0)
+        local_max_z = max((point.z for triangle in mesh for point in triangle), default=0.0)
+        span = local_max_z - local_min_z
+        rng = random.Random((hash(ship.frame.id) ^ 0x6C8E9CF5) & 0xFFFFFFFF)
+        accent_bands: list[tuple[float, float]] = []
+        if span > 1e-3:
+            band_count = 3 if ship.frame.size in {"Line", "Outpost"} else 2
+            for _ in range(band_count):
+                center = rng.uniform(local_min_z + span * 0.15, local_max_z - span * 0.15)
+                width = span * rng.uniform(0.08, 0.18)
+                accent_bands.append((center - width * 0.5, center + width * 0.5))
+        highlight_push = rng.uniform(0.05, 0.16)
+
+        render_triangles: list[
+            tuple[float, list[tuple[int, int]], tuple[int, int, int], tuple[int, int, int]]
+        ] = []
+
+        for triangle in mesh:
+            if len(triangle) < 3:
+                continue
+            centroid_local = Vector3()
+            centroid_world = Vector3()
+            world_points: list[Vector3] = []
+            screen_points: list[tuple[int, int]] = []
+            depths: list[float] = []
+            visible = True
+            for local in triangle:
+                centroid_local += local
+                world = self._local_to_world(origin, right, up, forward, local)
+                centroid_world += world
+                screen, vis = camera.project(world, screen_size)
+                if not vis:
+                    visible = False
+                    break
+                world_points.append(world)
+                screen_points.append((int(round(screen.x)), int(round(screen.y))))
+                depths.append(screen.z)
+            if not visible:
+                continue
+            centroid_local /= len(triangle)
+            centroid_world /= len(triangle)
+            edge1 = world_points[1] - world_points[0]
+            edge2 = world_points[2] - world_points[0]
+            normal = edge1.cross(edge2)
+            if normal.length_squared() <= 1e-6:
+                continue
+            normal = normal.normalize()
+            view_dir = camera.position - centroid_world
+            if view_dir.length_squared() <= 1e-6:
+                continue
+            view_dir = view_dir.normalize()
+            facing = normal.dot(view_dir)
+            if facing <= 0.0:
+                normal = -normal
+                facing = -facing
+            if facing <= 0.01:
+                continue
+
+            light_strength = max(0.0, normal.dot(LIGHT_DIRECTION))
+            shade = 0.35 + light_strength * 0.65
+            if centroid_local.y < 0.0:
+                shade *= 0.85
+            else:
+                shade *= 1.0 + highlight_push * 0.5
+            shade = max(0.2, min(1.3, shade))
+
+            color = base_color
+            if accent_bands and any(low <= centroid_local.z <= high for low, high in accent_bands):
+                color = accent_color
+            fill_color = _shade_color(color, shade)
+            outline_color = _darken(fill_color, 0.35)
+            average_depth = sum(depths) / len(depths)
+            render_triangles.append((average_depth, screen_points, fill_color, outline_color))
+
+        render_triangles.sort(reverse=True, key=lambda item: item[0])
+        for _, points, fill_color, outline_color in render_triangles:
+            if len(points) < 3:
+                continue
+            pygame.draw.polygon(self.surface, fill_color, points)
+            pygame.draw.polygon(self.surface, outline_color, points, 1)
 
     def _draw_speed_streaks(
         self,
@@ -849,6 +1108,8 @@ class VectorRenderer:
 
         if speed_intensity > 0.0:
             self._draw_speed_streaks(camera, origin, right, up, forward, ship, speed_intensity)
+
+        self._draw_skin(camera, origin, right, up, forward, ship)
 
         for a_local, b_local in edges:
             a_world = origin + right * a_local.x + up * a_local.y + forward * a_local.z
