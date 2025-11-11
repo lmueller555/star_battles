@@ -151,16 +151,19 @@ class ChaseCamera:
         if lock_distance > 0.0:
             side_sign = 1.0 if focus_right.dot(lock_direction) >= 0 else -1.0
             lateral_scale = min(1.0, lock_distance / 900.0)
-            back_scale = min(1.0, lock_distance / 600.0)
             height_scale = min(1.0, lock_distance / 800.0)
             lock_target_pos = (
                 base_target_pos
                 + focus_right * (self.lock_side_offset * lateral_scale * side_sign)
-                - focus_forward * (self.lock_back_offset * back_scale)
                 + focus_up * (self.lock_up_offset * 0.5 * height_scale)
             )
         target_pos = _lerp_vector(base_target_pos, lock_target_pos, self.lock_blend)
         self.position += (target_pos - self.position) * min(1.0, 10.0 * dt)
+        # Enforce constant trailing distance behind the ship regardless of smoothing
+        desired_back_offset = -focus_forward * self.distance
+        offset = self.position - ship.kinematics.position
+        back_component = focus_forward * offset.dot(focus_forward)
+        self.position += desired_back_offset - back_component
 
         velocity = ship.kinematics.velocity
         speed = velocity.length()
