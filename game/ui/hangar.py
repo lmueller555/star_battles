@@ -218,6 +218,9 @@ class HangarView:
         self._store_scrollbar_thumb_rect: Optional[pygame.Rect] = None
         self._store_scrollbar_dragging: bool = False
         self._store_scroll_drag_offset: float = 0.0
+        self._ship_widgets: List[_SlotDisplay] = []
+        self._active_slot_label: Optional[str] = None
+        self._active_slot_mouse_pos: Optional[Tuple[int, int]] = None
 
     def set_surface(self, surface: pygame.Surface) -> None:
         """Update the target surface when the display size changes."""
@@ -256,7 +259,16 @@ class HangarView:
             pos = getattr(event, "pos", None)
             if not pos:
                 return False
+            slot = self._slot_at_position(pos)
+            if slot:
+                if self._active_slot_label == slot.label:
+                    self._clear_active_slot()
+                else:
+                    self._active_slot_label = slot.label
+                    self._active_slot_mouse_pos = pos
+                return True
             if self.active_option == "Store" and self._handle_store_click(pos):
+                self._clear_active_slot()
                 return True
             if self.active_option == "Hold":
                 for row in self._hold_rows:
@@ -267,11 +279,16 @@ class HangarView:
                         and row.button_rect.collidepoint(pos)
                     ):
                         self._open_sell_dialog(row.item)
+                        self._clear_active_slot()
                         return True
             for option, rect in self._ribbon_rects.items():
                 if rect.collidepoint(pos):
                     self.active_option = option
+                    self._clear_active_slot()
                     return True
+            if self._active_slot_label:
+                self._clear_active_slot()
+                return True
         return False
 
     def update(self, dt: float) -> None:
@@ -317,6 +334,7 @@ class HangarView:
             self._draw_store_filters(surface, left_rect, ship)
             self._draw_store_grid(surface, center_rect, ship)
             self._draw_store_preview(surface, preview_rect, ship)
+            self._ship_widgets = []
         else:
             left_width = int(inner_rect.width * (1.0 / 3.0))
             left_rect = pygame.Rect(inner_rect.x, inner_rect.y, left_width, inner_rect.height)
@@ -1179,6 +1197,7 @@ class HangarView:
         layout_rect.height = int(layout_rect.height * 0.9)
 
         shape, widgets = self._build_ship_layout(ship, layout_rect)
+        self._ship_widgets = widgets
         if shape:
             pygame.draw.polygon(surface, (30, 44, 58), shape, 0)
             pygame.draw.lines(surface, (160, 210, 240), True, shape, 2)
@@ -1194,12 +1213,19 @@ class HangarView:
             if icon:
                 icon_rect = icon.get_rect(center=widget.rect.center)
                 surface.blit(icon, icon_rect.topleft)
+            if self._active_slot_label == widget.label:
+                pygame.draw.rect(surface, (210, 236, 255), widget.rect, 2)
             if widget.rect.collidepoint(mouse_pos):
                 hovered_widget = widget
                 pygame.draw.rect(surface, (210, 236, 255), widget.rect, 2)
 
         if hovered_widget:
             self._draw_tooltip(surface, hovered_widget, mouse_pos)
+        elif self._active_slot_label:
+            active_widget = self._find_widget_by_label(self._active_slot_label)
+            if active_widget:
+                anchor = self._active_slot_mouse_pos or active_widget.rect.center
+                self._draw_tooltip(surface, active_widget, anchor)
 
     def _blit_panel(
         self,
@@ -1585,6 +1611,22 @@ class HangarView:
         if normalized in self._slot_icons:
             return normalized
         return "weapon" if widget.category == "weapon" else "module"
+
+    def _find_widget_by_label(self, label: str) -> Optional[_SlotDisplay]:
+        for widget in self._ship_widgets:
+            if widget.label == label:
+                return widget
+        return None
+
+    def _slot_at_position(self, pos: Tuple[int, int]) -> Optional[_SlotDisplay]:
+        for widget in self._ship_widgets:
+            if widget.rect.collidepoint(pos):
+                return widget
+        return None
+
+    def _clear_active_slot(self) -> None:
+        self._active_slot_label = None
+        self._active_slot_mouse_pos = None
 
     def _draw_tooltip(self, surface: pygame.Surface, widget: _SlotDisplay, mouse_pos: tuple[int, int]) -> None:
         text_lines: List[str] = []
