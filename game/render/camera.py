@@ -14,8 +14,8 @@ from game.ships.ship import Ship
 # module (avoiding circular imports).
 DEFAULT_SHIP_LENGTHS: dict[str, float] = {
     "Strike": 4.5,
-    "Escort": 184.0,
-    "Line": 658.0,
+    "Escort": 124.0,
+    "Line": 458.0,
     "Outpost": 1270.0,
 }
 
