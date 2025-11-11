@@ -56,6 +56,14 @@ class _HoldRow:
 
 
 @dataclass
+class _TooltipButton:
+    rect: pygame.Rect
+    enabled: bool
+    action: str
+    slot: _SlotDisplay
+
+
+@dataclass
 class _SellDialog:
     item_key: str
     item_name: str
@@ -352,9 +360,7 @@ class HangarView:
         self._ship_widgets: List[_SlotDisplay] = []
         self._active_slot_label: Optional[str] = None
         self._active_slot_mouse_pos: Optional[Tuple[int, int]] = None
-        self._tooltip_button_rect: Optional[pygame.Rect] = None
-        self._tooltip_button_slot: Optional[_SlotDisplay] = None
-        self._tooltip_button_enabled: bool = False
+        self._tooltip_buttons: List[_TooltipButton] = []
         self._player_skills: Dict[str, int] = {"Gunnery": 3, "Engineering": 3, "Propulsion": 3}
 
     def set_surface(self, surface: pygame.Surface) -> None:
@@ -396,16 +402,17 @@ class HangarView:
             pos = getattr(event, "pos", None)
             if not pos:
                 return False
-            if (
-                self._tooltip_button_rect
-                and self._tooltip_button_rect.collidepoint(pos)
-                and self._tooltip_button_slot
-            ):
-                if self._tooltip_button_enabled and self._tooltip_button_slot.filled:
-                    if self._unequip_slot(self._tooltip_button_slot):
-                        self._play_confirm_sound()
-                self._clear_active_slot()
-                return True
+            for button in self._tooltip_buttons:
+                if button.rect.collidepoint(pos):
+                    if button.action == "unequip":
+                        if button.enabled and button.slot.filled:
+                            if self._unequip_slot(button.slot):
+                                self._play_confirm_sound()
+                    elif button.action == "upgrade":
+                        if button.enabled and button.slot.filled:
+                            self._open_upgrade_dialog_for_slot(button.slot)
+                    self._clear_active_slot()
+                    return True
             slot = self._slot_at_position(pos)
             if slot:
                 if self._active_slot_label == slot.label:
@@ -452,9 +459,7 @@ class HangarView:
 
     def draw(self, surface: pygame.Surface, ship: Ship, station: DockingStation, distance: float) -> None:
         self._current_ship = ship
-        self._tooltip_button_rect = None
-        self._tooltip_button_slot = None
-        self._tooltip_button_enabled = False
+        self._tooltip_buttons = []
         width, height = surface.get_size()
         self._interior.draw(surface)
         panel_width = int(width * 0.78)
@@ -1325,6 +1330,43 @@ class HangarView:
             return False
         store.bind_ship(ship)
         return True
+
+    def _open_upgrade_dialog_for_slot(self, widget: _SlotDisplay) -> None:
+        if not self._current_ship or not widget.filled:
+            return
+        store_item = self._store_item_for_slot(widget)
+        if not store_item:
+            return
+        icon_key = store_item.slot_family.lower()
+        if icon_key not in self._hold_icons:
+            icon_key = "module"
+        item = _HoldItem(
+            key=store_item.id,
+            name=store_item.name,
+            amount=1.0,
+            icon_key=icon_key,
+            description=store_item.description,
+            equippable=True,
+            slot_family=store_item.slot_family,
+            store_item=store_item,
+        )
+        self._open_upgrade_dialog(item)
+
+    def _store_item_for_slot(self, widget: _SlotDisplay) -> Optional[StoreItem]:
+        ship = self._current_ship
+        if not ship or not widget.filled:
+            return None
+        if widget.category == "weapon":
+            mount = self._weapon_mount_at_index(ship, widget.slot_type, widget.index)
+            if mount and mount.weapon_id:
+                return CATALOG.get(mount.weapon_id)
+            return None
+        modules = ship.modules_by_slot.get(widget.slot_type, [])
+        if 0 <= widget.index < len(modules):
+            module = modules[widget.index]
+            if module and module.id:
+                return CATALOG.get(module.id)
+        return None
 
     def _handle_sell_dialog_event(self, event: pygame.event.Event) -> bool:
         if not self._sell_dialog:
@@ -2556,8 +2598,11 @@ class HangarView:
     def _clear_active_slot(self) -> None:
         self._active_slot_label = None
         self._active_slot_mouse_pos = None
+        self._tooltip_buttons = []
 
     def _draw_tooltip(self, surface: pygame.Surface, widget: _SlotDisplay, mouse_pos: tuple[int, int]) -> None:
+        self._tooltip_buttons = []
+
         text_lines: List[str] = []
         header = widget.label
         if header:
@@ -2572,12 +2617,27 @@ class HangarView:
         spacing = 6
         button_height = 28
         button_padding_top = 10
+        button_spacing = 6
         text_surfaces = [font.render(line, True, (220, 236, 250)) for line in text_lines]
         text_width = max((surf.get_width() for surf in text_surfaces), default=0)
         width = max(120, text_width + padding * 2)
+
+        buttons: List[tuple[str, bool, str]] = []
+        upgrade_enabled = False
+        if widget.filled:
+            store_item = self._store_item_for_slot(widget)
+            if store_item:
+                upgrade_enabled = bool(EQUIPMENT_UPGRADE_SPECS.get(store_item.id))
+            buttons.append(("Upgrade", upgrade_enabled, "upgrade"))
+        can_unequip = bool(widget.filled and self._current_ship and self._current_ship.can_store_in_hold())
+        buttons.append(("Unequip", can_unequip, "unequip"))
+
         height = padding * 2 + sum(surf.get_height() for surf in text_surfaces)
         height += spacing * (len(text_surfaces) - 1 if text_surfaces else 0)
-        height += button_padding_top + button_height
+        if buttons:
+            height += button_padding_top + button_height * len(buttons)
+            if len(buttons) > 1:
+                height += button_spacing * (len(buttons) - 1)
 
         tooltip_rect = pygame.Rect(mouse_pos[0] + 16, mouse_pos[1] + 16, width, height)
         surface_rect = surface.get_rect()
@@ -2598,32 +2658,44 @@ class HangarView:
             cursor_y += surf.get_height() + spacing
         cursor_y -= spacing
 
-        button_rect = pygame.Rect(
-            tooltip_rect.x + padding,
-            cursor_y + button_padding_top,
-            tooltip_rect.width - padding * 2,
-            button_height,
-        )
-        can_unequip = bool(widget.filled and self._current_ship and self._current_ship.can_store_in_hold())
-        fill_color = (40, 68, 92, 240) if can_unequip else (24, 36, 48, 200)
-        border_color = (150, 210, 250) if can_unequip else (70, 96, 122)
-        self._blit_panel(surface, button_rect, fill_color, border_color)
-        label_color = (220, 236, 250) if can_unequip else (150, 170, 188)
-        button_label = self.mini_font.render("Unequip", True, label_color)
-        surface.blit(
-            button_label,
-            (
-                button_rect.centerx - button_label.get_width() // 2,
-                button_rect.centery - button_label.get_height() // 2,
-            ),
-        )
-        if not can_unequip and self._current_ship and self._current_ship.hold_item_count() >= self._current_ship.hold_capacity:
-            warning = self.mini_font.render("Hold full", True, (210, 140, 140))
-            surface.blit(warning, (button_rect.x, button_rect.bottom + 6))
+        last_button_rect: Optional[pygame.Rect] = None
+        for index, (label, enabled, action) in enumerate(buttons):
+            button_rect = pygame.Rect(
+                tooltip_rect.x + padding,
+                cursor_y + button_padding_top + index * (button_height + button_spacing),
+                tooltip_rect.width - padding * 2,
+                button_height,
+            )
+            if action == "upgrade":
+                fill_color = (70, 130, 180, 240) if enabled else (32, 44, 58, 200)
+                border_color = (170, 230, 255) if enabled else (70, 96, 120)
+            else:
+                fill_color = (40, 68, 92, 240) if enabled else (24, 36, 48, 200)
+                border_color = (150, 210, 250) if enabled else (70, 96, 122)
+            self._blit_panel(surface, button_rect, fill_color, border_color)
+            label_color = (220, 236, 250) if enabled else (150, 170, 188)
+            button_label = self.mini_font.render(label, True, label_color)
+            surface.blit(
+                button_label,
+                (
+                    button_rect.centerx - button_label.get_width() // 2,
+                    button_rect.centery - button_label.get_height() // 2,
+                ),
+            )
+            self._tooltip_buttons.append(
+                _TooltipButton(rect=button_rect, enabled=enabled, action=action, slot=widget)
+            )
+            last_button_rect = button_rect
 
-        self._tooltip_button_rect = button_rect
-        self._tooltip_button_slot = widget
-        self._tooltip_button_enabled = can_unequip
+        if (
+            buttons
+            and not can_unequip
+            and self._current_ship
+            and self._current_ship.hold_item_count() >= self._current_ship.hold_capacity
+        ):
+            warning = self.mini_font.render("Hold full", True, (210, 140, 140))
+            target_rect = last_button_rect or tooltip_rect
+            surface.blit(warning, (target_rect.x, target_rect.bottom + 6))
 
 
 __all__ = ["HangarView"]
