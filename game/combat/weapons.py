@@ -5,7 +5,7 @@ import json
 from dataclasses import dataclass
 from math import radians
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional, TYPE_CHECKING
 
 from pygame.math import Vector3
 
@@ -16,6 +16,9 @@ from game.combat.formulas import (
     calculate_hit_chance,
 )
 from game.engine.logger import ChannelLogger
+
+if TYPE_CHECKING:
+    from game.ships.ship import Ship
 
 
 MAGNETISM_ANGLE = 5.5
@@ -192,6 +195,7 @@ class Projectile:
         ttl: float,
         team: str,
         *,
+        source_ship: "Ship | None" = None,
         visual_only: bool = False,
     ) -> None:
         self.weapon = weapon
@@ -202,6 +206,7 @@ class Projectile:
         self.team = team
         self.lock_strength = 1.0
         self.visual_only = visual_only
+        self.source_ship = source_ship
 
     def update(self, dt: float, logger: Optional[ChannelLogger] = None) -> None:
         self.position += self.velocity * dt

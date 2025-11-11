@@ -155,7 +155,11 @@ class SpaceWorld:
                 hit_radius = max(5.0, target_asteroid.radius)
                 if distance <= hit_radius:
                     if not projectile.visual_only:
-                        self._apply_asteroid_damage(target_asteroid, projectile.weapon.base_damage)
+                        self._apply_asteroid_damage(
+                            target_asteroid,
+                            projectile.weapon.base_damage,
+                            projectile.source_ship,
+                        )
                     self.projectiles.remove(projectile)
                     continue
                 if projectile.weapon.wclass == "missile" and to_target.length_squared() > 0.0:
@@ -318,7 +322,7 @@ class SpaceWorld:
                     if ship.team == "player" or target_ship.team == "player":
                         self.threat_timer = max(self.threat_timer, 12.0)
                 elif target_asteroid:
-                    self._apply_asteroid_damage(target_asteroid, result.damage)
+                    self._apply_asteroid_damage(target_asteroid, result.damage, ship)
             bullet_speed = weapon.projectile_speed if weapon.projectile_speed > 0.0 else HITSCAN_BULLET_SPEED
             bullet_velocity = aim_direction * bullet_speed + ship.kinematics.velocity
             travel_distance = distance if distance > 0.0 else weapon.max_range
@@ -335,6 +339,7 @@ class SpaceWorld:
                 target_id=target_id,
                 ttl=ttl,
                 team=ship.team,
+                source_ship=ship,
                 visual_only=True,
             )
             self.projectiles.append(tracer)
@@ -366,6 +371,7 @@ class SpaceWorld:
                 target_id=target_id,
                 ttl=weapon.max_range / max(1.0, weapon.projectile_speed),
                 team=ship.team,
+                source_ship=ship,
             )
             self.projectiles.append(projectile)
             if target_ship and (ship.team == "player" or target_ship.team == "player"):
@@ -401,12 +407,25 @@ class SpaceWorld:
         if target.team == "player":
             self.threat_timer = max(self.threat_timer, 12.0)
 
-    def _apply_asteroid_damage(self, target: Asteroid, damage: float) -> None:
+    def _apply_asteroid_damage(
+        self,
+        target: Asteroid,
+        damage: float,
+        source: Ship | None = None,
+    ) -> None:
         if damage <= 0.0:
             return
         applied = target.take_damage(damage)
-        if applied > 0.0:
-            self.asteroids.prune_destroyed()
+        if applied <= 0.0:
+            return
+        if target.is_destroyed():
+            if source and target.resource_amount > 0.0:
+                resource_key = target.inventory_resource_key
+                if resource_key and hasattr(source.resources, resource_key):
+                    source.resources.add(resource_key, target.resource_amount)
+            target.resource_amount = 0.0
+            target.resource = None
+        self.asteroids.prune_destroyed()
 
     def _apply_collision_damage(self, target: Ship, damage: float) -> None:
         if damage <= 0.0:
