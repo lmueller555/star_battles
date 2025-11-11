@@ -324,11 +324,27 @@ class _StoreContext:
         self.selected_item: Optional[str] = None
 
     def bind_ship(self, ship: Ship) -> None:
-        if self.ship is ship:
-            return
-        self.ship = ship
+        if self.ship is not ship:
+            self.ship = ship
+            self.selected_item = None
+        self.sync_inventory()
+
+    def sync_inventory(self) -> None:
         self.inventory = InventoryState()
-        self.selected_item = None
+        ship = self.ship
+        if not ship:
+            return
+        for item_id, quantity in ship.hold_items.items():
+            if quantity <= 0:
+                continue
+            self.inventory.owned[item_id] = quantity
+        for slot_type, modules in ship.modules_by_slot.items():
+            for module in modules:
+                item_id = module.id
+                if not item_id:
+                    continue
+                self.inventory.owned[item_id] = self.inventory.owned.get(item_id, 0) + 1
+                self.inventory.equipped.setdefault(slot_type, []).append(item_id)
 
     def available_currency(self) -> float:
         if not self.ship:
@@ -388,8 +404,15 @@ class StoreService:
             return {"success": False, "error": "Item not found."}
         if ship.resources.cubits < item.price:
             return {"success": False, "error": "Insufficient funds."}
+        if not ship.can_store_in_hold():
+            return {"success": False, "error": "Hold is full."}
         ship.resources.cubits -= item.price
+        stored = ship.add_hold_item(item.id)
+        if not stored:
+            ship.resources.cubits += item.price
+            return {"success": False, "error": "Hold is full."}
         self._context.inventory.add(item)
+        self._context.sync_inventory()
         capacity = 0
         if item.slot_family == "hull":
             capacity = int(ship.frame.slots.hull)

@@ -8,11 +8,11 @@ from typing import Dict, Iterable, List, Optional, Tuple
 import pygame
 from pygame.math import Vector2
 
-from game.assets.content import ContentManager
+from game.assets.content import ContentManager, ItemData
 from game.ships.ship import Ship, WeaponMount
 from game.world.station import DockingStation
 from game.ui.ship_info import DEFAULT_ANCHORS, MODEL_LAYOUTS
-from game.ui.strike_store import ItemCardData, StoreFilters, StoreItem, fitting, store
+from game.ui.strike_store import CATALOG, ItemCardData, StoreFilters, StoreItem, fitting, store
 
 
 @dataclass
@@ -23,6 +23,7 @@ class _SlotDisplay:
     filled: bool
     category: str
     slot_type: str
+    index: int = 0
 
 
 @dataclass
@@ -36,6 +37,9 @@ class _HoldItem:
     sell_currency: Optional[str] = None
     price_icon_key: Optional[str] = None
     description: Optional[str] = None
+    equippable: bool = False
+    slot_family: Optional[str] = None
+    store_item: Optional[StoreItem] = None
 
 
 @dataclass
@@ -43,6 +47,8 @@ class _HoldRow:
     item: _HoldItem
     rect: pygame.Rect
     button_rect: Optional[pygame.Rect]
+    action: Optional[str] = None
+    enabled: bool = False
 
 
 @dataclass
@@ -221,6 +227,9 @@ class HangarView:
         self._ship_widgets: List[_SlotDisplay] = []
         self._active_slot_label: Optional[str] = None
         self._active_slot_mouse_pos: Optional[Tuple[int, int]] = None
+        self._tooltip_button_rect: Optional[pygame.Rect] = None
+        self._tooltip_button_slot: Optional[_SlotDisplay] = None
+        self._tooltip_button_enabled: bool = False
 
     def set_surface(self, surface: pygame.Surface) -> None:
         """Update the target surface when the display size changes."""
@@ -259,6 +268,16 @@ class HangarView:
             pos = getattr(event, "pos", None)
             if not pos:
                 return False
+            if (
+                self._tooltip_button_rect
+                and self._tooltip_button_rect.collidepoint(pos)
+                and self._tooltip_button_slot
+            ):
+                if self._tooltip_button_enabled and self._tooltip_button_slot.filled:
+                    if self._unequip_slot(self._tooltip_button_slot):
+                        self._play_confirm_sound()
+                self._clear_active_slot()
+                return True
             slot = self._slot_at_position(pos)
             if slot:
                 if self._active_slot_label == slot.label:
@@ -272,14 +291,14 @@ class HangarView:
                 return True
             if self.active_option == "Hold":
                 for row in self._hold_rows:
-                    if (
-                        row.button_rect
-                        and row.item.can_sell
-                        and row.item.amount > 0.0
-                        and row.button_rect.collidepoint(pos)
-                    ):
-                        self._open_sell_dialog(row.item)
-                        self._clear_active_slot()
+                    if row.button_rect and row.button_rect.collidepoint(pos):
+                        if row.action == "sell" and row.item.can_sell and row.item.amount > 0.0:
+                            self._open_sell_dialog(row.item)
+                            self._clear_active_slot()
+                        elif row.action == "equip" and row.enabled:
+                            if self._equip_hold_item(row.item):
+                                self._play_confirm_sound()
+                                self._clear_active_slot()
                         return True
             for option, rect in self._ribbon_rects.items():
                 if rect.collidepoint(pos):
@@ -298,6 +317,9 @@ class HangarView:
 
     def draw(self, surface: pygame.Surface, ship: Ship, station: DockingStation, distance: float) -> None:
         self._current_ship = ship
+        self._tooltip_button_rect = None
+        self._tooltip_button_slot = None
+        self._tooltip_button_enabled = False
         width, height = surface.get_size()
         self._interior.draw(surface)
         panel_width = int(width * 0.78)
@@ -870,7 +892,13 @@ class HangarView:
         self._hold_rows = []
         row_height = 76
         spacing = 10
-        y = rect.y + 12
+        capacity_text = self.mini_font.render(
+            f"Capacity: {ship.hold_item_count():.0f}/{ship.hold_capacity}",
+            True,
+            (214, 232, 255) if ship.hold_item_count() < ship.hold_capacity else (220, 160, 150),
+        )
+        surface.blit(capacity_text, (rect.x + 16, rect.y + 12))
+        y = rect.y + 36
         for item in items:
             row_rect = pygame.Rect(rect.x + 12, y, rect.width - 24, row_height)
             fill = (18, 30, 44, 220) if item.can_sell else (14, 24, 34, 200)
@@ -896,7 +924,28 @@ class HangarView:
                 surface.blit(desc_text, (text_x, row_rect.y + 54))
 
             button_rect: Optional[pygame.Rect] = None
-            if item.can_sell and item.sell_rate and item.sell_currency and item.price_icon_key:
+            action: Optional[str] = None
+            enabled = False
+            if item.equippable and item.store_item:
+                button_rect = pygame.Rect(row_rect.right - 110, row_rect.centery - 18, 98, 36)
+                enabled = item.amount > 0.0 and self._can_equip_store_item(ship, item.store_item)
+                action = "equip"
+                fill_color = (60, 110, 150, 230) if enabled else (34, 46, 60, 200)
+                border_color = (150, 220, 255) if enabled else (72, 96, 120)
+                self._blit_panel(surface, button_rect, fill_color, border_color, 1)
+                label = self.small_font.render("Equip", True, (220, 238, 255) if enabled else (150, 170, 188))
+                surface.blit(
+                    label,
+                    (
+                        button_rect.centerx - label.get_width() // 2,
+                        button_rect.centery - label.get_height() // 2,
+                    ),
+                )
+                if not enabled:
+                    status = "No free slot" if item.amount > 0.0 else "None owned"
+                    note_text = self.mini_font.render(status, True, (150, 170, 188))
+                    surface.blit(note_text, (row_rect.x + 16, row_rect.bottom - note_text.get_height() - 12))
+            elif item.can_sell and item.sell_rate and item.sell_currency and item.price_icon_key:
                 price_icon = self._price_icons.get(item.price_icon_key)
                 currency_name = self._format_currency_name(item.sell_currency)
                 price_value = self._format_amount_display(item.sell_rate or 0.0)
@@ -930,6 +979,8 @@ class HangarView:
                         button_rect.centery - label.get_height() // 2,
                     ),
                 )
+                action = "sell"
+                enabled = item.amount > 0.0
             else:
                 note = "Not for sale"
                 if item.key == "cubits":
@@ -945,7 +996,9 @@ class HangarView:
                     ),
                 )
 
-            self._hold_rows.append(_HoldRow(item=item, rect=row_rect, button_rect=button_rect))
+            self._hold_rows.append(
+                _HoldRow(item=item, rect=row_rect, button_rect=button_rect, action=action, enabled=enabled)
+            )
             y += row_height + spacing
 
     def _gather_hold_items(self, ship: Ship) -> List[_HoldItem]:
@@ -988,7 +1041,125 @@ class HangarView:
                 description="Station exchange currency.",
             ),
         ]
+        for item_id in sorted(ship.hold_items.keys()):
+            quantity = ship.hold_items[item_id]
+            if quantity <= 0:
+                continue
+            store_item = CATALOG.get(item_id)
+            if store_item:
+                icon_key = store_item.slot_family
+                items.append(
+                    _HoldItem(
+                        key=item_id,
+                        name=store_item.name,
+                        amount=float(quantity),
+                        icon_key=icon_key if icon_key in self._hold_icons else "module",
+                        description=store_item.description,
+                        equippable=True,
+                        slot_family=store_item.slot_family,
+                        store_item=store_item,
+                    )
+                )
+            else:
+                items.append(
+                    _HoldItem(
+                        key=item_id,
+                        name=item_id.replace("_", " ").title(),
+                        amount=float(quantity),
+                        icon_key="module",
+                        description="Stored equipment.",
+                    )
+                )
         return items
+
+    def _can_equip_store_item(self, ship: Ship, item: StoreItem) -> bool:
+        family = item.slot_family.lower()
+        if family == "weapon":
+            return any(not mount.weapon_id for mount in ship.mounts)
+        if family in {"hull", "engine", "computer", "utility"}:
+            capacity = getattr(ship.frame.slots, family, 0)
+            return len(ship.modules_by_slot.get(family, [])) < capacity
+        return False
+
+    def _equip_hold_item(self, item: _HoldItem) -> bool:
+        ship = self._current_ship
+        if not ship or not item.store_item or item.amount <= 0.0:
+            return False
+        store_item = item.store_item
+        if not self._can_equip_store_item(ship, store_item):
+            return False
+        if not ship.remove_hold_item(store_item.id):
+            return False
+        success = False
+        family = store_item.slot_family.lower()
+        if family in {"hull", "engine", "computer", "utility"}:
+            module = ItemData(
+                id=store_item.id,
+                slot_type=store_item.slot_family,
+                name=store_item.name,
+                tags=list(store_item.tags),
+                stats=dict(store_item.stats),
+            )
+            success = ship.equip_module(module)
+        elif family == "weapon":
+            mount = self._find_available_mount(ship, store_item.slot_family)
+            if mount:
+                mount.weapon_id = store_item.id
+                success = True
+        if not success:
+            ship.add_hold_item(store_item.id)
+            return False
+        store.bind_ship(ship)
+        return True
+
+    def _find_available_mount(self, ship: Ship, slot_family: str) -> Optional[WeaponMount]:
+        normalized = slot_family.lower()
+        for mount in ship.mounts:
+            if not mount.weapon_id and self._slot_matches(mount.hardpoint.slot, normalized):
+                return mount
+        for mount in ship.mounts:
+            if not mount.weapon_id:
+                return mount
+        return None
+
+    def _weapon_mount_at_index(self, ship: Ship, slot_type: str, index: int) -> Optional[WeaponMount]:
+        normalized = slot_type.lower()
+        mounts = [
+            mount
+            for mount in ship.mounts
+            if self._slot_matches(mount.hardpoint.slot, normalized)
+        ]
+        if 0 <= index < len(mounts):
+            return mounts[index]
+        return None
+
+    def _unequip_slot(self, widget: _SlotDisplay) -> bool:
+        ship = self._current_ship
+        if not ship or not widget.filled:
+            return False
+        if not ship.can_store_in_hold():
+            return False
+        if widget.category == "weapon":
+            mount = self._weapon_mount_at_index(ship, widget.slot_type, widget.index)
+            if not mount or not mount.weapon_id:
+                return False
+            item_id = mount.weapon_id
+            if not ship.add_hold_item(item_id):
+                return False
+            mount.weapon_id = None
+            store.bind_ship(ship)
+            return True
+        module = ship.unequip_module(widget.slot_type, widget.index)
+        if not module or not module.id:
+            return False
+        if not ship.add_hold_item(module.id):
+            ship.equip_module(module)
+            modules = ship.modules_by_slot.get(widget.slot_type, [])
+            if modules:
+                modules.insert(widget.index, modules.pop())
+            return False
+        store.bind_ship(ship)
+        return True
 
     def _handle_sell_dialog_event(self, event: pygame.event.Event) -> bool:
         if not self._sell_dialog:
@@ -1296,6 +1467,7 @@ class HangarView:
                         filled=filled,
                         category="weapon",
                         slot_type=normalized,
+                        index=index,
                     )
                 )
 
@@ -1327,6 +1499,7 @@ class HangarView:
                         filled=module is not None,
                         category="module",
                         slot_type=normalized,
+                        index=index,
                     )
                 )
 
@@ -1517,6 +1690,43 @@ class HangarView:
         pygame.draw.polygon(cubits, (90, 60, 150), gem_points, 2)
         icons["cubits"] = cubits
 
+        module = surface()
+        pygame.draw.polygon(module, (160, 210, 230), [(24, 8), (38, 24), (24, 40), (10, 24)])
+        pygame.draw.polygon(module, (70, 110, 130), [(24, 12), (34, 24), (24, 36), (14, 24)], 2)
+        icons["module"] = module
+
+        hull = surface()
+        pygame.draw.rect(hull, (140, 180, 210), pygame.Rect(10, 14, 28, 20))
+        pygame.draw.rect(hull, (60, 90, 120), pygame.Rect(10, 14, 28, 20), 3)
+        pygame.draw.line(hull, (200, 230, 255), (14, 20), (34, 28), 3)
+        icons["hull"] = hull
+
+        engine = surface()
+        pygame.draw.polygon(engine, (120, 200, 255), [(16, 10), (32, 18), (28, 30), (12, 22)])
+        pygame.draw.polygon(engine, (255, 200, 120), [(12, 22), (28, 30), (24, 38), (8, 30)])
+        pygame.draw.polygon(engine, (70, 110, 160), [(16, 10), (32, 18), (28, 30), (12, 22)], 2)
+        icons["engine"] = engine
+
+        weapon = surface()
+        pygame.draw.circle(weapon, (200, 210, 220), (24, 24), 14)
+        pygame.draw.circle(weapon, (90, 110, 140), (24, 24), 14, 3)
+        pygame.draw.line(weapon, (220, 90, 90), (12, 24), (36, 24), 3)
+        pygame.draw.line(weapon, (220, 90, 90), (24, 12), (24, 36), 3)
+        icons["weapon"] = weapon
+
+        utility = surface()
+        pygame.draw.circle(utility, (220, 180, 90), (20, 20), 6)
+        pygame.draw.rect(utility, (80, 110, 150), pygame.Rect(18, 18, 16, 12))
+        pygame.draw.line(utility, (240, 220, 150), (20, 10), (36, 12), 3)
+        icons["utility"] = utility
+
+        computer = surface()
+        pygame.draw.rect(computer, (140, 200, 220), pygame.Rect(12, 14, 24, 18))
+        pygame.draw.rect(computer, (60, 90, 110), pygame.Rect(12, 14, 24, 18), 2)
+        pygame.draw.rect(computer, (70, 110, 150), pygame.Rect(16, 18, 6, 10))
+        pygame.draw.rect(computer, (70, 110, 150), pygame.Rect(24, 18, 6, 10))
+        icons["computer"] = computer
+
         return icons
 
     def _create_price_icons(self) -> Dict[str, pygame.Surface]:
@@ -1675,8 +1885,12 @@ class HangarView:
             tooltip_rect.width - padding * 2,
             button_height,
         )
-        self._blit_panel(surface, button_rect, (28, 52, 70, 240), (130, 180, 220))
-        button_label = self.mini_font.render("Upgrade", True, (220, 236, 250))
+        can_unequip = bool(widget.filled and self._current_ship and self._current_ship.can_store_in_hold())
+        fill_color = (40, 68, 92, 240) if can_unequip else (24, 36, 48, 200)
+        border_color = (150, 210, 250) if can_unequip else (70, 96, 122)
+        self._blit_panel(surface, button_rect, fill_color, border_color)
+        label_color = (220, 236, 250) if can_unequip else (150, 170, 188)
+        button_label = self.mini_font.render("Unequip", True, label_color)
         surface.blit(
             button_label,
             (
@@ -1684,6 +1898,13 @@ class HangarView:
                 button_rect.centery - button_label.get_height() // 2,
             ),
         )
+        if not can_unequip and self._current_ship and self._current_ship.hold_item_count() >= self._current_ship.hold_capacity:
+            warning = self.mini_font.render("Hold full", True, (210, 140, 140))
+            surface.blit(warning, (button_rect.x, button_rect.bottom + 6))
+
+        self._tooltip_button_rect = button_rect
+        self._tooltip_button_slot = widget
+        self._tooltip_button_enabled = can_unequip
 
 
 __all__ = ["HangarView"]

@@ -132,6 +132,8 @@ class Ship:
         self.lock_timer: float = 0.0
         self.modules_by_slot: Dict[str, list[ItemData]] = defaultdict(list)
         self._module_stat_cache: Dict[str, float] = defaultdict(float)
+        self.hold_items: Dict[str, int] = {}
+        self.hold_capacity: int = 30
         self.countermeasure_cooldown: float = 0.0
         self.auto_throttle_enabled: bool = False
         self.auto_throttle_ratio: float = 0.0
@@ -193,6 +195,44 @@ class Ship:
         installed.append(module)
         for key, value in module.stats.items():
             self._module_stat_cache[key] += float(value)
+        return True
+
+    def unequip_module(self, slot_type: str, index: int) -> ItemData | None:
+        """Remove a module from the specified slot index."""
+
+        modules = self.modules_by_slot.get(slot_type)
+        if not modules or index < 0 or index >= len(modules):
+            return None
+        module = modules.pop(index)
+        for key, value in module.stats.items():
+            self._module_stat_cache[key] -= float(value)
+        return module
+
+    def hold_item_count(self) -> int:
+        return sum(self.hold_items.values())
+
+    def can_store_in_hold(self, quantity: int = 1) -> bool:
+        return self.hold_item_count() + max(0, quantity) <= self.hold_capacity
+
+    def add_hold_item(self, item_id: str, quantity: int = 1) -> bool:
+        if quantity <= 0:
+            return True
+        if not self.can_store_in_hold(quantity):
+            return False
+        self.hold_items[item_id] = self.hold_items.get(item_id, 0) + quantity
+        return True
+
+    def remove_hold_item(self, item_id: str, quantity: int = 1) -> bool:
+        if quantity <= 0:
+            return True
+        current = self.hold_items.get(item_id, 0)
+        if current < quantity:
+            return False
+        remaining = current - quantity
+        if remaining > 0:
+            self.hold_items[item_id] = remaining
+        else:
+            self.hold_items.pop(item_id, None)
         return True
 
     def apply_default_loadout(self, content: "ContentManager") -> None:
