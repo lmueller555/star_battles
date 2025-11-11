@@ -580,28 +580,7 @@ class SandboxScene(Scene):
                 if self.hangar_open:
                     self.flank_slider_dragging = False
         if self.station_contact and self.input.consume_action("dock_explore"):
-            station, distance = self.station_contact
-            if distance <= station.docking_radius and self.world and self.player:
-                if self.ship_info_open:
-                    self._close_ship_info_panel()
-                self.hangar_open = False
-                self.player.control = ShipControlState()
-                self.player.kinematics.velocity = Vector3()
-                self.player.kinematics.angular_velocity = Vector3()
-                self._enter_ui_cursor()
-                self.world.remove_ship(self.player)
-                self.manager.activate(
-                    "outpost_interior",
-                    content=self.content,
-                    input=self.input,
-                    logger=self.logger,
-                    world=self.world,
-                    player=self.player,
-                    station=station,
-                    distance=distance,
-                )
-                return
-            self._set_combat_feedback("Dock & Explore is not available yet.", duration=2.5)
+            return
         if self.hangar_open:
             if self.hangar_view:
                 self.hangar_view.update(dt)
