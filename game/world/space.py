@@ -170,7 +170,12 @@ class SpaceWorld:
         weapons_log = self.logger.channel("weapons")
         ftl_log = self.logger.channel("ftl")
 
-        self.asteroids.update(dt)
+        player_focus = None
+        for ship in self.ships:
+            if ship.team == "player" and ship.is_alive():
+                player_focus = ship.kinematics.position
+                break
+        self.asteroids.update(dt, focus=player_focus)
 
         # Reset per-frame collision feedback.
         for ship in self.ships:
@@ -594,6 +599,9 @@ class SpaceWorld:
 
     def asteroids_in_current_system(self) -> list[Asteroid]:
         return list(self.asteroids.current_field())
+
+    def all_asteroids_in_current_system(self) -> list[Asteroid]:
+        return list(self.asteroids.all_in_current_field())
 
     def _station_ships(self, *, team: str | None = None) -> Iterable[Ship]:
         for candidate in self.ships:
