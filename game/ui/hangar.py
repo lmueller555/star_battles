@@ -210,6 +210,14 @@ class HangarView:
         self._store_hover_item: Optional[str] = None
         self._store_preview_data: Optional[Dict[str, Dict[str, float]]] = None
         self._store_cards: List[ItemCardData] = []
+        self._store_inventory_view = pygame.Rect(0, 0, 0, 0)
+        self._store_scroll_offset: float = 0.0
+        self._store_content_height: float = 0.0
+        self._store_view_height: float = 0.0
+        self._store_scrollbar_rect: Optional[pygame.Rect] = None
+        self._store_scrollbar_thumb_rect: Optional[pygame.Rect] = None
+        self._store_scrollbar_dragging: bool = False
+        self._store_scroll_drag_offset: float = 0.0
 
     def set_surface(self, surface: pygame.Surface) -> None:
         """Update the target surface when the display size changes."""
@@ -221,6 +229,29 @@ class HangarView:
 
         if self._sell_dialog and self._handle_sell_dialog_event(event):
             return True
+        if self.active_option == "Store":
+            if event.type == pygame.MOUSEWHEEL:
+                if self._store_inventory_view.collidepoint(pygame.mouse.get_pos()):
+                    self._scroll_store_by(-event.y * 60.0)
+                    return True
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button in (4, 5):
+                    pos = getattr(event, "pos", pygame.mouse.get_pos())
+                    if self._store_inventory_view.collidepoint(pos):
+                        delta = -60.0 if event.button == 4 else 60.0
+                        self._scroll_store_by(delta)
+                        return True
+                if event.button == 1:
+                    pos = getattr(event, "pos", None)
+                    if pos and self._handle_store_scrollbar_press(pos):
+                        return True
+            if event.type == pygame.MOUSEMOTION and self._store_scrollbar_dragging:
+                pos = getattr(event, "pos", None)
+                if pos:
+                    self._drag_store_scrollbar(pos[1])
+                    return True
+            if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                self._store_scrollbar_dragging = False
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             pos = getattr(event, "pos", None)
             if not pos:
@@ -370,6 +401,65 @@ class HangarView:
                     break
         self._update_store_filters()
 
+    def _scroll_store_by(self, delta: float) -> None:
+        if self._store_view_height <= 0.0 or self._store_content_height <= self._store_view_height:
+            self._store_scroll_offset = 0.0
+            return
+        max_offset = max(0.0, self._store_content_height - self._store_view_height)
+        self._store_scroll_offset = min(max(self._store_scroll_offset + delta, 0.0), max_offset)
+
+    def _scroll_store_to_fraction(self, fraction: float) -> None:
+        if self._store_view_height <= 0.0 or self._store_content_height <= self._store_view_height:
+            self._store_scroll_offset = 0.0
+            return
+        max_offset = max(0.0, self._store_content_height - self._store_view_height)
+        fraction = max(0.0, min(1.0, fraction))
+        self._store_scroll_offset = max_offset * fraction
+
+    def _handle_store_scrollbar_press(self, pos: Tuple[int, int]) -> bool:
+        if (
+            not self._store_scrollbar_rect
+            or self._store_content_height <= self._store_view_height
+            or not self._store_scrollbar_rect.collidepoint(pos)
+        ):
+            return False
+        if self._store_scrollbar_thumb_rect and self._store_scrollbar_thumb_rect.collidepoint(pos):
+            self._store_scrollbar_dragging = True
+            self._store_scroll_drag_offset = pos[1] - self._store_scrollbar_thumb_rect.y
+            return True
+        if self._store_scrollbar_thumb_rect:
+            self._jump_store_scrollbar(pos[1])
+            self._store_scrollbar_dragging = True
+            return True
+        return False
+
+    def _jump_store_scrollbar(self, mouse_y: float) -> None:
+        if not (self._store_scrollbar_rect and self._store_scrollbar_thumb_rect):
+            return
+        track_top = self._store_scrollbar_rect.y
+        track_span = self._store_scrollbar_rect.height - self._store_scrollbar_thumb_rect.height
+        if track_span <= 0:
+            self._store_scroll_drag_offset = 0.0
+            return
+        thumb_height = self._store_scrollbar_thumb_rect.height
+        new_top = mouse_y - thumb_height / 2
+        new_top = max(track_top, min(track_top + track_span, new_top))
+        self._store_scroll_drag_offset = mouse_y - new_top
+        fraction = (new_top - track_top) / track_span
+        self._scroll_store_to_fraction(fraction)
+
+    def _drag_store_scrollbar(self, mouse_y: float) -> None:
+        if not (self._store_scrollbar_rect and self._store_scrollbar_thumb_rect):
+            return
+        track_top = self._store_scrollbar_rect.y
+        track_span = self._store_scrollbar_rect.height - self._store_scrollbar_thumb_rect.height
+        if track_span <= 0:
+            return
+        new_top = mouse_y - self._store_scroll_drag_offset
+        new_top = max(track_top, min(track_top + track_span, new_top))
+        fraction = (new_top - track_top) / track_span
+        self._scroll_store_to_fraction(fraction)
+
     def _handle_store_click(self, pos: Tuple[int, int]) -> bool:
         ship = self._current_ship
         if ship:
@@ -484,28 +574,87 @@ class HangarView:
         grid_rect.y = rect.y + 56
         self._blit_panel(surface, grid_rect, (12, 20, 30, 210), (60, 96, 134))
         padding = 16
-        columns = 1 if grid_rect.width < 420 else 2
-        card_width = (grid_rect.width - padding * (columns + 1)) // columns
+        scrollbar_width = 12
+        track_gap = 6
+        card_area_width = max(0, grid_rect.width - scrollbar_width - track_gap)
+        columns = 1 if card_area_width < 420 else 2
+        columns = max(1, columns)
+        available_width = card_area_width - padding * (columns + 1)
+        if available_width <= 0:
+            card_width = max(1, card_area_width - 2 * padding)
+        else:
+            card_width = available_width // columns
         card_height = 240
         mouse_pos = pygame.mouse.get_pos()
         self._store_cards = store.list_items(self._store_filters)
         self._store_card_rects = {}
         self._store_buy_rects = {}
         self._store_hover_item = None
+        view_width = max(0, card_area_width - 2 * padding)
+        view_height = max(0, grid_rect.height - 2 * padding)
+        self._store_inventory_view = pygame.Rect(
+            grid_rect.x + padding,
+            grid_rect.y + padding,
+            view_width,
+            view_height,
+        )
+        total_rows = (len(self._store_cards) + columns - 1) // columns if self._store_cards else 0
+        if total_rows > 0:
+            content_height = padding + total_rows * (card_height + padding)
+        else:
+            content_height = view_height
+        self._store_view_height = float(view_height)
+        self._store_content_height = float(max(content_height, view_height))
+        max_offset = max(0.0, self._store_content_height - self._store_view_height)
+        if max_offset <= 0.0:
+            self._store_scroll_offset = 0.0
+            self._store_scrollbar_dragging = False
+        else:
+            self._store_scroll_offset = min(self._store_scroll_offset, max_offset)
+        if self._store_inventory_view.width > 0 and self._store_inventory_view.height > 0:
+            surface.set_clip(self._store_inventory_view)
+        origin_x = grid_rect.x + padding
+        origin_y = grid_rect.y + padding
         for index, card in enumerate(self._store_cards):
             col = index % columns
             row = index // columns
             card_rect = pygame.Rect(
-                grid_rect.x + padding + col * (card_width + padding),
-                grid_rect.y + padding + row * (card_height + padding),
+                origin_x + col * (card_width + padding),
+                origin_y + row * (card_height + padding) - int(self._store_scroll_offset),
                 card_width,
                 card_height,
             )
+            if card_rect.bottom < self._store_inventory_view.top or card_rect.top > self._store_inventory_view.bottom:
+                continue
             self._draw_store_card(surface, card_rect, card, mouse_pos)
             self._store_card_rects[card.item.id] = card_rect
+        surface.set_clip(None)
         if not self._store_cards:
             empty_text = self.small_font.render("No items match the current filters.", True, (170, 196, 214))
             surface.blit(empty_text, (grid_rect.x + 18, grid_rect.y + 24))
+        scrollbar_rect = pygame.Rect(
+            grid_rect.x + card_area_width + track_gap,
+            grid_rect.y + padding,
+            scrollbar_width,
+            view_height,
+        )
+        self._store_scrollbar_rect = scrollbar_rect
+        self._store_scrollbar_thumb_rect = None
+        if scrollbar_rect.width > 0 and scrollbar_rect.height > 0:
+            self._blit_panel(surface, scrollbar_rect, (20, 32, 44, 200), (58, 90, 120))
+            if max_offset > 0.0:
+                thumb_ratio = self._store_view_height / self._store_content_height if self._store_content_height else 1.0
+                thumb_height = max(36, int(scrollbar_rect.height * thumb_ratio))
+                thumb_height = min(scrollbar_rect.height, thumb_height)
+                track_span = scrollbar_rect.height - thumb_height
+                if track_span <= 0:
+                    thumb_top = scrollbar_rect.y
+                else:
+                    fraction = self._store_scroll_offset / max_offset if max_offset else 0.0
+                    thumb_top = scrollbar_rect.y + int(track_span * fraction)
+                thumb_rect = pygame.Rect(scrollbar_rect.x, thumb_top, scrollbar_rect.width, thumb_height)
+                self._store_scrollbar_thumb_rect = thumb_rect
+                self._blit_panel(surface, thumb_rect, (52, 86, 116, 220), (142, 202, 248))
 
     def _draw_store_card(
         self,
