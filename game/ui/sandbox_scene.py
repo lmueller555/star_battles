@@ -161,7 +161,7 @@ class SandboxScene(Scene):
                         ai = create_ai_for_ship(ship)
                         self.world.add_ship(ship, ai=ai)
 
-                edge_distance = AsteroidField.FIELD_RADIUS * 0.95
+                edge_distance = AsteroidField.FIELD_RADIUS * 0.75
                 outpost_spawns: list[tuple[str, str, Vector3]] = [
                     ("player", "outpost_regular", Vector3(-edge_distance, 0.0, -edge_distance)),
                     ("enemy", "outpost_regular", Vector3(edge_distance, 0.0, edge_distance)),
