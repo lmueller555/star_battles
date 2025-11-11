@@ -198,7 +198,7 @@ class ChaseCamera:
             self.right = self.right.normalize()
             self.up = self.right.cross(self.forward).normalize()
 
-        base_fov = min(self.base_fov + speed * 0.12, self.base_fov + 25.0)
+        base_fov = self.base_fov
         desired_fov = base_fov
         if lock_distance > 0.0:
             distance_ratio = min(1.0, lock_distance / 1200.0)
