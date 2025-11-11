@@ -7,7 +7,12 @@ from typing import Iterable, List, Optional, TYPE_CHECKING
 from pygame.math import Vector3
 
 from game.combat.targeting import update_lock
-from game.combat.weapons import HitResult, Projectile, WeaponDatabase, resolve_hitscan
+from game.combat.weapons import (
+    HitResult,
+    Projectile,
+    WeaponDatabase,
+    resolve_hitscan,
+)
 from game.engine.logger import ChannelLogger, GameLogger
 from game.math.ballistics import compute_lead
 from game.ships.flight import update_ship_flight
@@ -34,6 +39,7 @@ COLLISION_MASS = {
 
 COLLISION_RESTITUTION = 0.35
 COLLISION_DAMAGE_SCALE = 6.0
+HITSCAN_BULLET_SPEED = 1800.0
 
 if TYPE_CHECKING:
     from game.world.ai import ShipAI
@@ -134,7 +140,8 @@ class SpaceWorld:
                 to_target = target.kinematics.position - projectile.position
                 distance = to_target.length()
                 if distance < 5.0:
-                    self._apply_damage(target, projectile.weapon.base_damage)
+                    if not projectile.visual_only:
+                        self._apply_damage(target, projectile.weapon.base_damage)
                     self.projectiles.remove(projectile)
                     continue
                 if projectile.weapon.wclass == "missile":
@@ -222,27 +229,33 @@ class SpaceWorld:
         weapon = self.weapons.get(mount.weapon_id)
         if mount.cooldown > 0.0:
             return None
-        if ship.power < weapon.power_per_shot:
+        power_cost = weapon.power_cost
+        if ship.power < power_cost:
             return None
-        ship.power -= weapon.power_per_shot
+        ship.power -= power_cost
         mount.cooldown = weapon.cooldown
         forward = ship.kinematics.forward()
+        right = ship.kinematics.right()
+        up = ship.kinematics.up()
+        muzzle = self._weapon_muzzle_position(ship, mount, forward, right, up)
         to_target = None
         distance = 0.0
         angle_error = 0.0
+        aim_direction = forward
         effective_gimbal = weapon.gimbal
         if mount.hardpoint:
             effective_gimbal = min(effective_gimbal, mount.hardpoint.gimbal)
         if target:
-            to_target = target.kinematics.position - ship.kinematics.position
+            to_target = target.kinematics.position - muzzle
             distance = to_target.length()
             if distance > 0.0:
-                angle_error = forward.angle_to(to_target.normalize())
+                aim_direction = to_target.normalize()
+                angle_error = forward.angle_to(aim_direction)
             if angle_error > effective_gimbal:
                 return None
         if weapon.wclass == "hitscan" and target:
             result = resolve_hitscan(
-                ship.kinematics.position,
+                muzzle,
                 forward,
                 weapon,
                 target.kinematics.position,
@@ -261,17 +274,31 @@ class SpaceWorld:
                 self._apply_damage(target, result.damage)
                 if ship.team == "player" or target.team == "player":
                     self.threat_timer = max(self.threat_timer, 12.0)
+            bullet_speed = weapon.projectile_speed if weapon.projectile_speed > 0.0 else HITSCAN_BULLET_SPEED
+            bullet_velocity = aim_direction * bullet_speed + ship.kinematics.velocity
+            travel_distance = distance if distance > 0.0 else weapon.max_range
+            ttl = max(0.1, travel_distance / max(1.0, bullet_speed))
+            tracer = Projectile(
+                weapon=weapon,
+                position=muzzle,
+                velocity=bullet_velocity,
+                target_id=id(target),
+                ttl=ttl,
+                team=ship.team,
+                visual_only=True,
+            )
+            self.projectiles.append(tracer)
             return result
         else:
-            launch_direction = forward
+            launch_direction = aim_direction
             if target and weapon.projectile_speed > 0.0:
                 lead_point = compute_lead(
-                    ship.kinematics.position,
+                    muzzle,
                     target.kinematics.position,
                     target.kinematics.velocity,
                     weapon.projectile_speed,
                 )
-                to_lead = lead_point - ship.kinematics.position
+                to_lead = lead_point - muzzle
                 if to_lead.length_squared() > 0:
                     launch_direction = to_lead.normalize()
             if target and angle_error > effective_gimbal:
@@ -279,7 +306,7 @@ class SpaceWorld:
             velocity = launch_direction * weapon.projectile_speed + ship.kinematics.velocity
             projectile = Projectile(
                 weapon=weapon,
-                position=ship.kinematics.position + launch_direction * 3.0,
+                position=muzzle,
                 velocity=velocity,
                 target_id=id(target) if target else None,
                 ttl=weapon.max_range / max(1.0, weapon.projectile_speed),
@@ -289,6 +316,19 @@ class SpaceWorld:
             if target and (ship.team == "player" or target.team == "player"):
                 self.threat_timer = max(self.threat_timer, 12.0)
             return None
+
+    @staticmethod
+    def _weapon_muzzle_position(
+        ship: Ship,
+        mount: WeaponMount,
+        forward: Vector3,
+        right: Vector3,
+        up: Vector3,
+    ) -> Vector3:
+        local = getattr(mount.hardpoint, "position", None)
+        if local is None:
+            return ship.kinematics.position
+        return ship.kinematics.position + right * local.x + up * local.y + forward * local.z
 
     def _apply_damage(self, target: Ship, damage: float) -> None:
         if target.durability > 0.0:
