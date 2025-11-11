@@ -25,8 +25,8 @@ from game.world.asteroids import Asteroid, AsteroidField
 
 COLLISION_RADII = {
     "Strike": 9.0,
-    "Escort": 12.0,
-    "Line": 16.0,
+    "Escort": 32.0,
+    "Line": 130.0,
     "Outpost": 260.0,
 }
 
