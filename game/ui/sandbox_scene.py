@@ -614,7 +614,7 @@ class SandboxScene(Scene):
             overlay_object = target
         target_overlay = self._build_target_overlay(overlay_object)
 
-        if self.dradis:
+        if self.dradis and not self.hangar_open:
             self.hud.draw(
                 self.camera,
                 self.player,

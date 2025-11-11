@@ -181,8 +181,7 @@ class HangarView:
         panel_width = int(width * 0.78)
         panel_height = int(height * 0.72)
         panel_rect = pygame.Rect((width - panel_width) // 2, (height - panel_height) // 2, panel_width, panel_height)
-        pygame.draw.rect(surface, (12, 18, 26), panel_rect)
-        pygame.draw.rect(surface, (82, 132, 168), panel_rect, 2)
+        self._blit_panel(surface, panel_rect, (12, 18, 26, 210), (82, 132, 168), 2)
 
         title = self.font.render(f"Docked at {station.name}", True, (220, 240, 255))
         surface.blit(title, (panel_rect.x + 28, panel_rect.y + 18))
@@ -213,18 +212,16 @@ class HangarView:
 
     # ------------------------------------------------------------------
     def _draw_ribbon(self, surface: pygame.Surface, rect: pygame.Rect) -> None:
-        pygame.draw.rect(surface, (16, 28, 38), rect)
-        pygame.draw.rect(surface, (70, 110, 150), rect, 1)
+        self._blit_panel(surface, rect, (16, 28, 38, 200), (70, 110, 150))
         option_width = rect.width // len(self.ribbon_options)
         self._ribbon_rects = {}
         for index, option in enumerate(self.ribbon_options):
             option_rect = pygame.Rect(rect.x + index * option_width, rect.y, option_width, rect.height)
             is_active = option == self.active_option
-            color = (36, 60, 82) if is_active else (20, 32, 44)
+            color = (36, 60, 82, 220) if is_active else (20, 32, 44, 200)
             border_color = (150, 220, 255) if is_active else (70, 110, 150)
             button_rect = option_rect.inflate(-4, -6)
-            pygame.draw.rect(surface, color, button_rect)
-            pygame.draw.rect(surface, border_color, button_rect, 2)
+            self._blit_panel(surface, button_rect, color, border_color, 2)
             label = self.font.render(option, True, (220, 236, 250))
             surface.blit(
                 label,
@@ -236,15 +233,13 @@ class HangarView:
             self._ribbon_rects[option] = button_rect
 
     def _draw_left_panel(self, surface: pygame.Surface, rect: pygame.Rect) -> None:
-        pygame.draw.rect(surface, (14, 24, 32), rect)
-        pygame.draw.rect(surface, (60, 98, 134), rect, 1)
+        self._blit_panel(surface, rect, (14, 24, 32, 210), (60, 98, 134))
         title = self.font.render(self.active_option, True, (210, 230, 250))
         surface.blit(title, (rect.x + 20, rect.y + 16))
 
         content_rect = rect.inflate(-40, -72)
         content_rect.y = rect.y + 54
-        pygame.draw.rect(surface, (10, 18, 26), content_rect)
-        pygame.draw.rect(surface, (50, 88, 120), content_rect, 1)
+        self._blit_panel(surface, content_rect, (10, 18, 26, 200), (50, 88, 120))
 
         lines = self._panel_lines_for_option(self.active_option)
         for idx, line in enumerate(lines):
@@ -252,8 +247,7 @@ class HangarView:
             surface.blit(text, (content_rect.x + 16, content_rect.y + 18 + idx * 20))
 
     def _draw_ship_panel(self, surface: pygame.Surface, rect: pygame.Rect, ship: Ship) -> None:
-        pygame.draw.rect(surface, (18, 28, 40), rect)
-        pygame.draw.rect(surface, (70, 110, 150), rect, 1)
+        self._blit_panel(surface, rect, (18, 28, 40, 210), (70, 110, 150))
         header = self.font.render("Ship Overview", True, (210, 236, 255))
         surface.blit(header, (rect.x + 24, rect.y + 16))
 
@@ -280,14 +274,30 @@ class HangarView:
                 ),
             )
 
-        pygame.draw.rect(surface, (16, 28, 40), detail_rect)
-        pygame.draw.rect(surface, (60, 98, 134), detail_rect, 1)
+        self._blit_panel(surface, detail_rect, (16, 28, 40, 210), (60, 98, 134))
         detail_title = self.small_font.render("Installed Equipment", True, (200, 224, 242))
         surface.blit(detail_title, (detail_rect.x + 12, detail_rect.y + 10))
         detail_lines = self._equipment_lines(widgets)
         for idx, line in enumerate(detail_lines):
             text = self.small_font.render(line, True, (180, 208, 228))
             surface.blit(text, (detail_rect.x + 12, detail_rect.y + 34 + idx * 18))
+
+    def _blit_panel(
+        self,
+        target: pygame.Surface,
+        rect: pygame.Rect,
+        fill_color: Tuple[int, ...],
+        border_color: Tuple[int, int, int] | None = None,
+        border_width: int = 1,
+    ) -> None:
+        overlay = pygame.Surface(rect.size, pygame.SRCALPHA)
+        if len(fill_color) == 3:
+            overlay.fill((*fill_color, 255))
+        else:
+            overlay.fill(fill_color)
+        target.blit(overlay, rect.topleft)
+        if border_color and border_width > 0:
+            pygame.draw.rect(target, border_color, rect, border_width)
 
     # ------------------------------------------------------------------
     def _build_ship_layout(self, ship: Ship, rect: pygame.Rect) -> tuple[List[tuple[int, int]], List[_SlotDisplay]]:
