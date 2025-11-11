@@ -76,6 +76,7 @@ class _InteriorLayout:
         self.lights: List[_LightSource] = []
         self.labels: List[_RoomLabel] = []
         self.spawn_point = Vector2()
+        self._hangar_bounds = pygame.Rect(0, 0, 0, 0)
         self._build()
 
     def _build(self) -> None:
@@ -110,6 +111,7 @@ class _InteriorLayout:
             self.rooms.append(rect)
 
         self.spawn_point = self._tile_center(hangar.left + hangar.width // 2, hangar.top + hangar.height // 2)
+        self._hangar_bounds = hangar.copy()
 
         # Decorative floor strips to add visual depth.
         hangar_detail_start = hangar.x * tile + int(tile * 0.6)
@@ -203,6 +205,16 @@ class _InteriorLayout:
             rect.width * self.tile_size,
             rect.height * self.tile_size,
         )
+
+    def tile_zone(self, tx: int, ty: int) -> str:
+        """Identify the interior zone that contains the given tile."""
+        if not (0 <= tx < self.cols and 0 <= ty < self.rows):
+            return "void"
+        if not self.walkable[ty][tx]:
+            return "wall"
+        if self._hangar_bounds.collidepoint(tx, ty):
+            return "hangar"
+        return "interior"
 
     def is_walkable_point(self, pos: Vector2) -> bool:
         tx = int(pos.x // self.tile_size)
@@ -770,7 +782,12 @@ class OutpostInteriorScene(Scene):
 
             hit = False
             side = 0
+            prev_map_x = map_x
+            prev_map_y = map_y
+            zone = "void"
             for _ in range(128):
+                prev_map_x = map_x
+                prev_map_y = map_y
                 if side_dist_x < side_dist_y:
                     side_dist_x += delta_dist_x
                     map_x += step_x
@@ -783,6 +800,7 @@ class OutpostInteriorScene(Scene):
                     break
                 if not self.layout.walkable[map_y][map_x]:
                     hit = True
+                    zone = self.layout.tile_zone(prev_map_x, prev_map_y)
                     break
             if not hit:
                 continue
@@ -794,7 +812,12 @@ class OutpostInteriorScene(Scene):
             perp_dist = max(perp_dist, 1e-3)
             world_dist = perp_dist * tile_size
             wall_height = int((height * tile_size * 0.9) / world_dist)
-            wall_height = max(2, min(height * 2, wall_height))
+            if zone == "hangar":
+                wall_height = int(wall_height * 10.0)
+                wall_height = max(2, min(height * 12, wall_height))
+            else:
+                wall_height = int(wall_height * 2.0)
+                wall_height = max(2, min(height * 4, wall_height))
             draw_start = max(0, horizon - wall_height // 2)
             draw_end = min(height, horizon + wall_height // 2)
 
@@ -810,6 +833,9 @@ class OutpostInteriorScene(Scene):
             color = tuple(int(c * shading) for c in base_color)
             rect = pygame.Rect(column, draw_start, column_step, max(1, draw_end - draw_start))
             surface.fill(color, rect)
+            ceiling_color = tuple(min(255, int(c * 1.18 + 8)) for c in base_color)
+            ceiling_rect = pygame.Rect(column, 0, column_step, draw_start)
+            surface.fill(ceiling_color, ceiling_rect)
             if column_step > 1:
                 highlight = tuple(min(255, int(c * 1.08)) for c in color)
                 surface.fill(highlight, pygame.Rect(column, draw_start, 1, rect.height))
