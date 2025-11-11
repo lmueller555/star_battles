@@ -50,42 +50,84 @@ def add_node(node_id: str, layer: str, points: list[tuple[float, float, float]],
 
 # --- Hangar geometry ------------------------------------------------------
 floor_outline = [(-40.0, -40.0, 0.0), (40.0, -40.0, 0.0), (40.0, 40.0, 0.0), (-40.0, 40.0, 0.0)]
+HANGAR_FLOOR_Z = 0.0
+HANGAR_HEIGHT = 45.0
+HANGAR_CEILING_Z = HANGAR_FLOOR_Z + HANGAR_HEIGHT
+
 add_node("hangar_floor", layers["floor"], floor_outline, type_="polyline_closed", style="primary")
 
 corners = [(-40.0, -40.0), (40.0, -40.0), (40.0, 40.0), (-40.0, 40.0)]
 for idx, (x, y) in enumerate(corners):
-    add_node(f"hangar_wall_column_{idx}", layers["walls"], [(x, y, 0.0), (x, y, 30.0)], style="primary")
+    add_node(
+        f"hangar_wall_column_{idx}",
+        layers["walls"],
+        [(x, y, HANGAR_FLOOR_Z), (x, y, HANGAR_CEILING_Z)],
+        style="primary",
+    )
 
 add_node(
     "hangar_wall_base",
     layers["walls"],
-    [(-40.0, -40.0, 0.0), (40.0, -40.0, 0.0), (40.0, 40.0, 0.0), (-40.0, 40.0, 0.0), (-40.0, -40.0, 0.0)],
+    [
+        (-40.0, -40.0, HANGAR_FLOOR_Z),
+        (40.0, -40.0, HANGAR_FLOOR_Z),
+        (40.0, 40.0, HANGAR_FLOOR_Z),
+        (-40.0, 40.0, HANGAR_FLOOR_Z),
+        (-40.0, -40.0, HANGAR_FLOOR_Z),
+    ],
     style="secondary",
 )
 add_node(
     "hangar_wall_top",
     layers["walls"],
-    [(-40.0, -40.0, 30.0), (40.0, -40.0, 30.0), (40.0, 40.0, 30.0), (-40.0, 40.0, 30.0), (-40.0, -40.0, 30.0)],
+    [
+        (-40.0, -40.0, HANGAR_CEILING_Z),
+        (40.0, -40.0, HANGAR_CEILING_Z),
+        (40.0, 40.0, HANGAR_CEILING_Z),
+        (-40.0, 40.0, HANGAR_CEILING_Z),
+        (-40.0, -40.0, HANGAR_CEILING_Z),
+    ],
     style="secondary",
 )
 
-add_node("hangar_ceiling", layers["ceiling"], [(-40.0, -40.0, 30.0), (40.0, -40.0, 30.0), (40.0, 40.0, 30.0), (-40.0, 40.0, 30.0)], type_="polyline_closed", style="ceiling_primary")
+add_node(
+    "hangar_ceiling",
+    layers["ceiling"],
+    [
+        (-40.0, -40.0, HANGAR_CEILING_Z),
+        (40.0, -40.0, HANGAR_CEILING_Z),
+        (40.0, 40.0, HANGAR_CEILING_Z),
+        (-40.0, 40.0, HANGAR_CEILING_Z),
+    ],
+    type_="polyline_closed",
+    style="ceiling_primary",
+)
 
 for idx, y in enumerate(range(-32, 33, 8)):
-    pts = [(-40.0, float(y), 30.0), (40.0, float(y), 30.0), (40.0, float(y), 29.5), (-40.0, float(y), 29.5)]
+    pts = [
+        (-40.0, float(y), HANGAR_CEILING_Z),
+        (40.0, float(y), HANGAR_CEILING_Z),
+        (40.0, float(y), HANGAR_CEILING_Z - 0.5),
+        (-40.0, float(y), HANGAR_CEILING_Z - 0.5),
+    ]
     add_node(f"hangar_beam_x_{idx}", layers["ceiling"], pts, type_="polyline_closed", style="ceiling_beam")
 
 for idx, x in enumerate(range(-32, 33, 8)):
-    pts = [(float(x), -40.0, 30.0), (float(x), 40.0, 30.0), (float(x), 40.0, 29.5), (float(x), -40.0, 29.5)]
+    pts = [
+        (float(x), -40.0, HANGAR_CEILING_Z),
+        (float(x), 40.0, HANGAR_CEILING_Z),
+        (float(x), 40.0, HANGAR_CEILING_Z - 0.5),
+        (float(x), -40.0, HANGAR_CEILING_Z - 0.5),
+    ]
     add_node(f"hangar_beam_y_{idx}", layers["ceiling"], pts, type_="polyline_closed", style="ceiling_beam")
 
 for xi, x in enumerate(range(-32, 33, 16)):
     for yi, y in enumerate(range(-32, 33, 16)):
         pts = [
-            (float(x) - 1.5, float(y) - 0.6, 29.0),
-            (float(x) + 1.5, float(y) - 0.6, 29.0),
-            (float(x) + 1.5, float(y) + 0.6, 29.0),
-            (float(x) - 1.5, float(y) + 0.6, 29.0),
+            (float(x) - 1.5, float(y) - 0.6, HANGAR_CEILING_Z - 1.0),
+            (float(x) + 1.5, float(y) - 0.6, HANGAR_CEILING_Z - 1.0),
+            (float(x) + 1.5, float(y) + 0.6, HANGAR_CEILING_Z - 1.0),
+            (float(x) - 1.5, float(y) + 0.6, HANGAR_CEILING_Z - 1.0),
         ]
         add_node(f"hangar_light_{xi}_{yi}", layers["fixtures"], pts, type_="polyline_closed", style="fixture_light")
 
@@ -137,8 +179,8 @@ for side, sign in (("left", -1.0), ("right", 1.0)):
     panel = [
         (x_min, door_opening_y - 4.0, 0.0),
         (x_max, door_opening_y - 4.0, 0.0),
-        (x_max, door_opening_y + 4.0, 18.0),
-        (x_min, door_opening_y + 4.0, 18.0),
+        (x_max, door_opening_y + 4.0, HANGAR_CEILING_Z),
+        (x_min, door_opening_y + 4.0, HANGAR_CEILING_Z),
     ]
     add_node(f"hangar_bay_door_{side}", layers["doors"], panel, type_="polyline_closed", style="door_panel")
 
@@ -398,7 +440,12 @@ no_walk.append({
 
 chunks.extend(
     [
-        {"id": "hangar", "aabb": [[-40.0, -40.0, 0.0], [40.0, 40.0, 30.0]], "label": "HANGAR", "stream": "Hangar"},
+        {
+            "id": "hangar",
+            "aabb": [[-40.0, -40.0, HANGAR_FLOOR_Z], [40.0, 40.0, HANGAR_CEILING_Z]],
+            "label": "HANGAR",
+            "stream": "Hangar",
+        },
         {"id": "vestibule", "aabb": [[-4.0, 36.0, 0.0], [4.0, 39.0, 4.0]], "label": "HANGAR", "stream": "VestibuleHall"},
         {"id": "hall", "aabb": [[-4.0, 39.0, 0.0], [4.0, 79.0, 4.0]], "label": "HALLWAY", "stream": "VestibuleHall"},
         {"id": "fleet", "aabb": [[-14.0, 55.0, 0.0], [-4.0, 63.0, 3.5]], "label": "FLEET SHOP", "stream": "FleetShop"},

@@ -15,7 +15,7 @@ def _load_definition() -> InteriorDefinition:
 def test_all_spaces_have_ceiling_planes_and_members() -> None:
     definition = _load_definition()
     chunk_targets = {
-        "hangar": 30.0,
+        "hangar": 45.0,
         "vestibule": 4.0,
         "hall": 4.0,
         "fleet": 3.5,
