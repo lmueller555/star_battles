@@ -7,6 +7,7 @@ from typing import Optional
 from pygame.math import Vector3
 
 from .ship import Ship
+from .stats import ShipStats
 
 
 LOOK_SENSITIVITY = 0.12
@@ -24,6 +25,16 @@ def _approach(current: float, target: float, rate: float) -> float:
     elif current > target:
         current = max(target, current - rate)
     return current
+
+
+def effective_thruster_speed(stats: ShipStats) -> float:
+    """Return the top speed achievable while boost thrusters are active."""
+
+    boost_speed = getattr(stats, "boost_speed", 0.0)
+    if boost_speed <= 0.0:
+        boost_speed = stats.max_speed * THRUSTER_SPEED_MULTIPLIER
+    boost_speed = max(boost_speed, stats.max_speed)
+    return boost_speed
 
 
 def update_ship_flight(ship: Ship, dt: float, logger=None) -> None:
@@ -63,12 +74,15 @@ def update_ship_flight(ship: Ship, dt: float, logger=None) -> None:
     if ctrl.brake and ship.auto_throttle_enabled:
         ship.disable_auto_throttle()
 
-    flank_speed = stats.max_speed * max(0.0, min(1.0, ship.flank_speed_ratio))
+    flank_ratio = max(0.0, min(1.0, ship.flank_speed_ratio))
+    flank_speed = stats.max_speed * flank_ratio
     current_max_speed = flank_speed
     accel_value = stats.acceleration
     if thrusters_active:
-        current_max_speed = stats.max_speed * THRUSTER_SPEED_MULTIPLIER
-        accel_value *= THRUSTER_SPEED_MULTIPLIER
+        current_max_speed = effective_thruster_speed(stats)
+        cruise_reference = max(1.0, stats.max_speed)
+        accel_multiplier = current_max_speed / cruise_reference if cruise_reference > 0.0 else THRUSTER_SPEED_MULTIPLIER
+        accel_value *= max(1.0, accel_multiplier)
     target_speed = current_max_speed * throttle_ratio
     if thrusters_active:
         target_speed = current_max_speed
@@ -136,4 +150,4 @@ def update_ship_flight(ship: Ship, dt: float, logger=None) -> None:
     ship.boost_meter = ship.resources.tylium
 
 
-__all__ = ["update_ship_flight"]
+__all__ = ["effective_thruster_speed", "update_ship_flight"]
