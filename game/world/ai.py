@@ -1,15 +1,31 @@
 """Simple AI behaviours for sandbox ships."""
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING
+import math
+from typing import Dict, List, Optional, TYPE_CHECKING
 
 from pygame.math import Vector3
 
-from game.combat.targeting import is_within_gimbal, pick_nearest_target
+from game.combat.targeting import is_within_gimbal
 from game.ships.ship import Ship
 
 if TYPE_CHECKING:
     from game.world.space import SpaceWorld
+
+
+_AGGRO_RADII: dict[str, float] = {
+    "strike": 600.0,
+    "escort": 900.0,
+    "line": 1200.0,
+    "capital": 1500.0,
+}
+
+_SENTRY_RADII: dict[str, float] = {
+    "strike": 1000.0,
+    "escort": 1500.0,
+    "line": 2000.0,
+    "capital": 2500.0,
+}
 
 class ShipAI:
     """Base AI controller that manages throttle and weapon firing."""
@@ -18,6 +34,16 @@ class ShipAI:
         self.ship = ship
         self.target: Optional[Ship] = None
         self._preferred_range: Optional[float] = None
+        self._sentry_radius = _SENTRY_RADII.get(ship.frame.size.lower(), 0.0)
+        self._aggro_radius = _AGGRO_RADII.get(ship.frame.size.lower(), 0.0)
+        self._patrol_route: List[Vector3] = self._build_patrol_route()
+        self._patrol_index: int = 0
+        self._patrol_pause: float = 1.5
+        self._patrol_hold_timer: float = 0.0
+        self._notice_timer: float = 0.0
+        self._disengage_timer: float = 0.0
+        self._disengage_chance: float = 1.0
+        self._notice_chances: Dict[int, float] = {}
 
     # ------------------------------------------------------------------
     # Public hooks
@@ -26,7 +52,7 @@ class ShipAI:
         if not self.ship.is_alive():
             return
         self._ensure_ranges(world)
-        self.target = self._select_target(world)
+        self._update_sentry_state(world, dt)
         self._reset_controls()
         if self.target and self.target.is_alive():
             self.ship.target_id = id(self.target)
@@ -44,7 +70,7 @@ class ShipAI:
 
     def _update_behavior(self, world: "SpaceWorld", dt: float) -> None:
         if not self.target or not self.target.is_alive():
-            self.ship.control.throttle = 0.2
+            self._update_patrol(world, dt)
             return
         # Default behaviour simply faces the target and approaches within range.
         to_target = self.target.kinematics.position - self.ship.kinematics.position
@@ -103,7 +129,7 @@ class ShipAI:
             self._preferred_range = 900.0
 
     def _select_target(self, world: "SpaceWorld") -> Optional[Ship]:
-        return pick_nearest_target(self.ship, world.ships)
+        return self.target
 
     def _reset_controls(self) -> None:
         self.ship.control.throttle = 0.0
@@ -134,6 +160,147 @@ class ShipAI:
     def preferred_range(self) -> float:
         return self._preferred_range if self._preferred_range is not None else 900.0
 
+    # ------------------------------------------------------------------
+    # Patrol helpers
+
+    def _build_patrol_route(self) -> List[Vector3]:
+        origin = Vector3(self.ship.kinematics.position)
+        if self._sentry_radius > 0.0:
+            patrol_radius = max(180.0, min(self._sentry_radius * 0.4, 1600.0))
+        else:
+            patrol_radius = 240.0
+        offsets = (
+            Vector3(patrol_radius, 0.0, 0.0),
+            Vector3(0.0, 0.0, patrol_radius),
+            Vector3(-patrol_radius, 0.0, 0.0),
+            Vector3(0.0, 0.0, -patrol_radius),
+        )
+        return [origin + offset for offset in offsets]
+
+    def _update_patrol(self, world: "SpaceWorld", dt: float) -> None:
+        if not self._patrol_route:
+            self.ship.control.throttle = 0.2
+            return
+        target_point = self._patrol_route[self._patrol_index]
+        to_point = target_point - self.ship.kinematics.position
+        distance = to_point.length()
+        arrival_threshold = max(60.0, self._sentry_radius * 0.1 if self._sentry_radius else 90.0)
+
+        if distance <= arrival_threshold:
+            if self._patrol_hold_timer <= 0.0:
+                self._patrol_hold_timer = self._patrol_pause
+            else:
+                self._patrol_hold_timer = max(0.0, self._patrol_hold_timer - dt)
+                if self._patrol_hold_timer == 0.0:
+                    self._patrol_index = (self._patrol_index + 1) % len(self._patrol_route)
+            self.ship.control.throttle = 0.0
+            self.ship.control.brake = True
+            return
+
+        self._patrol_hold_timer = 0.0
+        self._set_look_direction(to_point, strength=0.8)
+        throttle = 0.45
+        if distance > arrival_threshold * 4.0:
+            throttle = 0.75
+        elif distance > arrival_threshold * 2.0:
+            throttle = 0.6
+        self.ship.control.throttle = throttle
+        self.ship.control.boost = False
+        self.ship.control.brake = False
+        self.ship.control.strafe = Vector3()
+
+    # ------------------------------------------------------------------
+    # Sentry behaviour helpers
+
+    def _update_sentry_state(self, world: "SpaceWorld", dt: float) -> None:
+        ship = self.ship
+        if self.target and not self.target.is_alive():
+            self.target = None
+        if self.target is None:
+            self._disengage_chance = 1.0
+            self._disengage_timer = 0.0
+        enemies: list[Ship] = [
+            candidate
+            for candidate in world.ships
+            if candidate is not ship and candidate.is_alive() and candidate.team != ship.team
+        ]
+
+        if self.target is None and enemies:
+            immediate_target = self._enemy_within_radius(enemies, self._aggro_radius)
+            if immediate_target is not None:
+                self._set_target(immediate_target)
+            else:
+                self._update_notice_checks(world, enemies, dt)
+        elif self.target is not None:
+            self._update_disengage_check(world, dt)
+        self._prune_notice_entries(enemies)
+
+    def _enemy_within_radius(
+        self, enemies: List[Ship], radius: float
+    ) -> Optional[Ship]:
+        if radius <= 0.0:
+            return None
+        ship_pos = self.ship.kinematics.position
+        closest: Optional[Ship] = None
+        closest_distance = math.inf
+        for enemy in enemies:
+            distance = ship_pos.distance_to(enemy.kinematics.position)
+            if distance <= radius and distance < closest_distance:
+                closest = enemy
+                closest_distance = distance
+        return closest
+
+    def _update_notice_checks(
+        self, world: "SpaceWorld", enemies: List[Ship], dt: float
+    ) -> None:
+        if self._sentry_radius <= 0.0:
+            return
+        self._notice_timer += dt
+        if self._notice_timer < 1.0:
+            return
+        self._notice_timer -= 1.0
+        ship_pos = self.ship.kinematics.position
+        for enemy in enemies:
+            distance = ship_pos.distance_to(enemy.kinematics.position)
+            if distance > self._sentry_radius:
+                continue
+            enemy_id = id(enemy)
+            chance = self._notice_chances.get(enemy_id, 1.0)
+            if world.rng.random() * 100.0 < chance:
+                self._set_target(enemy)
+                self._notice_chances.clear()
+                self._notice_timer = 0.0
+                return
+            self._notice_chances[enemy_id] = min(100.0, chance + 1.0)
+
+    def _update_disengage_check(self, world: "SpaceWorld", dt: float) -> None:
+        self._disengage_timer += dt
+        if self._disengage_timer < 1.0 or self.target is None:
+            return
+        self._disengage_timer -= 1.0
+        if world.rng.random() * 100.0 < self._disengage_chance:
+            self.target = None
+            self.ship.target_id = None
+            self._disengage_chance = 1.0
+            self._notice_timer = 0.0
+            self._notice_chances.clear()
+            return
+        self._disengage_chance = min(100.0, self._disengage_chance + 1.0)
+
+    def _prune_notice_entries(self, enemies: List[Ship]) -> None:
+        if not self._notice_chances:
+            return
+        valid_ids = {id(enemy) for enemy in enemies}
+        for enemy_id in list(self._notice_chances.keys()):
+            if enemy_id not in valid_ids:
+                self._notice_chances.pop(enemy_id, None)
+
+    def _set_target(self, enemy: Ship) -> None:
+        self.target = enemy
+        self._disengage_timer = 0.0
+        self._disengage_chance = 1.0
+        self.ship.target_id = id(enemy)
+
 
 class InterceptorAI(ShipAI):
     """Fast hit-and-run passes with disengage logic."""
@@ -146,7 +313,7 @@ class InterceptorAI(ShipAI):
 
     def _update_behavior(self, world: "SpaceWorld", dt: float) -> None:
         if not self.target or not self.target.is_alive():
-            self.ship.control.throttle = 0.4
+            self._update_patrol(world, dt)
             return
         ship = self.ship
         to_target = self.target.kinematics.position - ship.kinematics.position
@@ -193,7 +360,7 @@ class AssaultAI(ShipAI):
 
     def _update_behavior(self, world: "SpaceWorld", dt: float) -> None:
         if not self.target or not self.target.is_alive():
-            self.ship.control.throttle = 0.3
+            self._update_patrol(world, dt)
             return
         ship = self.ship
         to_target = self.target.kinematics.position - ship.kinematics.position
@@ -255,7 +422,7 @@ class CommandAI(ShipAI):
             return
 
         if not self.target or not self.target.is_alive():
-            ship.control.throttle = 0.25
+            self._update_patrol(world, dt)
             return
 
         to_target = self.target.kinematics.position - ship.kinematics.position
