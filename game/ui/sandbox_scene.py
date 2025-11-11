@@ -114,7 +114,7 @@ class SandboxScene(Scene):
                 self.content.mining,
                 self.logger,
             )
-            player_frame = self.content.ships.get("vanir_command")
+            player_frame = self.content.ships.get("viper_mk_vii")
             self.player = Ship(player_frame, team="player")
             if self.content:
                 self.player.apply_default_loadout(self.content)
