@@ -426,7 +426,7 @@ class OutpostInteriorScene(Scene):
         ship_forward = ship_forward.normalize()
         front_tip = -ship_forward * 25.0
         center = front_tip - ship_forward * (length * 0.5)
-        center.y = -self.layout.tile_size * 0.18
+        center.y = self.layout.tile_size * 0.45
 
         yaw = math.degrees(math.atan2(ship_forward.x, ship_forward.z))
         ghost.kinematics.position = center
@@ -458,12 +458,6 @@ class OutpostInteriorScene(Scene):
     def _draw_ship_in_hangar(self, surface: pygame.Surface, horizon: int) -> None:
         ghost = self._hangar_ship_ghost
         if not ghost:
-            return
-
-        spawn_offset = self.player_position - self.layout.spawn_point
-        fade_distance = self.layout.tile_size * 6.0
-        distance_factor = 1.0 - min(1.0, spawn_offset.length() / max(1.0, fade_distance))
-        if distance_factor <= 1e-3:
             return
 
         view_forward_2d = Vector2(math.sin(self.player_yaw), -math.cos(self.player_yaw))
@@ -509,7 +503,7 @@ class OutpostInteriorScene(Scene):
         if planar.length_squared() > 1e-6:
             look_alignment = max(0.0, view_forward.dot(planar.normalize()))
 
-        visibility = look_alignment * distance_factor
+        visibility = look_alignment
         if visibility <= 1e-3:
             return
 
