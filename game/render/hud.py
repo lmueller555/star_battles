@@ -103,6 +103,7 @@ class HUD:
         self._flank_slider_rect = pygame.Rect(0, 0, 0, 0)
         self._flank_slider_hit_rect = pygame.Rect(0, 0, 0, 0)
         self._ship_info_button_rect = pygame.Rect(0, 0, 0, 0)
+        self._top_left_info_bottom = 0
 
     def toggle_overlay(self) -> None:
         self.overlay_enabled = not self.overlay_enabled
@@ -265,7 +266,9 @@ class HUD:
     def draw_target_panel(self, camera, player: Ship, target: Optional[Ship]) -> None:
         if not target:
             text = self.font.render("NO TARGET", True, (200, 200, 200))
-            self.surface.blit(text, (20, 20))
+            position = (20, 20)
+            self.surface.blit(text, position)
+            self._top_left_info_bottom = position[1] + text.get_height()
             return
         distance = player.kinematics.position.distance_to(target.kinematics.position)
         rel_speed = (target.kinematics.velocity - player.kinematics.velocity).length()
@@ -275,9 +278,14 @@ class HUD:
             f"Relative: {rel_speed:.1f} m/s",
             f"Hull: {target.hull:.0f}/{target.stats.hull_hp:.0f}",
         ]
+        top = 20
+        bottom = top
         for i, line in enumerate(lines):
             text = self.font.render(line, True, (200, 220, 255))
-            self.surface.blit(text, (20, 20 + i * 18))
+            y = top + i * 18
+            self.surface.blit(text, (20, y))
+            bottom = max(bottom, y + text.get_height())
+        self._top_left_info_bottom = bottom
 
     def draw_target_overlay(self, overlay: TargetOverlay | None) -> None:
         if not overlay:
@@ -312,24 +320,38 @@ class HUD:
         width = 220
         bar_height = 10
         x = 20
-        base_y = self.surface.get_height() - 80
-        def draw_bar(label: str, value: float, maximum: float, color: tuple[int, int, int], offset: int) -> None:
-            ratio = 0.0 if maximum <= 0 else max(0.0, min(1.0, value / maximum))
-            pygame.draw.rect(self.surface, (40, 60, 80), (x, base_y + offset, width, bar_height), 1)
-            pygame.draw.rect(self.surface, color, (x, base_y + offset, width * ratio, bar_height))
-            text = self.font.render(f"{label}: {value:.0f}/{maximum:.0f}", True, color)
-            self.surface.blit(text, (x, base_y + offset - 16))
+        line_gap = 24
 
-        draw_bar("Power", player.power, player.stats.power_cap, (120, 200, 255), 0)
-        draw_bar("Tylium Reserve", player.resources.tylium, player.tylium_capacity, (255, 190, 120), 24)
+        min_info_bottom = 20 + self.font.get_height() * 4
+        info_bottom = max(self._top_left_info_bottom, min_info_bottom)
+        current_y = int(info_bottom + 12)
+
+        def draw_bar(label: str, value: float, maximum: float, color: tuple[int, int, int], y: int) -> int:
+            ratio = 0.0 if maximum <= 0 else max(0.0, min(1.0, value / maximum))
+            text = self.font.render(f"{label}: {value:.0f}/{maximum:.0f}", True, color)
+            text_pos = (x, y - text.get_height() - 4)
+            self.surface.blit(text, text_pos)
+            bar_rect = pygame.Rect(x, y, width, bar_height)
+            pygame.draw.rect(self.surface, (40, 60, 80), bar_rect, 1)
+            if ratio > 0.0:
+                fill_width = int(bar_rect.width * ratio)
+                if fill_width > 0:
+                    fill_rect = pygame.Rect(bar_rect.x, bar_rect.y, fill_width, bar_rect.height)
+                    pygame.draw.rect(self.surface, color, fill_rect)
+            return y + bar_height + line_gap
+
+        current_y = draw_bar("Hull", player.hull, player.stats.hull_hp, (255, 140, 150), current_y)
+        current_y = draw_bar("Energy", player.power, player.stats.power_cap, (120, 200, 255), current_y)
+
         resources = [
             f"Tylium: {player.resources.tylium:.0f}",
             f"Titanium: {player.resources.titanium:.0f}",
             f"Water: {player.resources.water:.0f}",
         ]
+        base_y = self.surface.get_height() - 80 + 48
         for i, text in enumerate(resources):
             label = self.font.render(text, True, (170, 220, 180))
-            self.surface.blit(label, (x, base_y + 48 + i * 18))
+            self.surface.blit(label, (x, base_y + i * 18))
 
     def draw_lock_ring(self, camera, player: Ship, target: Optional[Ship]) -> None:
         if not target or player.lock_progress <= 0.0:
