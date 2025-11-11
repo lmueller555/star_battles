@@ -17,7 +17,7 @@ from game.engine.scene import Scene
 from game.ships.ship import Ship, ShipControlState
 from game.world.space import SpaceWorld
 from game.world.station import DockingStation
-from game.render.camera import ChaseCamera
+from game.render.camera import ChaseCamera, DEFAULT_SHIP_LENGTHS
 from game.render.renderer import VectorRenderer
 
 
@@ -245,9 +245,9 @@ class OutpostInteriorScene(Scene):
         self._ceiling_gradient: Optional[pygame.Surface] = None
         self._floor_gradient: Optional[pygame.Surface] = None
         self._proxy_station_ship: bool = False
-        self._hangar_ship_surface: Optional[pygame.Surface] = None
-        self._hangar_ship_scaled: Optional[pygame.Surface] = None
-        self._hangar_ship_scaled_size: Tuple[int, int] = (0, 0)
+        self._hangar_ship_ghost: Optional[Ship] = None
+        self._hangar_ship_center = Vector3()
+        self._initial_forward = Vector2(1.0, 0.0)
 
     def _build_starfield(self) -> None:
         rng = random.Random(20240217)
@@ -301,11 +301,11 @@ class OutpostInteriorScene(Scene):
         self.caption_font = pygame.font.SysFont("consolas", 28)
         pygame.mouse.set_visible(True)
         pygame.event.set_grab(False)
-        self._hangar_ship_surface = None
-        self._hangar_ship_scaled = None
-        self._hangar_ship_scaled_size = (0, 0)
+        self._hangar_ship_ghost = None
+        self._hangar_ship_center = Vector3()
+        self._initial_forward = Vector2(math.sin(self.player_yaw), -math.cos(self.player_yaw))
         self._setup_docking_sequence()
-        self._generate_hangar_ship_surface()
+        self._prepare_hangar_ship_model()
 
     def _setup_docking_sequence(self) -> None:
         if not self.player or not self.station:
@@ -401,129 +401,133 @@ class OutpostInteriorScene(Scene):
         self._proxy_station_ship = True
         return ghost
 
-    def _generate_hangar_ship_surface(self) -> None:
+    def _prepare_hangar_ship_model(self) -> None:
+        self._hangar_ship_ghost = None
+        self._hangar_ship_center = Vector3()
         if not self.player:
-            self._hangar_ship_surface = None
-            self._hangar_ship_scaled = None
-            self._hangar_ship_scaled_size = (0, 0)
             return
 
-        base_width = 1280
-        base_height = 720
-        surface = pygame.Surface((base_width, base_height), pygame.SRCALPHA)
+        forward_2d = Vector2(math.sin(self.player_yaw), -math.cos(self.player_yaw))
+        if forward_2d.length_squared() <= 1e-6:
+            forward_2d = Vector2(1.0, 0.0)
+        else:
+            forward_2d = forward_2d.normalize()
+        self._initial_forward = Vector2(forward_2d)
 
-        # Massive hangar backdrop gradient.
-        for y in range(base_height):
-            t = y / max(1, base_height - 1)
-            shade = int(14 + 46 * t)
-            alpha = int(200 * max(0.0, 1.0 - t * 0.55))
-            surface.fill((shade, shade + 18, shade + 32, alpha), pygame.Rect(0, y, base_width, 1))
-
-        # Structural ribs to emphasize the scale of the hangar chamber.
-        rib_color = (26, 48, 74, 180)
-        rib_count = 6
-        for idx in range(rib_count):
-            depth = idx / max(1, rib_count - 1)
-            spread = 0.4 + depth * 1.3
-            y_top = int(base_height * (0.18 + depth * 0.55))
-            thickness = int(18 + depth * 36)
-            left = int(base_width * (0.5 - spread))
-            right = int(base_width * (0.5 + spread))
-            pygame.draw.polygon(
-                surface,
-                rib_color,
-                [
-                    (left - thickness, y_top - thickness),
-                    (right + thickness, y_top - thickness),
-                    (right, y_top + thickness),
-                    (left, y_top + thickness),
-                ],
-            )
-
-        # Prepare a ghost copy of the player's ship to render inside the hangar.
         ghost = Ship(self.player.frame, team=self.player.team)
-        ghost.kinematics.position = Vector3(0.0, 0.0, 0.0)
-        ghost.kinematics.rotation = Vector3(0.0, 0.0, 0.0)
         ghost.kinematics.velocity = Vector3()
+        ghost.kinematics.angular_velocity = Vector3()
         ghost.thrusters_active = False
 
-        camera = ChaseCamera(70.0, base_width / base_height)
-        camera.position = Vector3(0.0, 160.0, -520.0)
-        camera.forward = Vector3(0.0, -0.1, 1.0).normalize()
-        camera.up = Vector3(0.0, 1.0, 0.0)
-        camera.right = camera.forward.cross(camera.up)
-        if camera.right.length_squared() > 1e-6:
-            camera.right = camera.right.normalize()
-            camera.up = camera.right.cross(camera.forward).normalize()
+        length = self._estimate_ship_length(ghost)
+        ship_forward = Vector3(forward_2d.x, 0.0, -forward_2d.y)
+        if ship_forward.length_squared() <= 1e-6:
+            ship_forward = Vector3(1.0, 0.0, 0.0)
+        ship_forward = ship_forward.normalize()
+        front_tip = -ship_forward * 25.0
+        center = front_tip - ship_forward * (length * 0.5)
+        center.y = -self.layout.tile_size * 0.18
 
-        renderer = VectorRenderer(surface)
+        yaw = math.degrees(math.atan2(ship_forward.x, ship_forward.z))
+        ghost.kinematics.position = center
+        ghost.kinematics.rotation = Vector3(0.0, yaw, 0.0)
 
-        grid_focus = ghost.kinematics.position + Vector3(0.0, -180.0, 320.0)
-        renderer.draw_grid(camera, grid_focus, tile_size=260.0, extent=7200.0, height_offset=-40.0)
-        renderer.draw_ship(camera, ghost)
+        self._hangar_ship_center = center
+        self._hangar_ship_ghost = ghost
 
-        # Additional hangar silhouettes to support the sense of scale.
-        support_surface = pygame.Surface((base_width, base_height), pygame.SRCALPHA)
-        pillar_color = (40, 70, 108, 180)
-        for offset in (-0.72, -0.44, 0.44, 0.72):
-            base_x = int(base_width * (0.5 + offset))
-            pygame.draw.polygon(
-                support_surface,
-                pillar_color,
-                [
-                    (base_x - 36, int(base_height * 0.22)),
-                    (base_x + 36, int(base_height * 0.22)),
-                    (base_x + 58, int(base_height * 0.86)),
-                    (base_x - 58, int(base_height * 0.86)),
-                ],
-            )
-        surface.blit(support_surface, (0, 0))
+    def _estimate_ship_length(self, ship: Ship) -> float:
+        length_attr = getattr(ship.frame, "length", None)
+        if isinstance(length_attr, (int, float)) and length_attr > 0.0:
+            return float(length_attr)
 
-        # Fade the lower portion so the floor from the interior renderer can show through.
-        fade_height = int(base_height * 0.32)
-        if fade_height > 0:
-            fade_mask = pygame.Surface((base_width, fade_height), pygame.SRCALPHA)
-            for y in range(fade_height):
-                t = y / max(1, fade_height - 1)
-                fade_mask.fill((0, 0, 0, int(255 * t)), pygame.Rect(0, y, base_width, 1))
-        surface.blit(fade_mask, (0, base_height - fade_height), special_flags=pygame.BLEND_RGBA_SUB)
+        default_length = DEFAULT_SHIP_LENGTHS.get(ship.frame.size)
+        if default_length is not None:
+            length = float(default_length)
+        else:
+            length = float(DEFAULT_SHIP_LENGTHS.get("Strike", 40.0))
 
-        self._hangar_ship_surface = surface
-        self._hangar_ship_scaled = None
-        self._hangar_ship_scaled_size = (0, 0)
+        if ship.frame.hardpoints:
+            z_values = [hp.position.z for hp in ship.frame.hardpoints]
+            if z_values:
+                extent = max(z_values) - min(z_values)
+                if extent > 0.0:
+                    length = float(extent)
+
+        return max(10.0, length)
 
     def _draw_ship_in_hangar(self, surface: pygame.Surface, horizon: int) -> None:
-        if not self._hangar_ship_surface:
-            return
-
-        facing = Vector2(math.sin(self.player_yaw), -math.cos(self.player_yaw))
-        alignment = facing.dot(Vector2(-1.0, 0.0))
-        if alignment <= 0.2:
+        ghost = self._hangar_ship_ghost
+        if not ghost:
             return
 
         spawn_offset = self.player_position - self.layout.spawn_point
         fade_distance = self.layout.tile_size * 6.0
         distance_factor = 1.0 - min(1.0, spawn_offset.length() / max(1.0, fade_distance))
-        visibility = max(0.0, min(1.0, (alignment - 0.2) / 0.8)) * distance_factor
+        if distance_factor <= 1e-3:
+            return
+
+        view_forward_2d = Vector2(math.sin(self.player_yaw), -math.cos(self.player_yaw))
+        if view_forward_2d.length_squared() <= 1e-6:
+            view_forward_2d = Vector2(self._initial_forward)
+        view_forward = Vector3(view_forward_2d.x, 0.0, -view_forward_2d.y)
+        if view_forward.length_squared() <= 1e-6:
+            view_forward = Vector3(0.0, 0.0, 1.0)
+        view_forward = view_forward.normalize()
+
+        up = Vector3(0.0, 1.0, 0.0)
+        if abs(view_forward.dot(up)) > 0.98:
+            up = Vector3(0.0, 0.0, 1.0)
+        right = up.cross(view_forward)
+        if right.length_squared() <= 1e-6:
+            right = Vector3(1.0, 0.0, 0.0)
+        else:
+            right = right.normalize()
+            up = view_forward.cross(right)
+            if up.length_squared() <= 1e-6:
+                up = Vector3(0.0, 1.0, 0.0)
+            else:
+                up = up.normalize()
+
+        eye_height = self.layout.tile_size * 0.45
+        camera = ChaseCamera(math.degrees(self._first_person_fov), surface.get_width() / max(1, surface.get_height()))
+        camera.position = Vector3(0.0, eye_height, 0.0)
+        camera.forward = view_forward
+        camera.right = right
+        camera.up = up
+        camera.distance = 0.0
+        camera.height = 0.0
+        camera.shoulder = 0.0
+        camera.look_ahead_distance = 0.0
+        camera.look_ahead_factor = 0.0
+        camera.lock_blend = 0.0
+
+        ghost.kinematics.position = self._hangar_ship_center
+
+        to_ship = ghost.kinematics.position - camera.position
+        planar = Vector3(to_ship.x, 0.0, to_ship.z)
+        look_alignment = 0.0
+        if planar.length_squared() > 1e-6:
+            look_alignment = max(0.0, view_forward.dot(planar.normalize()))
+
+        visibility = look_alignment * distance_factor
         if visibility <= 1e-3:
             return
 
-        size = surface.get_size()
-        if self._hangar_ship_scaled is None or self._hangar_ship_scaled_size != size:
-            self._hangar_ship_scaled = pygame.transform.smoothscale(self._hangar_ship_surface, size)
-            self._hangar_ship_scaled_size = size
+        width, height = surface.get_size()
+        overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+        renderer = VectorRenderer(overlay)
+        renderer.draw_ship(camera, ghost)
 
-        overlay = self._hangar_ship_scaled.copy()
-        fade_start = max(0, min(size[1], horizon + int(size[1] * 0.18)))
-        fade_height = max(int(size[1] * 0.34), size[1] - fade_start)
+        fade_start = max(0, min(height, horizon + int(height * 0.18)))
+        fade_height = max(int(height * 0.34), height - fade_start)
         if fade_height > 0:
-            fade_mask = pygame.Surface((size[0], fade_height), pygame.SRCALPHA)
+            fade_mask = pygame.Surface((width, fade_height), pygame.SRCALPHA)
             for y in range(fade_height):
                 t = y / max(1, fade_height - 1)
-                fade_mask.fill((0, 0, 0, int(255 * t)), pygame.Rect(0, y, size[0], 1))
-            overlay.blit(fade_mask, (0, size[1] - fade_height), special_flags=pygame.BLEND_RGBA_SUB)
+                fade_mask.fill((0, 0, 0, int(255 * t)), pygame.Rect(0, y, width, 1))
+            overlay.blit(fade_mask, (0, height - fade_height), special_flags=pygame.BLEND_RGBA_SUB)
 
-        shading = pygame.Surface(size, pygame.SRCALPHA)
+        shading = pygame.Surface((width, height), pygame.SRCALPHA)
         shading.fill((6, 12, 22, int(120 * (1.0 - visibility))))
         overlay.blit(shading, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
         overlay.set_alpha(int(220 * visibility))
@@ -764,13 +768,6 @@ class OutpostInteriorScene(Scene):
                 left = int(width / 2 - band_width / 2)
                 right = int(width / 2 + band_width / 2)
                 pygame.draw.line(walkway, color, (left, band_y), (right, band_y), 4)
-            pygame.draw.line(
-                walkway,
-                (120, 220, 255, 80),
-                (width // 2, horizon),
-                (width // 2, height),
-                2,
-            )
             surface.blit(walkway, (0, 0), special_flags=pygame.BLEND_ADD)
 
         self._render_light_markers(surface, position, yaw, horizon)
