@@ -572,6 +572,23 @@ class HUD:
             (speed_x, rect.bottom + 8),
         )
 
+        current_speed_text = self.font.render(
+            f"{player.kinematics.velocity.length():.0f} m/s",
+            True,
+            (200, 220, 255),
+        )
+        desired_speed_x = rect.right + 12
+        max_speed_x = self.surface.get_width() - current_speed_text.get_width() - 8
+        current_speed_x = desired_speed_x if desired_speed_x <= max_speed_x else max_speed_x
+        current_speed_x = max(8, current_speed_x)
+        current_speed_y = rect.centery - current_speed_text.get_height() // 2
+        current_speed_y = max(8, current_speed_y)
+        current_speed_y = min(self.surface.get_height() - current_speed_text.get_height() - 8, current_speed_y)
+        self.surface.blit(
+            current_speed_text,
+            (current_speed_x, current_speed_y),
+        )
+
     def draw_ship_info_button(self, player: Ship, open_state: bool, hovered: bool) -> None:
         rect = ship_info_button_rect(self.surface.get_size())
         self._ship_info_button_rect = rect.copy()
