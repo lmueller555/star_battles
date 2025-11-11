@@ -117,3 +117,39 @@ def test_space_world_ignores_unanchored_station_data(tmp_path):
     station, distance = world.nearest_station(player_ship)
     assert station is None
     assert distance == float("inf")
+
+
+def test_space_world_places_player_near_outpost(tmp_path):
+    sector_path = tmp_path / "sector.json"
+    sector_path.write_text(json.dumps([
+        {"id": "alpha", "position": [0, 0], "threat": False},
+    ]))
+    stations_path = tmp_path / "stations.json"
+    stations_path.write_text(json.dumps([
+        {"id": "gamma_outpost", "system": "alpha", "position": [0, 0, 0], "dockingRadius": 950},
+    ]))
+
+    sector = SectorMap()
+    sector.load(sector_path)
+    stations = StationDatabase()
+    stations.load(stations_path)
+
+    world = SpaceWorld(
+        weapons=WeaponDatabase(),
+        sector=sector,
+        stations=stations,
+        mining=MiningDatabase(),
+        logger=make_logger(),
+    )
+
+    player_ship = Ship(make_frame("player_ship"), team="player")
+    outpost_ship = Ship(make_frame("player_outpost", role="Outpost", size="Outpost"), team="player")
+    outpost_ship.kinematics.position = Vector3(100.0, 0.0, 200.0)
+
+    world.add_ship(outpost_ship)
+    world.add_ship(player_ship)
+
+    placed = world.place_ship_near_outpost(player_ship, zero_velocity=True)
+    assert placed
+    distance = player_ship.kinematics.position.distance_to(outpost_ship.kinematics.position)
+    assert 800.0 <= distance <= 1000.0

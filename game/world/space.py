@@ -1,6 +1,7 @@
 """World simulation container."""
 from __future__ import annotations
 
+import math
 import random
 from typing import Iterable, List, Optional, TYPE_CHECKING
 
@@ -40,6 +41,31 @@ COLLISION_MASS = {
 COLLISION_RESTITUTION = 0.35
 COLLISION_DAMAGE_SCALE = 6.0
 HITSCAN_BULLET_SPEED = 1800.0
+
+# Offsets used to position player spawns around a friendly Outpost.
+_OUTPOST_SPAWN_PATTERN: tuple[tuple[float, float, float], ...] = (
+    (0.0, 820.0, 20.0),
+    (30.0, 880.0, 60.0),
+    (60.0, 940.0, -40.0),
+    (90.0, 1000.0, 0.0),
+    (120.0, 860.0, 45.0),
+    (150.0, 920.0, -60.0),
+    (180.0, 800.0, 35.0),
+    (210.0, 880.0, -30.0),
+    (240.0, 960.0, 55.0),
+    (270.0, 900.0, -50.0),
+    (300.0, 840.0, 25.0),
+    (330.0, 980.0, -20.0),
+)
+
+OUTPOST_SPAWN_OFFSETS: tuple[Vector3, ...] = tuple(
+    Vector3(
+        math.cos(math.radians(angle)) * radius,
+        height,
+        math.sin(math.radians(angle)) * radius,
+    )
+    for angle, radius, height in _OUTPOST_SPAWN_PATTERN
+)
 
 if TYPE_CHECKING:
     from game.world.ai import ShipAI
@@ -83,6 +109,41 @@ class SpaceWorld:
         self.asteroids = AsteroidField()
         self.asteroids.enter_system(self.current_system_id)
         self._ai: dict[int, "ShipAI"] = {}
+
+    def _team_outpost_anchor(self, team: str | None) -> Ship | None:
+        if team is None:
+            return None
+        preferred: Ship | None = None
+        fallback: Ship | None = None
+        for candidate in self._station_ships(team=team):
+            if not candidate.is_alive():
+                continue
+            role = candidate.frame.role.lower()
+            size = candidate.frame.size.lower()
+            if "outpost" in role or size == "outpost":
+                preferred = candidate
+                break
+            if fallback is None:
+                fallback = candidate
+        return preferred or fallback
+
+    def pick_outpost_spawn_point(self, team: str | None) -> Optional[Vector3]:
+        anchor = self._team_outpost_anchor(team)
+        if not anchor:
+            return None
+        offset = self.rng.choice(OUTPOST_SPAWN_OFFSETS)
+        spawn = anchor.kinematics.position + offset
+        return Vector3(spawn.x, spawn.y, spawn.z)
+
+    def place_ship_near_outpost(self, ship: Ship, *, zero_velocity: bool = False) -> bool:
+        spawn = self.pick_outpost_spawn_point(getattr(ship, "team", None))
+        if spawn is None:
+            return False
+        ship.kinematics.position = spawn
+        if zero_velocity:
+            ship.kinematics.velocity = Vector3(0.0, 0.0, 0.0)
+            ship.kinematics.angular_velocity = Vector3(0.0, 0.0, 0.0)
+        return True
 
     def add_ship(self, ship: Ship, ai: "ShipAI | None" = None) -> None:
         self.ships.append(ship)
@@ -512,6 +573,7 @@ class SpaceWorld:
         ship.kinematics.position = Vector3(0.0, 0.0, 0.0)
         ship.kinematics.velocity = Vector3(0.0, 0.0, 0.0)
         ship.kinematics.angular_velocity = Vector3(0.0, 0.0, 0.0)
+        self.place_ship_near_outpost(ship)
         self.current_system_id = destination
         self.mining.enter_system(destination)
         self.asteroids.enter_system(destination)
