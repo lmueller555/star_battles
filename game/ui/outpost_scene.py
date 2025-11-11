@@ -8,7 +8,7 @@ from enum import Enum, auto
 from typing import Optional
 
 import pygame
-from pygame.math import Vector3
+from pygame.math import Vector2, Vector3
 
 from game.assets.content import ContentManager
 from game.engine.input import InputMapper
@@ -19,12 +19,14 @@ from game.render.renderer import VectorRenderer
 from game.ships.ship import Ship, ShipControlState
 from game.world.space import SpaceWorld, SpaceWorldState
 from game.world.station import DockingStation
+from game.world.interior import InteriorDefinition, InteriorNavArea
 
 
 class _InteriorState(Enum):
     DOCKING = auto()
     LOADING_IN = auto()
     DISEMBARK = auto()
+    EXPLORE = auto()
     LOADING_OUT = auto()
 
 
@@ -79,6 +81,16 @@ class OutpostInteriorScene(Scene):
         self._loading_out_started = False
         self._suspended_world_state: Optional[SpaceWorldState] = None
         self._proxy_station_ship = False
+        self.interior: Optional[InteriorDefinition] = None
+        self._interior_nav: tuple[InteriorNavArea, ...] = ()
+        self._interior_player_pos = Vector2(0.0, 0.0)
+        self._interior_heading = Vector2(0.0, 1.0)
+        self._interior_camera_pos = Vector2(0.0, 0.0)
+        self._interior_view_size: tuple[int, int] = (0, 0)
+        self._interior_zoom = 12.0
+        self._interior_move_speed = 9.0
+        self._interior_elapsed = 0.0
+        self._interior_font: Optional[pygame.font.Font] = None
 
     def _build_starfield(self) -> None:
         rng = random.Random(20240217)
@@ -128,6 +140,9 @@ class OutpostInteriorScene(Scene):
         pygame.event.set_grab(False)
         self._proxy_station_ship = False
         self._setup_docking_sequence()
+        self._load_interior_definition()
+        self._interior_elapsed = 0.0
+        self._interior_font = pygame.font.SysFont("consolas", 18)
 
     def handle_event(self, event: pygame.event.Event) -> None:
         if self.input:
@@ -142,6 +157,9 @@ class OutpostInteriorScene(Scene):
 
     def update(self, dt: float) -> None:
         self.elapsed_time += dt
+        if self.input:
+            self.input.update_axes()
+
         if self.state == _InteriorState.DOCKING:
             self.state_timer += dt
             self._update_docking_animation(dt)
@@ -160,7 +178,10 @@ class OutpostInteriorScene(Scene):
         if self.state == _InteriorState.DISEMBARK:
             self.state_timer += dt
             if self.state_timer >= self.disembark_duration:
-                self._undock()
+                self._start_interior_explore()
+            return
+        if self.state == _InteriorState.EXPLORE:
+            self._update_interior(dt)
             return
         if self.state == _InteriorState.LOADING_OUT:
             if not self._loading_out_started:
@@ -230,6 +251,9 @@ class OutpostInteriorScene(Scene):
             return
         if self.state == _InteriorState.DISEMBARK:
             self._render_disembark_cutscene(surface)
+            return
+        if self.state == _InteriorState.EXPLORE:
+            self._render_interior(surface)
             return
         if self.state == _InteriorState.LOADING_OUT:
             progress = 0.0
@@ -683,6 +707,155 @@ class OutpostInteriorScene(Scene):
             self.cutscene_camera.right = Vector3(1.0, 0.0, 0.0)
 
         self.cutscene_station_ship = self._locate_station_visual(station_pos, approach_dir)
+
+    def _load_interior_definition(self) -> None:
+        self.interior = None
+        self._interior_nav = ()
+        if not self.content:
+            return
+        interior_id = "outpost_interior_v1"
+        try:
+            self.interior = self.content.interiors.get(interior_id)
+        except KeyError:
+            self.interior = None
+        if self.interior:
+            self._interior_nav = self.interior.nav_areas
+
+    def _start_interior_explore(self) -> None:
+        self.state = _InteriorState.EXPLORE
+        self.state_timer = 0.0
+        self._interior_elapsed = 0.0
+        if self.interior and self.interior.spawn_point:
+            spawn_x, spawn_y, _ = self.interior.spawn_point
+            self._interior_player_pos = Vector2(spawn_x, spawn_y)
+        else:
+            bounds = self.interior.bounds if self.interior else (0.0, 0.0, 0.0, 0.0)
+            center_x = (bounds[0] + bounds[2]) * 0.5
+            center_y = (bounds[1] + bounds[3]) * 0.5
+            self._interior_player_pos = Vector2(center_x, center_y)
+        self._interior_camera_pos = Vector2(self._interior_player_pos)
+        self._interior_heading = Vector2(0.0, 1.0)
+
+    def _update_interior(self, dt: float) -> None:
+        self._interior_elapsed += dt
+        if not self.input:
+            return
+        move_x = self.input.axis_state.get("strafe_x", 0.0)
+        move_y = self.input.axis_state.get("throttle", 0.0)
+        lift = self.input.axis_state.get("strafe_y", 0.0)
+        move_vec = Vector2(move_x, move_y - lift)
+        if move_vec.length_squared() > 1e-6:
+            move_vec = move_vec.normalize() * self._interior_move_speed
+            self._interior_heading = move_vec.normalize()
+        displacement = move_vec * dt
+        if displacement.length_squared() <= 0.0:
+            displacement = Vector2(0.0, 0.0)
+        desired = self._interior_player_pos + displacement
+        self._interior_player_pos = self._constrain_to_nav(desired)
+        approach = self._interior_player_pos - self._interior_camera_pos
+        self._interior_camera_pos += approach * min(1.0, dt * 4.5)
+
+    def _constrain_to_nav(self, position: Vector2) -> Vector2:
+        if not self._interior_nav:
+            return Vector2(position)
+        # Direct containment first.
+        for area in self._interior_nav:
+            if area.contains(position.x, position.y):
+                return Vector2(position)
+        best: Vector2 | None = None
+        best_distance = float("inf")
+        for area in self._interior_nav:
+            left, bottom, right, top = area.bounds
+            clamped_x = max(left, min(right, position.x))
+            clamped_y = max(bottom, min(top, position.y))
+            dx = clamped_x - position.x
+            dy = clamped_y - position.y
+            distance_sq = dx * dx + dy * dy
+            if distance_sq < best_distance:
+                best_distance = distance_sq
+                best = Vector2(clamped_x, clamped_y)
+        if best is None:
+            return Vector2(position)
+        return best
+
+    def _render_interior(self, surface: pygame.Surface) -> None:
+        width, height = surface.get_size()
+        if (width, height) != self._interior_view_size:
+            self._interior_view_size = (width, height)
+            self._configure_interior_zoom(width, height)
+        surface.fill((6, 10, 18))
+        if not self.interior:
+            if self.caption_font:
+                message = self.caption_font.render("Interior assets missing", True, (230, 120, 120))
+                surface.blit(
+                    message,
+                    (width // 2 - message.get_width() // 2, height // 2 - message.get_height() // 2),
+                )
+            return
+
+        def to_screen(point: tuple[float, float, float]) -> tuple[int, int]:
+            px, py, _ = point
+            sx = (px - self._interior_camera_pos.x) * self._interior_zoom + width * 0.5
+            sy = height * 0.5 - (py - self._interior_camera_pos.y) * self._interior_zoom
+            return int(round(sx)), int(round(sy))
+
+        overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+        for area in self._interior_nav:
+            points = [to_screen(pt) for pt in area.points]
+            if len(points) >= 3:
+                pygame.draw.polygon(overlay, (26, 60, 88, 90), points)
+        surface.blit(overlay, (0, 0))
+
+        style_colors = {
+            "primary": (110, 200, 255),
+            "secondary": (70, 120, 160),
+            "accent": (255, 196, 128),
+        }
+        for node in self.interior.nodes:
+            points = [to_screen(pt) for pt in node.points]
+            if len(points) < 2:
+                continue
+            color = style_colors.get(node.style or "secondary", (80, 150, 200))
+            if node.type.endswith("closed") and len(points) >= 3:
+                pygame.draw.polygon(surface, color, points, 0)
+                pygame.draw.polygon(surface, (max(20, color[0] - 40), max(20, color[1] - 40), max(20, color[2] - 40)), points, 2)
+            else:
+                pygame.draw.lines(surface, color, False, points, 2)
+
+        for label in self.interior.labels:
+            if not self._interior_font or not label.text:
+                continue
+            lx, ly = to_screen(label.position)
+            text_surface = self._interior_font.render(label.text, True, (210, 230, 255))
+            surface.blit(text_surface, (lx - text_surface.get_width() // 2, ly - text_surface.get_height() // 2))
+
+        heading = self._interior_heading.normalize() if self._interior_heading.length() > 1e-5 else Vector2(0.0, 1.0)
+        right = Vector2(-heading.y, heading.x)
+        size = max(8.0, 12.0 * (self._interior_zoom / 18.0))
+        tip = self._interior_player_pos + heading * (size * 0.9)
+        left = self._interior_player_pos - heading * (size * 0.5) + right * (size * 0.45)
+        right_pt = self._interior_player_pos - heading * (size * 0.5) - right * (size * 0.45)
+        ship_points = [to_screen((tip.x, tip.y, 0.0)), to_screen((left.x, left.y, 0.0)), to_screen((right_pt.x, right_pt.y, 0.0))]
+        pygame.draw.polygon(surface, (160, 220, 255), ship_points)
+        pygame.draw.polygon(surface, (20, 40, 60), ship_points, 2)
+
+        if self.caption_font:
+            caption = self.caption_font.render("Outpost Interior", True, (210, 232, 255))
+            surface.blit(caption, (32, 24))
+            instruction = self.caption_font.render("Press ESC to undock", True, (160, 200, 255))
+            surface.blit(instruction, (32, 24 + caption.get_height() + 6))
+
+    def _configure_interior_zoom(self, width: int, height: int) -> None:
+        if not self.interior:
+            self._interior_zoom = 12.0
+            return
+        min_x, min_y, max_x, max_y = self.interior.bounds
+        span_x = max(1.0, max_x - min_x)
+        span_y = max(1.0, max_y - min_y)
+        padding = 1.35
+        scale_x = width / (span_x * padding)
+        scale_y = height / (span_y * padding)
+        self._interior_zoom = max(8.0, min(scale_x, scale_y, 36.0))
 
     def _locate_station_visual(self, station_pos: Vector3, approach_dir: Vector3) -> Optional[Ship]:
         if not self.station:
