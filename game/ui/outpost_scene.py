@@ -72,27 +72,27 @@ class _InteriorLayout:
     def _build(self) -> None:
         tile = self.tile_size
         # Primary hangar and connected chambers.
-        hangar = pygame.Rect(2, 12, 20, 12)
-        central_spine = pygame.Rect(20, 14, 12, 10)
-        central_hub = pygame.Rect(30, 10, 14, 12)
-        north_hall = pygame.Rect(30, 8, 14, 4)
-        south_hall = pygame.Rect(30, 22, 14, 8)
-        east_connector = pygame.Rect(40, 12, 6, 12)
-        observation = pygame.Rect(44, 6, 10, 10)
-        engineering = pygame.Rect(44, 18, 10, 10)
-        upper_connector = pygame.Rect(36, 6, 12, 6)
-        upper_access = pygame.Rect(40, 2, 8, 4)
-        far_wing = pygame.Rect(44, 0, 10, 6)
-        reactor = pygame.Rect(42, 26, 12, 6)
-        atrium = pygame.Rect(32, 28, 16, 6)
-        south_link = pygame.Rect(22, 24, 12, 6)
-        south_galleria = pygame.Rect(12, 24, 14, 6)
-        western_link = pygame.Rect(10, 8, 10, 8)
-        north_link = pygame.Rect(16, 6, 10, 6)
-        labs = pygame.Rect(16, 0, 10, 6)
-        cargo = pygame.Rect(10, 0, 12, 8)
-        connector_to_hub = pygame.Rect(24, 10, 6, 6)
-        connector_to_labs = pygame.Rect(18, 4, 8, 4)
+        hangar = pygame.Rect(0, 6, 30, 22)
+        central_spine = pygame.Rect(30, 14, 12, 12)
+        central_hub = pygame.Rect(40, 10, 14, 12)
+        north_hall = pygame.Rect(40, 8, 14, 4)
+        south_hall = pygame.Rect(40, 22, 14, 8)
+        east_connector = pygame.Rect(52, 12, 4, 12)
+        observation = pygame.Rect(52, 6, 4, 10)
+        engineering = pygame.Rect(52, 22, 4, 10)
+        upper_connector = pygame.Rect(46, 6, 6, 6)
+        upper_access = pygame.Rect(48, 2, 6, 4)
+        far_wing = pygame.Rect(52, 0, 4, 6)
+        reactor = pygame.Rect(46, 28, 8, 6)
+        atrium = pygame.Rect(34, 28, 14, 6)
+        south_link = pygame.Rect(24, 26, 12, 6)
+        south_galleria = pygame.Rect(12, 26, 16, 6)
+        western_link = pygame.Rect(10, 10, 12, 10)
+        north_link = pygame.Rect(16, 6, 12, 8)
+        labs = pygame.Rect(16, 0, 12, 6)
+        cargo = pygame.Rect(8, 0, 16, 8)
+        connector_to_hub = pygame.Rect(26, 12, 8, 8)
+        connector_to_labs = pygame.Rect(18, 4, 10, 4)
 
         rooms = [
             hangar,
@@ -122,7 +122,7 @@ class _InteriorLayout:
             self._carve(rect)
             self.rooms.append(rect)
 
-        self.spawn_point = self._tile_center(8, 18)
+        self.spawn_point = self._tile_center(12, 18)
 
         # Decorative floor strips to add visual depth.
         self.floor_details.extend(
@@ -133,7 +133,7 @@ class _InteriorLayout:
                     hangar.width * tile - int(tile * 1.8),
                     int(tile * 0.32),
                 )
-                for idx in range(4)
+                for idx in range(6)
             ]
         )
         self.floor_details.extend(
@@ -150,18 +150,18 @@ class _InteriorLayout:
 
         # Area lights to add atmosphere along the walkways.
         light_tiles = [
-            (10, 18),
-            (16, 18),
-            (22, 18),
-            (30, 18),
-            (35, 12),
-            (36, 24),
-            (45, 10),
-            (46, 20),
-            (24, 8),
-            (14, 8),
-            (20, 2),
-            (42, 2),
+            (6, 18),
+            (12, 18),
+            (18, 18),
+            (26, 18),
+            (32, 18),
+            (38, 18),
+            (46, 12),
+            (46, 24),
+            (20, 10),
+            (14, 10),
+            (24, 4),
+            (42, 4),
         ]
         for x, y in light_tiles:
             self.lights.append(
@@ -221,11 +221,11 @@ class OutpostInteriorScene(Scene):
         self.state: _InteriorState = _InteriorState.DOCKING
         self.state_timer: float = 0.0
         self.docking_duration = 5.2
-        self.disembark_duration = 2.8
+        self.disembark_duration = 4.2
         self.layout = _InteriorLayout(cols=56, rows=36, tile_size=96)
         self.player_position = Vector2(self.layout.spawn_point)
         self.player_velocity = Vector2()
-        self.player_heading = Vector2(0.0, -1.0)
+        self.player_heading = Vector2(1.0, 0.0)
         self.camera_position = Vector2()
         self.viewport_size = Vector2(1920.0, 1080.0)
         self.status_font: Optional[pygame.font.Font] = None
@@ -245,6 +245,9 @@ class OutpostInteriorScene(Scene):
         self._ceiling_gradient: Optional[pygame.Surface] = None
         self._floor_gradient: Optional[pygame.Surface] = None
         self._proxy_station_ship: bool = False
+        self._hangar_ship_surface: Optional[pygame.Surface] = None
+        self._hangar_ship_scaled: Optional[pygame.Surface] = None
+        self._hangar_ship_scaled_size: Tuple[int, int] = (0, 0)
 
     def _build_starfield(self) -> None:
         rng = random.Random(20240217)
@@ -278,10 +281,10 @@ class OutpostInteriorScene(Scene):
             self.viewport_size = Vector2(surface.get_width(), surface.get_height())
         self.player_position = Vector2(self.layout.spawn_point)
         self.player_velocity = Vector2()
-        self.player_heading = Vector2(0.0, -1.0)
+        self.player_heading = Vector2(1.0, 0.0)
         self.camera_position = self.player_position - self.viewport_size / 2
         self.elapsed_time = 0.0
-        self.player_yaw = 0.0
+        self.player_yaw = math.pi / 2
         self.head_bob_phase = 0.0
         self.head_bob_offset = 0.0
         self.cutscene_camera = None
@@ -298,7 +301,11 @@ class OutpostInteriorScene(Scene):
         self.caption_font = pygame.font.SysFont("consolas", 28)
         pygame.mouse.set_visible(True)
         pygame.event.set_grab(False)
+        self._hangar_ship_surface = None
+        self._hangar_ship_scaled = None
+        self._hangar_ship_scaled_size = (0, 0)
         self._setup_docking_sequence()
+        self._generate_hangar_ship_surface()
 
     def _setup_docking_sequence(self) -> None:
         if not self.player or not self.station:
@@ -394,6 +401,134 @@ class OutpostInteriorScene(Scene):
         self._proxy_station_ship = True
         return ghost
 
+    def _generate_hangar_ship_surface(self) -> None:
+        if not self.player:
+            self._hangar_ship_surface = None
+            self._hangar_ship_scaled = None
+            self._hangar_ship_scaled_size = (0, 0)
+            return
+
+        base_width = 1280
+        base_height = 720
+        surface = pygame.Surface((base_width, base_height), pygame.SRCALPHA)
+
+        # Massive hangar backdrop gradient.
+        for y in range(base_height):
+            t = y / max(1, base_height - 1)
+            shade = int(14 + 46 * t)
+            alpha = int(200 * max(0.0, 1.0 - t * 0.55))
+            surface.fill((shade, shade + 18, shade + 32, alpha), pygame.Rect(0, y, base_width, 1))
+
+        # Structural ribs to emphasize the scale of the hangar chamber.
+        rib_color = (26, 48, 74, 180)
+        rib_count = 6
+        for idx in range(rib_count):
+            depth = idx / max(1, rib_count - 1)
+            spread = 0.4 + depth * 1.3
+            y_top = int(base_height * (0.18 + depth * 0.55))
+            thickness = int(18 + depth * 36)
+            left = int(base_width * (0.5 - spread))
+            right = int(base_width * (0.5 + spread))
+            pygame.draw.polygon(
+                surface,
+                rib_color,
+                [
+                    (left - thickness, y_top - thickness),
+                    (right + thickness, y_top - thickness),
+                    (right, y_top + thickness),
+                    (left, y_top + thickness),
+                ],
+            )
+
+        # Prepare a ghost copy of the player's ship to render inside the hangar.
+        ghost = Ship(self.player.frame, team=self.player.team)
+        ghost.kinematics.position = Vector3(0.0, 0.0, 0.0)
+        ghost.kinematics.rotation = Vector3(0.0, 0.0, 0.0)
+        ghost.kinematics.velocity = Vector3()
+        ghost.thrusters_active = False
+
+        camera = ChaseCamera(70.0, base_width / base_height)
+        camera.position = Vector3(0.0, 160.0, -520.0)
+        camera.forward = Vector3(0.0, -0.1, 1.0).normalize()
+        camera.up = Vector3(0.0, 1.0, 0.0)
+        camera.right = camera.forward.cross(camera.up)
+        if camera.right.length_squared() > 1e-6:
+            camera.right = camera.right.normalize()
+            camera.up = camera.right.cross(camera.forward).normalize()
+
+        renderer = VectorRenderer(surface)
+
+        grid_focus = ghost.kinematics.position + Vector3(0.0, -180.0, 320.0)
+        renderer.draw_grid(camera, grid_focus, tile_size=260.0, extent=7200.0, height_offset=-40.0)
+        renderer.draw_ship(camera, ghost)
+
+        # Additional hangar silhouettes to support the sense of scale.
+        support_surface = pygame.Surface((base_width, base_height), pygame.SRCALPHA)
+        pillar_color = (40, 70, 108, 180)
+        for offset in (-0.72, -0.44, 0.44, 0.72):
+            base_x = int(base_width * (0.5 + offset))
+            pygame.draw.polygon(
+                support_surface,
+                pillar_color,
+                [
+                    (base_x - 36, int(base_height * 0.22)),
+                    (base_x + 36, int(base_height * 0.22)),
+                    (base_x + 58, int(base_height * 0.86)),
+                    (base_x - 58, int(base_height * 0.86)),
+                ],
+            )
+        surface.blit(support_surface, (0, 0))
+
+        # Fade the lower portion so the floor from the interior renderer can show through.
+        fade_height = int(base_height * 0.32)
+        if fade_height > 0:
+            fade_mask = pygame.Surface((base_width, fade_height), pygame.SRCALPHA)
+            for y in range(fade_height):
+                t = y / max(1, fade_height - 1)
+                fade_mask.fill((0, 0, 0, int(255 * t)), pygame.Rect(0, y, base_width, 1))
+        surface.blit(fade_mask, (0, base_height - fade_height), special_flags=pygame.BLEND_RGBA_SUB)
+
+        self._hangar_ship_surface = surface
+        self._hangar_ship_scaled = None
+        self._hangar_ship_scaled_size = (0, 0)
+
+    def _draw_ship_in_hangar(self, surface: pygame.Surface, horizon: int) -> None:
+        if not self._hangar_ship_surface:
+            return
+
+        facing = Vector2(math.sin(self.player_yaw), -math.cos(self.player_yaw))
+        alignment = facing.dot(Vector2(-1.0, 0.0))
+        if alignment <= 0.2:
+            return
+
+        spawn_offset = self.player_position - self.layout.spawn_point
+        fade_distance = self.layout.tile_size * 6.0
+        distance_factor = 1.0 - min(1.0, spawn_offset.length() / max(1.0, fade_distance))
+        visibility = max(0.0, min(1.0, (alignment - 0.2) / 0.8)) * distance_factor
+        if visibility <= 1e-3:
+            return
+
+        size = surface.get_size()
+        if self._hangar_ship_scaled is None or self._hangar_ship_scaled_size != size:
+            self._hangar_ship_scaled = pygame.transform.smoothscale(self._hangar_ship_surface, size)
+            self._hangar_ship_scaled_size = size
+
+        overlay = self._hangar_ship_scaled.copy()
+        fade_start = max(0, min(size[1], horizon + int(size[1] * 0.18)))
+        fade_height = max(int(size[1] * 0.34), size[1] - fade_start)
+        if fade_height > 0:
+            fade_mask = pygame.Surface((size[0], fade_height), pygame.SRCALPHA)
+            for y in range(fade_height):
+                t = y / max(1, fade_height - 1)
+                fade_mask.fill((0, 0, 0, int(255 * t)), pygame.Rect(0, y, size[0], 1))
+            overlay.blit(fade_mask, (0, size[1] - fade_height), special_flags=pygame.BLEND_RGBA_SUB)
+
+        shading = pygame.Surface(size, pygame.SRCALPHA)
+        shading.fill((6, 12, 22, int(120 * (1.0 - visibility))))
+        overlay.blit(shading, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+        overlay.set_alpha(int(220 * visibility))
+        surface.blit(overlay, (0, 0))
+
     def _update_docking_animation(self, dt: float) -> None:
         if not self.player or not self._docking_sequence:
             return
@@ -437,7 +572,7 @@ class OutpostInteriorScene(Scene):
     def _update_disembark(self, dt: float) -> None:
         self.player_velocity *= max(0.0, 1.0 - dt * 4.0)
         self.head_bob_offset *= max(0.0, 1.0 - dt * 5.0)
-        target_yaw = 0.0
+        target_yaw = math.pi / 2
         delta = target_yaw - self.player_yaw
         if delta > math.pi:
             delta -= 2.0 * math.pi
@@ -837,35 +972,316 @@ class OutpostInteriorScene(Scene):
 
     def _render_disembark_cutscene(self, surface: pygame.Surface) -> None:
         width, height = surface.get_size()
-        progress = min(1.0, self.state_timer / self.disembark_duration)
-        eased = progress ** 1.6
-        forward = Vector2(math.sin(self.player_yaw), -math.cos(self.player_yaw))
-        travel = forward * (self.layout.tile_size * 0.8 * (1.0 - eased))
-        virtual_position = self.player_position - travel
-        horizon = self._render_first_person_view(surface, virtual_position, self.player_yaw, 0.0)
+        duration = max(1e-5, self.disembark_duration)
+        progress = max(0.0, min(1.0, self.state_timer / duration))
 
-        door_width = int(width * 0.28)
-        gap = int((1.0 - eased) * (door_width + 40))
-        door_height = int(height * 0.58)
-        center_y = horizon - int(height * 0.08)
-        left_rect = pygame.Rect(width // 2 - door_width - gap, center_y - door_height // 2, door_width, door_height)
-        right_rect = pygame.Rect(width // 2 + gap, center_y - door_height // 2, door_width, door_height)
-        door_color = (18, 42, 68)
-        accent_color = (120, 220, 255)
-        pygame.draw.rect(surface, door_color, left_rect)
-        pygame.draw.rect(surface, door_color, right_rect)
-        pygame.draw.rect(surface, accent_color, left_rect, 2)
-        pygame.draw.rect(surface, accent_color, right_rect, 2)
+        def _segment(start: float, end: float) -> float:
+            if progress <= start:
+                return 0.0
+            if progress >= end:
+                return 1.0
+            span = end - start
+            if span <= 0.0:
+                return 1.0
+            return (progress - start) / span
 
-        fade_strength = max(0.0, 1.0 - progress * 1.8)
-        if fade_strength > 0.0:
-            overlay = pygame.Surface((width, height), pygame.SRCALPHA)
-            overlay.fill((0, 0, 0, int(255 * fade_strength)))
-            surface.blit(overlay, (0, 0))
+        approach = _segment(0.0, 0.5)
+        brake = _segment(0.5, 0.72)
+        drop = _segment(0.72, 0.85)
+        canopy = _segment(0.85, 0.92)
+        egress = _segment(0.92, 1.0)
+
+        approach_ease = approach ** 1.2
+        brake_ease = brake ** 1.6
+        drop_ease = drop ** 2.1
+        canopy_ease = canopy ** 1.5
+        egress_ease = egress ** 1.35
+
+        def _to_int(value: float) -> int:
+            return int(round(value))
+
+        surface.fill((8, 14, 24))
+
+        center_x = width // 2
+        vanish_y = _to_int(height * (0.34 - drop_ease * 0.08 + egress_ease * 0.04))
+        floor_y = _to_int(height * (0.86 - drop_ease * 0.26 + egress_ease * 0.18))
+        neck_y = _to_int(vanish_y + height * (0.18 + approach_ease * 0.12))
+        far_half_width = width * (0.18 + approach_ease * 0.32)
+        near_half_width = width * (0.48 + approach_ease * 0.36 + brake_ease * 0.18)
+        parallax = (1.0 - approach_ease) * 0.4 + (1.0 - brake_ease) * 0.2
+
+        hangar_overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+
+        ceiling_height = height * (0.18 - parallax * 0.12)
+        ceiling_poly = [
+            (_to_int(center_x - near_half_width * 0.82), _to_int(vanish_y - ceiling_height)),
+            (_to_int(center_x + near_half_width * 0.82), _to_int(vanish_y - ceiling_height)),
+            (_to_int(center_x + far_half_width * 0.92), neck_y),
+            (_to_int(center_x - far_half_width * 0.92), neck_y),
+        ]
+        pygame.draw.polygon(hangar_overlay, (24, 36, 58, 235), ceiling_poly)
+
+        floor_poly = [
+            (_to_int(center_x - near_half_width), floor_y),
+            (_to_int(center_x + near_half_width), floor_y),
+            (_to_int(center_x + far_half_width * 0.94), neck_y),
+            (_to_int(center_x - far_half_width * 0.94), neck_y),
+        ]
+        pygame.draw.polygon(hangar_overlay, (34, 48, 66, 255), floor_poly)
+
+        side_color = (18, 30, 50, 220)
+        left_wall = [
+            (_to_int(center_x - near_half_width * 1.08), floor_y),
+            (_to_int(center_x - near_half_width * 0.86), floor_y),
+            (_to_int(center_x - far_half_width * 0.96), neck_y),
+            (_to_int(center_x - far_half_width * 1.28), _to_int(vanish_y - height * (0.12 - parallax * 0.08))),
+        ]
+        right_wall = [
+            (_to_int(center_x + near_half_width * 0.86), floor_y),
+            (_to_int(center_x + near_half_width * 1.08), floor_y),
+            (_to_int(center_x + far_half_width * 1.28), _to_int(vanish_y - height * (0.12 - parallax * 0.08))),
+            (_to_int(center_x + far_half_width * 0.96), neck_y),
+        ]
+        pygame.draw.polygon(hangar_overlay, side_color, left_wall)
+        pygame.draw.polygon(hangar_overlay, side_color, right_wall)
+
+        beam_color = (50, 86, 132, 170)
+        beam_count = 5
+        for idx in range(-beam_count, beam_count + 1):
+            frac = idx / max(1, beam_count)
+            top_y = _to_int(vanish_y - height * (0.1 + frac * 0.03) - canopy_ease * height * 0.14)
+            bottom_y = _to_int(neck_y + frac * height * 0.06)
+            x_far = _to_int(center_x + far_half_width * frac * 0.9)
+            x_near = _to_int(center_x + near_half_width * frac * 0.92)
+            pygame.draw.polygon(
+                hangar_overlay,
+                beam_color,
+                [
+                    (x_far - 8, top_y),
+                    (x_far + 8, top_y),
+                    (x_near + 18, bottom_y),
+                    (x_near - 18, bottom_y),
+                ],
+            )
+
+        edge_color = (118, 210, 255, 160)
+        pygame.draw.aaline(
+            hangar_overlay,
+            edge_color,
+            (_to_int(center_x - near_half_width), floor_y),
+            (_to_int(center_x - far_half_width * 0.94), neck_y),
+        )
+        pygame.draw.aaline(
+            hangar_overlay,
+            edge_color,
+            (_to_int(center_x + near_half_width), floor_y),
+            (_to_int(center_x + far_half_width * 0.94), neck_y),
+        )
+
+        stripes = 12
+        motion = (1.0 - approach_ease) * 6.5 + (1.0 - brake_ease) * 2.2
+        for idx in range(stripes + 3):
+            depth = (idx + motion) / (stripes + 3)
+            if depth >= 0.98:
+                continue
+            depth = max(0.05, depth)
+            y = _to_int(vanish_y + (neck_y - vanish_y) * depth)
+            half = far_half_width + (near_half_width - far_half_width) * depth
+            alpha = int(150 * (1.0 - depth) ** 0.55)
+            color = (80, 160, 220, alpha)
+            pygame.draw.line(hangar_overlay, color, (_to_int(center_x - half), y), (_to_int(center_x + half), y), 4)
+
+        for idx in range(6):
+            fraction = idx / 5.0 if idx else 0.0
+            light_x = _to_int(center_x - near_half_width * 0.9 + fraction * near_half_width * 1.8)
+            light_y = _to_int(vanish_y + (neck_y - vanish_y) * 0.22)
+            radius = max(3, _to_int(6 + fraction * 5))
+            alpha = int(140 * (0.6 + 0.4 * math.sin(self.elapsed_time * 4.0 + idx * 0.7)))
+            pygame.draw.circle(hangar_overlay, (30, 50, 70, alpha), (light_x, light_y), radius + 4)
+            pygame.draw.circle(hangar_overlay, (120, 210, 255, alpha), (light_x, light_y), radius, 0)
+
+        door_rect = pygame.Rect(
+            _to_int(center_x - far_half_width * 0.6),
+            _to_int(vanish_y - height * 0.06),
+            _to_int(far_half_width * 1.2),
+            _to_int(height * 0.16),
+        )
+        hangar_overlay.fill((32, 52, 84, 220), door_rect)
+        pygame.draw.rect(hangar_overlay, (90, 150, 200, 200), door_rect, 2)
+
+        pit_rect = pygame.Rect(
+            _to_int(center_x - near_half_width * 0.58),
+            _to_int(neck_y + (floor_y - neck_y) * 0.32),
+            _to_int(near_half_width * 1.16),
+            _to_int((floor_y - neck_y) * 0.42),
+        )
+        hangar_overlay.fill((18, 26, 40, 200), pit_rect)
+        pygame.draw.rect(hangar_overlay, (70, 120, 168, 150), pit_rect, 2)
+
+        crane_color = (60, 90, 130, 170)
+        crane_y = _to_int(vanish_y - height * (0.14 + canopy_ease * 0.12))
+        pygame.draw.line(hangar_overlay, crane_color, (_to_int(center_x - far_half_width * 0.8), crane_y), (_to_int(center_x + far_half_width * 0.8), crane_y), 6)
+        for offset in (-0.55, -0.15, 0.25, 0.65):
+            anchor_x = _to_int(center_x + far_half_width * offset)
+            pygame.draw.line(hangar_overlay, crane_color, (anchor_x, crane_y), (anchor_x, _to_int(neck_y + height * 0.02)), 4)
+            hook_y = _to_int(neck_y + (floor_y - neck_y) * 0.22 - drop_ease * height * 0.08)
+            pygame.draw.circle(hangar_overlay, (120, 180, 230, 160), (anchor_x, hook_y), 6, 1)
+
+        glow_surface = pygame.Surface((width, height), pygame.SRCALPHA)
+        glow_radius = max(60, _to_int(width * 0.14))
+        for offset in (-1, 1):
+            glow_center = (_to_int(center_x + near_half_width * 0.94 * offset), floor_y)
+            pygame.draw.circle(glow_surface, (40, 90, 150, 140), glow_center, glow_radius)
+        hangar_overlay.blit(glow_surface, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+
+        surface.blit(hangar_overlay, (0, 0))
+
+        glass_alpha = int(150 * (1.0 - canopy_ease))
+        if glass_alpha > 0:
+            glass_surface = pygame.Surface((width, height), pygame.SRCALPHA)
+            glass_shift = _to_int(height * 0.44 * canopy_ease)
+            glass_points = [
+                (_to_int(center_x - near_half_width * 0.78), _to_int(height - (height - floor_y) * 1.08) - glass_shift),
+                (_to_int(center_x - far_half_width * 0.38), _to_int(vanish_y - height * 0.06) - glass_shift),
+                (_to_int(center_x + far_half_width * 0.38), _to_int(vanish_y - height * 0.06) - glass_shift),
+                (_to_int(center_x + near_half_width * 0.78), _to_int(height - (height - floor_y) * 1.08) - glass_shift),
+            ]
+            pygame.draw.polygon(glass_surface, (70, 120, 170, glass_alpha), glass_points)
+            highlight = pygame.Surface((width, height), pygame.SRCALPHA)
+            pygame.draw.polygon(highlight, (150, 220, 255, glass_alpha // 3), glass_points)
+            glass_surface.blit(highlight, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+            surface.blit(glass_surface, (0, 0))
+
+        cockpit_overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+        panel_height = max(56, _to_int(height * (0.28 - egress_ease * 0.12)))
+        panel_top = height - panel_height
+        panel_rect = pygame.Rect(_to_int(width * 0.06), panel_top, _to_int(width * 0.88), panel_height)
+        panel_alpha = int(220 * (1.0 - egress_ease * 0.7))
+        pygame.draw.rect(cockpit_overlay, (18, 30, 48, panel_alpha), panel_rect, border_radius=24)
+        pygame.draw.rect(cockpit_overlay, (60, 136, 200, 160), panel_rect, 2)
+
+        screen_rect = pygame.Rect(panel_rect.left + 24, panel_top + _to_int(panel_height * 0.12), _to_int(width * 0.12), _to_int(panel_height * 0.22))
+        pygame.draw.rect(cockpit_overlay, (26, 50, 90, 200), screen_rect, border_radius=8)
+        pygame.draw.rect(cockpit_overlay, (120, 200, 255, 180), screen_rect.inflate(-8, -8), 2)
+        mirror_screen = pygame.Rect(panel_rect.right - screen_rect.width - 24, screen_rect.top, screen_rect.width, screen_rect.height)
+        pygame.draw.rect(cockpit_overlay, (26, 50, 90, 200), mirror_screen, border_radius=8)
+        pygame.draw.rect(cockpit_overlay, (120, 200, 255, 160), mirror_screen.inflate(-8, -8), 2)
+
+        gauge_count = 4
+        for idx in range(gauge_count):
+            gauge_width = panel_rect.width // (gauge_count + 3)
+            gauge_left = panel_rect.left + gauge_width * (idx + 2)
+            gauge_rect = pygame.Rect(gauge_left, panel_top + _to_int(panel_height * 0.32), gauge_width, _to_int(panel_height * 0.18))
+            pygame.draw.rect(cockpit_overlay, (26, 46, 70, 200), gauge_rect, border_radius=6)
+            fill_height = max(6, int(gauge_rect.height * (0.25 + 0.6 * (1.0 - approach_ease) * (1.0 - idx / (gauge_count + 1)))))
+            fill_rect = pygame.Rect(gauge_rect.left + 4, gauge_rect.bottom - fill_height - 4, gauge_rect.width - 8, fill_height)
+            pygame.draw.rect(cockpit_overlay, (90, 200, 255, 170), fill_rect, border_radius=4)
+
+        holo_radius = max(48, _to_int(panel_height * 0.28))
+        holo_center = (_to_int(center_x), panel_top + _to_int(panel_height * 0.42))
+        pygame.draw.circle(cockpit_overlay, (30, 56, 90, 180), holo_center, holo_radius, 0)
+        scan_radius = max(18, int(holo_radius * (0.32 + 0.6 * (1.0 - brake_ease))))
+        pygame.draw.circle(cockpit_overlay, (120, 220, 255, 200), holo_center, scan_radius, 2)
+        sweep_angle = approach_ease * math.pi * 0.8 + brake_ease * 0.3
+        indicator = (
+            _to_int(holo_center[0] + math.sin(sweep_angle) * holo_radius * 0.6),
+            _to_int(holo_center[1] - math.cos(sweep_angle) * holo_radius * 0.6),
+        )
+        pygame.draw.circle(cockpit_overlay, (170, 240, 255, 210), indicator, 6, 0)
+        pygame.draw.circle(cockpit_overlay, (90, 180, 220, 160), indicator, 12, 2)
+
+        throttle_value = max(0.0, min(1.0, 1.0 - approach_ease * 0.7 - brake_ease * 0.5 + drop_ease * 0.2))
+        throttle_slot = pygame.Rect(_to_int(width * 0.74), panel_top - _to_int(panel_height * 0.3), _to_int(width * 0.02), _to_int(panel_height * 0.5))
+        pygame.draw.rect(cockpit_overlay, (40, 70, 100, 200), throttle_slot, border_radius=6)
+        knob_height = _to_int(panel_height * 0.1)
+        knob_top = throttle_slot.bottom - _to_int(throttle_slot.height * (0.18 + throttle_value * 0.78)) - knob_height // 2
+        knob_rect = pygame.Rect(throttle_slot.left - _to_int(width * 0.012), knob_top, throttle_slot.width + _to_int(width * 0.024), knob_height)
+        pygame.draw.rect(cockpit_overlay, (120, 210, 255, 200), knob_rect, border_radius=4)
+
+        pygame.draw.line(
+            cockpit_overlay,
+            (90, 150, 210, 160),
+            (panel_rect.left + 12, panel_top + _to_int(panel_height * 0.18)),
+            (panel_rect.right - 12, panel_top + _to_int(panel_height * 0.18)),
+            2,
+        )
+
+        arm_alpha = int(255 * (1.0 - egress_ease))
+        arm_motion = brake_ease * 36.0 - drop_ease * 18.0
+        if arm_alpha > 0:
+            arm_color = (58, 92, 132, arm_alpha)
+            glove_color = (214, 232, 255, arm_alpha)
+            left_arm_points = [
+                (_to_int(width * 0.18), _to_int(height - panel_height * 0.08)),
+                (_to_int(width * 0.26 - arm_motion * 0.12), _to_int(panel_top - panel_height * 0.25 - arm_motion * 0.32)),
+                (_to_int(width * 0.34 - arm_motion * 0.05), _to_int(panel_top - panel_height * 0.12)),
+                (_to_int(width * 0.26), _to_int(height - panel_height * 0.02)),
+            ]
+            right_arm_points = [
+                (_to_int(width * 0.82), _to_int(height - panel_height * 0.08)),
+                (_to_int(width * 0.74 + arm_motion * 0.12), _to_int(panel_top - panel_height * 0.27 - arm_motion * 0.3)),
+                (_to_int(width * 0.66 + arm_motion * 0.05), _to_int(panel_top - panel_height * 0.14)),
+                (_to_int(width * 0.74), _to_int(height - panel_height * 0.02)),
+            ]
+            pygame.draw.polygon(cockpit_overlay, arm_color, left_arm_points)
+            pygame.draw.polygon(cockpit_overlay, arm_color, right_arm_points)
+            left_hand_center = (_to_int(width * 0.32 - arm_motion * 0.04), _to_int(panel_top - panel_height * 0.16 - arm_motion * 0.38))
+            right_hand_center = (_to_int(width * 0.68 + arm_motion * 0.04), _to_int(panel_top - panel_height * 0.18 - arm_motion * 0.28))
+            hand_radius = max(14, _to_int(panel_height * 0.12))
+            pygame.draw.circle(cockpit_overlay, glove_color, left_hand_center, hand_radius)
+            pygame.draw.circle(cockpit_overlay, (140, 180, 220, arm_alpha), left_hand_center, hand_radius, 3)
+            pygame.draw.circle(cockpit_overlay, glove_color, right_hand_center, hand_radius)
+            pygame.draw.circle(cockpit_overlay, (140, 180, 220, arm_alpha), right_hand_center, hand_radius, 3)
+            left_stick_base = (_to_int(width * 0.32), _to_int(height - panel_height * 0.04))
+            left_stick_tip = (
+                _to_int(width * 0.32 + math.sin(self.elapsed_time * 2.0 + brake_ease) * 18.0),
+                _to_int(panel_top - panel_height * (0.52 - drop_ease * 0.12)),
+            )
+            pygame.draw.line(cockpit_overlay, (90, 150, 210, arm_alpha), left_stick_base, left_stick_tip, 6)
+            right_stick_base = (_to_int(width * 0.68), _to_int(height - panel_height * 0.04))
+            right_stick_tip = (
+                _to_int(width * 0.68 + math.sin(self.elapsed_time * 1.6 + approach_ease) * 16.0),
+                _to_int(panel_top - panel_height * (0.46 - drop_ease * 0.08)),
+            )
+            pygame.draw.line(cockpit_overlay, (90, 150, 210, arm_alpha), right_stick_base, right_stick_tip, 6)
+
+        frame_alpha = int(235 * (1.0 - egress_ease * 0.5))
+        frame_color = (12, 20, 32, frame_alpha)
+        frame_width = max(6, _to_int(width * 0.01))
+        apex_y = _to_int(vanish_y - height * (0.1 + canopy_ease * 0.18))
+        pygame.draw.line(cockpit_overlay, frame_color, (_to_int(width * 0.1), panel_top), (center_x, apex_y), frame_width)
+        pygame.draw.line(cockpit_overlay, frame_color, (_to_int(width * 0.9), panel_top), (center_x, apex_y), frame_width)
+        pygame.draw.line(cockpit_overlay, frame_color, (_to_int(width * 0.08), panel_top + _to_int(panel_height * 0.26)), (_to_int(width * 0.92), panel_top + _to_int(panel_height * 0.26)), frame_width)
+
+        cockpit_overlay.set_alpha(int(255 * (1.0 - egress_ease * 0.08)))
+        cockpit_offset = -_to_int(egress_ease * height * 0.18)
+        surface.blit(cockpit_overlay, (0, cockpit_offset))
+
+        if egress_ease > 0.0:
+            first_person = pygame.Surface((width, height), pygame.SRCALPHA)
+            horizon = self._render_first_person_view(
+                first_person,
+                self.player_position,
+                self.player_yaw,
+                0.0,
+            )
+            self._draw_ship_in_hangar(first_person, horizon)
+            first_person.set_alpha(_to_int(255 * egress_ease))
+            surface.blit(first_person, (0, -_to_int((1.0 - egress_ease) * height * 0.04)))
 
         if self.caption_font:
-            caption = self.caption_font.render("Touchdown inside the hangar", True, (214, 236, 255))
-            surface.blit(caption, (width // 2 - caption.get_width() // 2, int(height * 0.08)))
+            if progress < 0.5:
+                caption_text = "Approaching Outpost hangar"
+            elif progress < 0.85:
+                caption_text = "Landing thrusters engaged"
+            else:
+                caption_text = "Disembarking to Outpost"
+            caption = self.caption_font.render(caption_text, True, (214, 236, 255))
+            surface.blit(caption, (width // 2 - caption.get_width() // 2, _to_int(height * 0.08)))
+
+        if self.status_font:
+            detail = self.status_font.render("Hangar deck pressurized · Line-class clearance", True, (150, 196, 236))
+            surface.blit(detail, (width // 2 - detail.get_width() // 2, _to_int(height * 0.9)))
 
     def _render_exploration(self, surface: pygame.Surface) -> None:
         horizon = self._render_first_person_view(
@@ -876,12 +1292,7 @@ class OutpostInteriorScene(Scene):
         )
 
         width, height = surface.get_size()
-        crosshair_color = (210, 240, 255)
-        center_y = horizon + int(height * 0.06) + int(self.head_bob_offset)
-        center = (width // 2, center_y)
-        pygame.draw.circle(surface, crosshair_color, center, 6, 1)
-        pygame.draw.line(surface, crosshair_color, (center[0] - 12, center[1]), (center[0] + 12, center[1]), 1)
-        pygame.draw.line(surface, crosshair_color, (center[0], center[1] - 12), (center[0], center[1] + 12), 1)
+        self._draw_ship_in_hangar(surface, horizon)
 
         if self.caption_font:
             label = self.caption_font.render("OUTPOST INTERIOR", True, (162, 208, 246))
