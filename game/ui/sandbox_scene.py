@@ -1,6 +1,7 @@
 """Sandbox combat scene."""
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 import pygame
@@ -128,7 +129,10 @@ class SandboxScene(Scene):
                 )
                 self.dummy = None
                 last_enemy_spawn: Ship | None = None
+                formation_limit = max(1, math.ceil(len(SHIP_FORMATION_OFFSETS) / 2))
                 for index, offset in enumerate(SHIP_FORMATION_OFFSETS):
+                    if index >= formation_limit:
+                        break
                     frame = self.content.ships.get(primary_enemy_spawn[1])
                     ship = Ship(frame, team=primary_enemy_spawn[0])
                     ship.apply_default_loadout(self.content)
@@ -151,8 +155,9 @@ class SandboxScene(Scene):
                     ("enemy", "glaive_command", (60.0, -36.0, 940.0), (0.0, 0.0, -14.0)),
                     ("enemy", "brimir_carrier", (0.0, -80.0, 1280.0), (0.0, 0.0, -6.0)),
                 ]
+                spawn_subset = additional_spawns[: max(1, len(additional_spawns) // 2)]
                 for offset in SHIP_FORMATION_OFFSETS:
-                    for team, frame_id, position, velocity in additional_spawns:
+                    for team, frame_id, position, velocity in spawn_subset:
                         frame = self.content.ships.get(frame_id)
                         ship = Ship(frame, team=team)
                         ship.kinematics.position = Vector3(position) * SECTOR_SCALE + offset
