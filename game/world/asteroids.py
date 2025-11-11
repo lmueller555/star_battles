@@ -27,6 +27,9 @@ def _lerp_color(a: Tuple[int, int, int], b: Tuple[int, int, int], t: float) -> T
     return tuple(int(round(av + (bv - av) * t)) for av, bv in zip(a, b))
 
 
+INVENTORY_RESOURCE_OVERRIDES: Dict[str, str] = {"tyllium": "tylium"}
+
+
 @dataclass
 class Asteroid:
     """Single asteroid instance within a sector."""
@@ -40,6 +43,7 @@ class Asteroid:
     scanned: bool = False
     scanning: bool = False
     _scan_effect_timer: float = field(default=0.0, repr=False)
+    _size: float = field(init=False, repr=False)
 
     MIN_SIZE = 10.0
     MAX_SIZE = 100.0
@@ -48,12 +52,19 @@ class Asteroid:
     SCAN_DURATION = 2.0
     SCAN_EFFECT_DURATION = 0.75
 
-    def size(self) -> float:
+    def __post_init__(self) -> None:
+        self._size = self._size_for_health(self.health)
+
+    @classmethod
+    def _size_for_health(cls, health: float) -> float:
         ratio = 0.0
-        if self.MAX_HEALTH > self.MIN_HEALTH:
-            ratio = (self.health - self.MIN_HEALTH) / (self.MAX_HEALTH - self.MIN_HEALTH)
+        if cls.MAX_HEALTH > cls.MIN_HEALTH:
+            ratio = (health - cls.MIN_HEALTH) / (cls.MAX_HEALTH - cls.MIN_HEALTH)
         ratio = max(0.0, min(1.0, ratio))
-        return self.MIN_SIZE + (self.MAX_SIZE - self.MIN_SIZE) * ratio
+        return cls.MIN_SIZE + (cls.MAX_SIZE - cls.MIN_SIZE) * ratio
+
+    def size(self) -> float:
+        return self._size
 
     @property
     def radius(self) -> float:
@@ -77,6 +88,12 @@ class Asteroid:
             blend = 1.0 - min(1.0, self._scan_effect_timer / self.SCAN_EFFECT_DURATION)
             return _lerp_color(SCAN_GLOW, self.resource_color, blend)
         return self.resource_color
+
+    @property
+    def inventory_resource_key(self) -> Optional[str]:
+        if not self.resource:
+            return None
+        return INVENTORY_RESOURCE_OVERRIDES.get(self.resource, self.resource)
 
     def begin_scan(self) -> None:
         self.scanning = True
