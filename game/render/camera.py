@@ -48,8 +48,8 @@ class ChaseCamera:
         self.look_ahead_distance = 0.0
         self.look_ahead_direction = Vector3(0.0, 0.0, 1.0)
         self.look_ahead_response = 4.0
-        self.look_ahead_factor = 0.08
-        self.look_ahead_max = 20.0
+        self.look_ahead_factor = 0.03
+        self.look_ahead_max = 12.0
         self.lock_blend = 0.0
         self.lock_response = 4.0
         self.lock_side_offset = 3.0
@@ -160,7 +160,7 @@ class ChaseCamera:
                 + focus_up * (self.lock_up_offset * 0.5 * height_scale)
             )
         target_pos = _lerp_vector(base_target_pos, lock_target_pos, self.lock_blend)
-        self.position += (target_pos - self.position) * min(1.0, 5.0 * dt)
+        self.position += (target_pos - self.position) * min(1.0, 10.0 * dt)
 
         velocity = ship.kinematics.velocity
         speed = velocity.length()
@@ -172,7 +172,7 @@ class ChaseCamera:
         )
         base_focus_point = (
             ship.kinematics.position
-            + focus_forward * (self.distance * 0.8)
+            + focus_forward * (self.distance * 0.2)
             + self.look_ahead_direction * self.look_ahead_distance
         )
         lock_focus_point = base_focus_point
