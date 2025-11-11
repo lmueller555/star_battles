@@ -27,6 +27,22 @@ def test_store_purchase_updates_inventory_and_currency() -> None:
     assert preview["current"]["max_speed"] == pytest.approx(ship.stats.max_speed + 1.25)
 
 
+def test_store_purchase_adds_item_to_hold() -> None:
+    ship = _make_ship()
+    result = store.buy("strike_composite_plating")
+    assert result["success"] is True
+    assert ship.hold_items["strike_composite_plating"] == 1
+
+
+def test_store_purchase_respects_hold_capacity() -> None:
+    ship = _make_ship()
+    assert ship.add_hold_item("strike_composite_plating", ship.hold_capacity)
+    store.bind_ship(ship)
+    result = store.buy("light_drive_overcharger")
+    assert result["success"] is False
+    assert "Hold is full" in str(result["error"])  # type: ignore[index]
+
+
 @pytest.mark.parametrize(
     "item_id,expected",
     [
