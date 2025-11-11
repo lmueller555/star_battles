@@ -143,30 +143,45 @@ class AsteroidField:
     RESOURCE_OPTIONS: Tuple[Optional[str], ...] = (None, "water", "titanium", "tyllium")
     RESOURCE_RATIO_RANGE = (0.25, 0.35)
     SCAN_RANGE = 1600.0
+    ACTIVE_RADIUS = 4000.0
+    ACTIVE_REFRESH_DISTANCE = 500.0
 
     def __init__(self, rng: Optional[random.Random] = None) -> None:
         self._rng = rng or random.Random(1337)
         self._fields: Dict[str, List[Asteroid]] = {}
         self._current_system: Optional[str] = None
-        self._current: List[Asteroid] = []
+        self._current_all: List[Asteroid] = []
+        self._active: List[Asteroid] = []
+        self._last_focus: Optional[Vector3] = None
 
     def enter_system(self, system_id: Optional[str]) -> None:
         self._current_system = system_id
+        self._active = []
+        self._last_focus = None
         if not system_id:
-            self._current = []
+            self._current_all = []
             return
         if system_id not in self._fields:
             self._fields[system_id] = self._generate_field(system_id)
-        self._current = self._fields[system_id]
-        for asteroid in self._current:
+        self._current_all = self._fields[system_id]
+        for asteroid in self._current_all:
             asteroid.halt_scan()
         self._prune_destroyed()
+        self._ensure_active_initialized()
 
     def current_field(self) -> List[Asteroid]:
-        return self._current
+        self._ensure_active_initialized()
+        return self._active
 
-    def update(self, dt: float) -> None:
-        for asteroid in self._current:
+    def all_in_current_field(self) -> List[Asteroid]:
+        return self._current_all
+
+    def update(self, dt: float, focus: Optional[Vector3] = None) -> None:
+        if focus is not None:
+            self._update_active_set(focus)
+        else:
+            self._ensure_active_initialized()
+        for asteroid in self._active:
             asteroid.update(dt)
         self._prune_destroyed()
 
@@ -202,12 +217,13 @@ class AsteroidField:
         return Vector3(x, y, z)
 
     def scan_step(self, ship: "Ship", dt: float) -> None:
-        if not self._current:
+        if not self._current_all:
             return
-        for asteroid in self._current:
-            asteroid.halt_scan()
         position = ship.kinematics.position
-        for asteroid in self._current:
+        self._update_active_set(position)
+        for asteroid in self._active:
+            asteroid.halt_scan()
+        for asteroid in self._active:
             if asteroid.scanned or asteroid.is_destroyed():
                 asteroid.update(dt)
                 continue
@@ -216,21 +232,55 @@ class AsteroidField:
                 asteroid.scan(dt)
 
     def halt_scanning(self) -> None:
-        for asteroid in self._current:
+        for asteroid in self._active:
             asteroid.halt_scan()
 
     def prune_destroyed(self) -> None:
         self._prune_destroyed()
 
     def _prune_destroyed(self) -> None:
-        if not self._current:
+        if not self._current_all:
             return
-        remaining = [asteroid for asteroid in self._current if not asteroid.is_destroyed()]
-        if len(remaining) == len(self._current):
+        remaining = [asteroid for asteroid in self._current_all if not asteroid.is_destroyed()]
+        if len(remaining) == len(self._current_all):
             return
-        self._current[:] = remaining
+        self._current_all[:] = remaining
         if self._current_system:
-            self._fields[self._current_system] = self._current
+            self._fields[self._current_system] = self._current_all
+        if self._active:
+            self._active = [asteroid for asteroid in self._active if not asteroid.is_destroyed()]
+
+    def _ensure_active_initialized(self) -> None:
+        if self._active or not self._current_all:
+            return
+        if self._last_focus is None:
+            self._last_focus = Vector3()
+        self._update_active_set(self._last_focus, force=True)
+
+    def _update_active_set(self, focus: Optional[Vector3], *, force: bool = False) -> None:
+        if not self._current_all or focus is None:
+            return
+        if self._last_focus is not None and not force:
+            delta = focus - self._last_focus
+            if delta.length_squared() < self.ACTIVE_REFRESH_DISTANCE ** 2:
+                return
+        previous_active = self._active
+        self._last_focus = Vector3(focus)
+        radius_sq = self.ACTIVE_RADIUS ** 2
+        active: List[Asteroid] = []
+        for asteroid in self._current_all:
+            if asteroid.is_destroyed():
+                continue
+            offset = asteroid.position - focus
+            if offset.length_squared() <= radius_sq:
+                active.append(asteroid)
+        new_ids = {asteroid.id for asteroid in active}
+        removed_ids = {asteroid.id for asteroid in previous_active if asteroid.id not in new_ids}
+        if removed_ids:
+            for asteroid in previous_active:
+                if asteroid.id in removed_ids:
+                    asteroid.halt_scan()
+        self._active = active
 
 
 __all__ = ["Asteroid", "AsteroidField"]

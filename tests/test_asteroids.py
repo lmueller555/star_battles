@@ -31,7 +31,7 @@ def test_asteroid_field_generation_bounds() -> None:
     logger = _quiet_logger()
     world = SpaceWorld(content.weapons, content.sector, content.stations, content.mining, logger)
 
-    asteroids = world.asteroids_in_current_system()
+    asteroids = world.all_asteroids_in_current_system()
     assert len(asteroids) == AsteroidField.ASTEROID_COUNT
     for asteroid in asteroids:
         assert Asteroid.MIN_HEALTH <= asteroid.health <= Asteroid.MAX_HEALTH
@@ -84,7 +84,7 @@ def test_space_world_scanning_marks_asteroid() -> None:
     ship = Ship(frame, team="player")
     world.add_ship(ship)
 
-    asteroid = world.asteroids_in_current_system()[0]
+    asteroid = world.all_asteroids_in_current_system()[0]
     ship.kinematics.position = Vector3(asteroid.position.x, asteroid.position.y, asteroid.position.z)
 
     total = 0.0
@@ -106,7 +106,7 @@ def test_weapons_can_destroy_asteroid() -> None:
     ship.apply_default_loadout(content)
     world.add_ship(ship)
 
-    asteroid = next(a for a in world.asteroids_in_current_system() if not a.is_destroyed())
+    asteroid = next(a for a in world.all_asteroids_in_current_system() if not a.is_destroyed())
     ship.kinematics.position = Vector3(asteroid.position.x, asteroid.position.y, asteroid.position.z - 250.0)
     ship.kinematics.rotation = Vector3(0.0, 0.0, 0.0)
     ship.power = 1000.0
