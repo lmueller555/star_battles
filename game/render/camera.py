@@ -151,11 +151,11 @@ class ChaseCamera:
         focus_right = ship_right
         focus_up = ship_up
         if abs(self.freelook_angles.y) > 1e-3:
-            focus_forward = focus_forward.rotate(ship_up, -self.freelook_angles.y)
-            focus_right = focus_right.rotate(ship_up, -self.freelook_angles.y)
+            focus_forward = focus_forward.rotate(-self.freelook_angles.y, ship_up)
+            focus_right = focus_right.rotate(-self.freelook_angles.y, ship_up)
         if abs(self.freelook_angles.x) > 1e-3:
-            focus_forward = focus_forward.rotate(focus_right, self.freelook_angles.x)
-            focus_up = focus_up.rotate(focus_right, self.freelook_angles.x)
+            focus_forward = focus_forward.rotate(self.freelook_angles.x, focus_right)
+            focus_up = focus_up.rotate(self.freelook_angles.x, focus_right)
 
         focus_forward = focus_forward.normalize()
         focus_right = focus_forward.cross(focus_up).normalize()
