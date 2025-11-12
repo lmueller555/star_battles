@@ -224,56 +224,9 @@ def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
         segments.append((point, nose_tip))
         segments.append((point, ventral_spear))
 
-    dorsal_spine_points: list[Vector3] = []
-    ventral_keel_points: list[Vector3] = []
-    for z_pos, _, half_height in hull_profile:
-        dorsal_spine_points.append(Vector3(0.0, half_height * 1.4 + 30.0, z_pos))
-        ventral_keel_points.append(Vector3(0.0, -half_height * 1.3 - 20.0, z_pos))
-    _loop_segments(segments, dorsal_spine_points, close=False)
-    _loop_segments(segments, ventral_keel_points, close=False)
-    for top, bottom in zip(dorsal_spine_points, ventral_keel_points):
-        segments.append((top, bottom))
-
-    tower_base_z = -60.0
-    tower_profile = [
-        Vector3(0.0, 220.0, tower_base_z - 40.0),
-        Vector3(70.0, 240.0, tower_base_z - 20.0),
-        Vector3(70.0, 320.0, tower_base_z + 30.0),
-        Vector3(-70.0, 320.0, tower_base_z + 30.0),
-        Vector3(-70.0, 240.0, tower_base_z - 20.0),
-    ]
-    _loop_segments(segments, tower_profile)
-    bridge_tip = Vector3(0.0, 360.0, tower_base_z + 60.0)
-    for point in tower_profile:
-        segments.append((point, bridge_tip))
-
-    flank_ridges: list[list[Vector3]] = []
-    for sign in (-1.0, 1.0):
-        ridge_points: list[Vector3] = []
-        for z_pos, half_width, half_height in hull_profile[1:-1]:
-            ridge_points.append(
-                Vector3(sign * (half_width * 1.1 + 30.0), half_height * 0.6, z_pos)
-            )
-        flank_ridges.append(ridge_points)
-        _loop_segments(segments, ridge_points, close=False)
-        for point, section in zip(ridge_points, hull_sections[1:-1]):
-            anchor = section[ring_sides // 4 if sign > 0 else (ring_sides * 3) // 4]
-            segments.append((point, anchor))
-
-    wing_span = 520.0
-    wing_thickness = 55.0
-    wing_points = [
-        Vector3(-wing_span, -wing_thickness, -120.0),
-        Vector3(-wing_span * 0.4, 20.0, -200.0),
-        Vector3(0.0, 60.0, -220.0),
-        Vector3(wing_span * 0.4, 20.0, -200.0),
-        Vector3(wing_span, -wing_thickness, -120.0),
-        Vector3(wing_span * 0.3, -90.0, -40.0),
-        Vector3(-wing_span * 0.3, -90.0, -40.0),
-    ]
-    _loop_segments(segments, wing_points)
-    for index in range(len(wing_points)):
-        segments.append((wing_points[index], wing_points[(index + 3) % len(wing_points)]))
+    # The remaining structure keeps the focus on the primary hull and engines,
+    # avoiding the dorsal and ventral "railings" and other protruding detail
+    # elements that previously extended from the silhouette.
 
     engine_clusters: list[list[Vector3]] = []
     tail_z = hull_profile[0][0]
@@ -307,28 +260,6 @@ def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
     for section in plating_lines:
         for offset in range(0, ring_sides, 2):
             segments.append((section[offset], section[(offset + 2) % ring_sides]))
-
-    dorsal_array_z = 200.0
-    dorsal_array = [
-        Vector3(-140.0, 360.0, dorsal_array_z - 60.0),
-        Vector3(0.0, 380.0, dorsal_array_z),
-        Vector3(140.0, 360.0, dorsal_array_z - 60.0),
-        Vector3(0.0, 340.0, dorsal_array_z - 120.0),
-    ]
-    _loop_segments(segments, dorsal_array)
-    for point in dorsal_array:
-        segments.append((point, dorsal_spine_points[len(dorsal_spine_points) // 2]))
-
-    ventral_bay_z = -160.0
-    bay_frame = [
-        Vector3(-130.0, -220.0, ventral_bay_z - 80.0),
-        Vector3(130.0, -220.0, ventral_bay_z - 80.0),
-        Vector3(160.0, -160.0, ventral_bay_z + 40.0),
-        Vector3(-160.0, -160.0, ventral_bay_z + 40.0),
-    ]
-    _loop_segments(segments, bay_frame)
-    for point in bay_frame:
-        segments.append((point, ventral_keel_points[len(ventral_keel_points) // 2]))
 
     return segments
 
