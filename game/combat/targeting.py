@@ -32,7 +32,7 @@ def pick_nearest_target(origin: Ship, candidates: Iterable[Ship]) -> Optional[Sh
 
 
 def _angle_to_target(mount: WeaponMount, ship: Ship, target: Ship) -> float:
-    forward = ship.kinematics.basis.forward
+    forward = ship.kinematics.forward()
     to_target = (target.kinematics.position - ship.kinematics.position).normalize()
     return forward.angle_to(to_target)
 
@@ -56,7 +56,7 @@ def update_lock(ship: Ship, target: Optional[Ship], dt: float) -> None:
     if distance > ship.stats.dradis_range:
         ship.lock_progress = max(0.0, ship.lock_progress - decay_rate * dt)
         return
-    forward = ship.kinematics.basis.forward
+    forward = ship.kinematics.forward()
     angle = radians(forward.angle_to(to_target.normalize()))
     if angle > radians(40.0):
         penalty = decay_rate * (2.0 if jammer_penalty > eccm_bonus else 1.0)

@@ -78,11 +78,14 @@ def _lighten(color: tuple[int, int, int], amount: float) -> tuple[int, int, int]
 
 
 def _ship_axes(ship: Ship) -> tuple[Vector3, Vector3, Vector3]:
-    basis = ship.kinematics.basis
-    forward = basis.forward
-    right = basis.right
-    up = basis.up
-    return right, up, forward
+    forward = ship.kinematics.forward()
+    right = ship.kinematics.right()
+    up = right.cross(forward)
+    if up.length_squared() == 0.0:
+        up = Vector3(0.0, 1.0, 0.0)
+    else:
+        up = up.normalize()
+    return right.normalize(), up, forward.normalize()
 
 
 def _vertex_key(vector: Vector3) -> Tuple[float, float, float]:

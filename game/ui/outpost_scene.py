@@ -667,8 +667,7 @@ class OutpostInteriorScene(Scene):
             self.player.kinematics.position = Vector3(start_point)
         dock_point = station_pos - approach_dir * dock_offset
 
-        basis = self.player.kinematics.basis
-        start_forward = basis.forward
+        start_forward = self.player.kinematics.forward()
         if start_forward.length_squared() <= 1e-5:
             start_forward = approach_dir
         dock_forward = approach_dir
@@ -696,11 +695,11 @@ class OutpostInteriorScene(Scene):
         self.cutscene_camera.lock_response = 4.0
         self.cutscene_camera.position = (
             self.player.kinematics.position
-            - basis.forward * self.cutscene_camera.distance
-            + basis.up * self.cutscene_camera.height
+            - self.player.kinematics.forward() * self.cutscene_camera.distance
+            + self.player.kinematics.up() * self.cutscene_camera.height
         )
-        self.cutscene_camera.forward = basis.forward
-        self.cutscene_camera.up = basis.up
+        self.cutscene_camera.forward = self.player.kinematics.forward()
+        self.cutscene_camera.up = self.player.kinematics.up()
         right = self.cutscene_camera.forward.cross(self.cutscene_camera.up)
         if right.length_squared() > 1e-6:
             self.cutscene_camera.right = right.normalize()

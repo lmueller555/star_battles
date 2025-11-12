@@ -44,12 +44,6 @@ class ShipAI:
         self._disengage_timer: float = 0.0
         self._disengage_chance: float = 1.0
         self._notice_chances: Dict[int, float] = {}
-        self._tick_seed: int = id(ship) & 0xFFFF
-        self._tick_interval: int = 1
-        self._tick_phase: int = self._tick_seed % max(1, self._tick_interval)
-        self._tick_bucket: str = "near"
-        self._force_next_update: bool = True
-        self._enemy_buffer: List[Ship] = []
 
     # ------------------------------------------------------------------
     # Public hooks
@@ -149,10 +143,9 @@ class ShipAI:
         if direction.length_squared() == 0:
             return
         desired = direction.normalize()
-        basis = self.ship.kinematics.basis
-        forward = basis.forward
-        right = basis.right
-        up = basis.up
+        forward = self.ship.kinematics.forward()
+        right = self.ship.kinematics.right()
+        up = self.ship.kinematics.up()
         local_x = desired.dot(right)
         local_y = desired.dot(up)
         look = Vector3(-local_y, local_x, 0.0) * strength
@@ -226,7 +219,11 @@ class ShipAI:
         if self.target is None:
             self._disengage_chance = 1.0
             self._disengage_timer = 0.0
-        enemies = self._populate_enemy_buffer(world)
+        enemies: list[Ship] = [
+            candidate
+            for candidate in world.ships
+            if candidate is not ship and candidate.is_alive() and candidate.team != ship.team
+        ]
 
         if self.target is None and enemies:
             immediate_target = self._enemy_within_radius(enemies, self._aggro_radius)
@@ -303,35 +300,6 @@ class ShipAI:
         self._disengage_timer = 0.0
         self._disengage_chance = 1.0
         self.ship.target_id = id(enemy)
-        self._force_next_update = True
-
-    def configure_tick(self, bucket: str, interval: int) -> None:
-        interval = max(1, interval)
-        if bucket != self._tick_bucket or interval != self._tick_interval:
-            self._tick_bucket = bucket
-            self._tick_interval = interval
-            self._tick_phase = self._tick_seed % interval
-            self._force_next_update = True
-
-    def should_update(self, frame_index: int) -> bool:
-        if self._force_next_update:
-            self._force_next_update = False
-            return True
-        if self._tick_interval <= 1:
-            return True
-        return (frame_index + self._tick_phase) % self._tick_interval == 0
-
-    def tick_bucket(self) -> str:
-        return self._tick_bucket
-
-    def force_next_update(self) -> None:
-        self._force_next_update = True
-
-    def _populate_enemy_buffer(self, world: "SpaceWorld") -> List[Ship]:
-        buffer = self._enemy_buffer
-        buffer.clear()
-        world.populate_enemy_buffer(self.ship, buffer)
-        return buffer
 
 
 class InterceptorAI(ShipAI):
