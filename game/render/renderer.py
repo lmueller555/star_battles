@@ -1464,9 +1464,7 @@ def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
         ventral_engine_tail,
     ]
 
-    # Keep the port/starboard pillars disconnected until the aft-most sections to
-    # mimic the "tuning fork" profile (no cross-beams near the prow).
-    rear_support_start = len(port_outer_hull) - 2
+    rear_support_start = 8
 
     for index in range(len(port_outer_hull)):
         outer = port_outer_hull[index]
