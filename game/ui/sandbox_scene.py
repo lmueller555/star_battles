@@ -604,6 +604,10 @@ class SandboxScene(Scene):
                 if self.hangar_open:
                     self.hangar_open = False
                     self._enter_game_cursor()
+                if self.player:
+                    print(
+                        f"[DEBUG] Docking while piloting: {self.player.frame.name}"
+                    )
                 self.manager.activate(
                     "outpost_interior",
                     content=self.content,
