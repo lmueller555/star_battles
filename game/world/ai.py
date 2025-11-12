@@ -213,7 +213,7 @@ class ShipAI:
         up = basis.up
         local_x = desired.dot(right)
         local_y = desired.dot(up)
-        look = Vector3(-local_y, local_x, 0.0) * strength
+        look = Vector3(local_x, local_y, 0.0) * strength
         if look.length() > 1.0:
             look.scale_to_length(1.0)
         self.ship.control.look_delta = look
