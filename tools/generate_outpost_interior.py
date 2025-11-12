@@ -56,6 +56,31 @@ HANGAR_CEILING_Z = HANGAR_FLOOR_Z + HANGAR_HEIGHT
 
 add_node("hangar_floor", layers["floor"], floor_outline, type_="polyline_closed", style="primary")
 
+floor_skin_inset = 3.5
+add_node(
+    "hangar_floor_skin",
+    layers["floor"],
+    [
+        (-40.0 + floor_skin_inset, -40.0 + floor_skin_inset, HANGAR_FLOOR_Z + 0.04),
+        (40.0 - floor_skin_inset, -40.0 + floor_skin_inset, HANGAR_FLOOR_Z + 0.04),
+        (40.0 - floor_skin_inset, 40.0 - floor_skin_inset, HANGAR_FLOOR_Z + 0.04),
+        (-40.0 + floor_skin_inset, 40.0 - floor_skin_inset, HANGAR_FLOOR_Z + 0.04),
+    ],
+    type_="polyline_closed",
+    style="floor_skin",
+)
+
+floor_stripe_offset = 12.0
+stripe_width = 1.2
+for idx, x in enumerate((-floor_stripe_offset, floor_stripe_offset)):
+    pad = [
+        (x - stripe_width, -32.0, HANGAR_FLOOR_Z + 0.05),
+        (x + stripe_width, -32.0, HANGAR_FLOOR_Z + 0.05),
+        (x + stripe_width, 32.0, HANGAR_FLOOR_Z + 0.05),
+        (x - stripe_width, 32.0, HANGAR_FLOOR_Z + 0.05),
+    ]
+    add_node(f"hangar_floor_stripe_{idx}", layers["floor"], pad, type_="polyline_closed", style="floor_skin")
+
 corners = [(-40.0, -40.0), (40.0, -40.0), (40.0, 40.0), (-40.0, 40.0)]
 for idx, (x, y) in enumerate(corners):
     add_node(
@@ -90,6 +115,32 @@ add_node(
     style="secondary",
 )
 
+wall_skin_offset = 1.2
+add_node(
+    "hangar_wall_skin_lower",
+    layers["walls"],
+    [
+        (-40.0, -40.0, HANGAR_FLOOR_Z + 3.0),
+        (40.0, -40.0, HANGAR_FLOOR_Z + 3.0),
+        (40.0, 40.0, HANGAR_FLOOR_Z + 3.0),
+        (-40.0, 40.0, HANGAR_FLOOR_Z + 3.0),
+        (-40.0, -40.0, HANGAR_FLOOR_Z + 3.0),
+    ],
+    style="wall_skin",
+)
+add_node(
+    "hangar_wall_skin_upper",
+    layers["walls"],
+    [
+        (-40.0, -40.0, HANGAR_CEILING_Z - wall_skin_offset),
+        (40.0, -40.0, HANGAR_CEILING_Z - wall_skin_offset),
+        (40.0, 40.0, HANGAR_CEILING_Z - wall_skin_offset),
+        (-40.0, 40.0, HANGAR_CEILING_Z - wall_skin_offset),
+        (-40.0, -40.0, HANGAR_CEILING_Z - wall_skin_offset),
+    ],
+    style="wall_skin",
+)
+
 add_node(
     "hangar_ceiling",
     layers["ceiling"],
@@ -101,6 +152,20 @@ add_node(
     ],
     type_="polyline_closed",
     style="ceiling_primary",
+)
+
+ceiling_skin_inset = 6.0
+add_node(
+    "hangar_ceiling_skin",
+    layers["ceiling"],
+    [
+        (-40.0 + ceiling_skin_inset, -40.0 + ceiling_skin_inset, HANGAR_CEILING_Z - 0.35),
+        (40.0 - ceiling_skin_inset, -40.0 + ceiling_skin_inset, HANGAR_CEILING_Z - 0.35),
+        (40.0 - ceiling_skin_inset, 40.0 - ceiling_skin_inset, HANGAR_CEILING_Z - 0.35),
+        (-40.0 + ceiling_skin_inset, 40.0 - ceiling_skin_inset, HANGAR_CEILING_Z - 0.35),
+    ],
+    type_="polyline_closed",
+    style="ceiling_skin",
 )
 
 for idx, y in enumerate(range(-32, 33, 8)):
@@ -131,22 +196,72 @@ for xi, x in enumerate(range(-32, 33, 16)):
         ]
         add_node(f"hangar_light_{xi}_{yi}", layers["fixtures"], pts, type_="polyline_closed", style="fixture_light")
 
+catwalk_height = 6.0
+catwalk_inner = 38.5
+catwalk_outer = 40.0
 for side, sign in (("west", -1.0), ("east", 1.0)):
-    x_outer = 40.0 * sign
-    x_inner = x_outer - sign * 1.5
+    x_outer = catwalk_outer * sign
+    x_inner = catwalk_inner * sign
     pts = [
-        (x_outer, -40.0, 6.0),
-        (x_inner, -40.0, 6.0),
-        (x_inner, 40.0, 6.0),
-        (x_outer, 40.0, 6.0),
+        (x_outer, -catwalk_outer, catwalk_height),
+        (x_inner, -catwalk_outer, catwalk_height),
+        (x_inner, catwalk_outer, catwalk_height),
+        (x_outer, catwalk_outer, catwalk_height),
     ]
     add_node(f"hangar_catwalk_{side}", layers["fixtures"], pts, type_="polyline_closed", style="catwalk")
     add_node(
         f"hangar_catwalk_rail_{side}",
         layers["fixtures"],
-        [(x_inner, -40.0, 6.8), (x_inner, 40.0, 6.8)],
+        [(x_inner, -catwalk_outer, catwalk_height + 0.8), (x_inner, catwalk_outer, catwalk_height + 0.8)],
         style="catwalk",
     )
+
+for orientation, y_outer, y_inner in (
+    ("south", -catwalk_outer, -catwalk_inner),
+    ("north", catwalk_outer, catwalk_inner),
+):
+    pts = [
+        (-catwalk_inner, y_outer, catwalk_height),
+        (catwalk_inner, y_outer, catwalk_height),
+        (catwalk_inner, y_inner, catwalk_height),
+        (-catwalk_inner, y_inner, catwalk_height),
+    ]
+    add_node(f"hangar_catwalk_{orientation}", layers["fixtures"], pts, type_="polyline_closed", style="catwalk")
+    add_node(
+        f"hangar_catwalk_rail_{orientation}",
+        layers["fixtures"],
+        [(-catwalk_inner, y_inner, catwalk_height + 0.8), (catwalk_inner, y_inner, catwalk_height + 0.8)],
+        style="catwalk",
+    )
+
+stair_width = 6.0
+stair_half = stair_width * 0.5
+stair_segments = [
+    (31.7, 33.2, catwalk_height * 0.25),
+    (33.2, 34.7, catwalk_height * 0.5),
+    (34.7, 36.2, catwalk_height * 0.75),
+    (36.2, 38.0, catwalk_height),
+]
+for idx, (y_start, y_end, tread_height) in enumerate(stair_segments):
+    pts = [
+        (-stair_half, y_start, tread_height),
+        (stair_half, y_start, tread_height),
+        (stair_half, y_end, tread_height),
+        (-stair_half, y_end, tread_height),
+    ]
+    add_node(f"hangar_stair_tread_{idx}", layers["fixtures"], pts, type_="polyline_closed", style="stair")
+add_node(
+    "hangar_stair_rail_left",
+    layers["fixtures"],
+    [(-stair_half, stair_segments[0][0], 0.8), (-stair_half, stair_segments[-1][1], catwalk_height + 0.8)],
+    style="catwalk",
+)
+add_node(
+    "hangar_stair_rail_right",
+    layers["fixtures"],
+    [(stair_half, stair_segments[0][0], 0.8), (stair_half, stair_segments[-1][1], catwalk_height + 0.8)],
+    style="catwalk",
+)
 
 for idx, x in enumerate((-35.0, 35.0)):
     add_node(f"hangar_ladder_{idx}", layers["fixtures"], [(x, -20.0, 0.0), (x, -20.0, 6.0)], style="ladder")
@@ -387,14 +502,71 @@ door((1.0, 61.5, 0.0), (4.0, 64.5, 3.0), 0.4, (-1.0, 0.0, 0.0), "weapons_bay", t
 
 # NavMesh definitions
 navmesh.append({
-    "id": "hangar_nav_outer",
+    "id": "hangar_floor_nav",
     "points": [
-        [-40.0, -40.0, 0.0],
-        [40.0, -40.0, 0.0],
-        [40.0, 40.0, 0.0],
-        [-40.0, 40.0, 0.0],
+        [-38.5, -38.5, 0.0],
+        [38.5, -38.5, 0.0],
+        [38.5, 31.7, 0.0],
+        [-38.5, 31.7, 0.0],
     ],
 })
+navmesh.extend(
+    {
+        "id": f"hangar_stairs_{name}",
+        "points": [
+            [-3.0, y0, z],
+            [3.0, y0, z],
+            [3.0, y1, z],
+            [-3.0, y1, z],
+        ],
+    }
+    for name, (y0, y1, z) in {
+        "lower": (31.7, 33.2, catwalk_height * 0.25),
+        "mid": (33.2, 34.7, catwalk_height * 0.5),
+        "upper": (34.7, 36.2, catwalk_height * 0.75),
+        "crest": (36.2, 38.5, catwalk_height),
+    }.items()
+)
+navmesh.extend(
+    [
+        {
+            "id": "hangar_catwalk_west_nav",
+            "points": [
+                [-40.0, -40.0, catwalk_height],
+                [-38.5, -40.0, catwalk_height],
+                [-38.5, 40.0, catwalk_height],
+                [-40.0, 40.0, catwalk_height],
+            ],
+        },
+        {
+            "id": "hangar_catwalk_east_nav",
+            "points": [
+                [38.5, -40.0, catwalk_height],
+                [40.0, -40.0, catwalk_height],
+                [40.0, 40.0, catwalk_height],
+                [38.5, 40.0, catwalk_height],
+            ],
+        },
+        {
+            "id": "hangar_catwalk_south_nav",
+            "points": [
+                [-38.5, -40.0, catwalk_height],
+                [38.5, -40.0, catwalk_height],
+                [38.5, -38.5, catwalk_height],
+                [-38.5, -38.5, catwalk_height],
+            ],
+        },
+        {
+            "id": "hangar_catwalk_north_nav",
+            "points": [
+                [-38.5, 40.0, catwalk_height],
+                [38.5, 40.0, catwalk_height],
+                [38.5, 38.5, catwalk_height],
+                [-38.5, 38.5, catwalk_height],
+            ],
+        },
+    ]
+)
 navmesh.append({
     "id": "vestibule_nav",
     "points": [

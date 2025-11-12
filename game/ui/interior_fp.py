@@ -46,6 +46,10 @@ STYLE_COLOURS = {
     "service_line": (130, 200, 255),
     "crane_rail": (255, 210, 150),
     "deck_pad": (200, 230, 255),
+    "floor_skin": (90, 180, 235),
+    "wall_skin": (110, 185, 235),
+    "ceiling_skin": (190, 225, 250),
+    "stair": (210, 235, 255),
 }
 
 DEFAULT_LAYER_COLOUR = {
@@ -348,7 +352,7 @@ class FirstPersonInteriorView:
         self.velocity.z = 0.0
 
         desired_position = self.position + self.velocity * dt
-        desired_position.z = PLAYER_HEIGHT
+        desired_position.z = self.position.z
         desired_position = self._constrain_to_nav(desired_position)
         desired_position = self._resolve_no_walk(desired_position)
         self.position = desired_position
@@ -371,10 +375,29 @@ class FirstPersonInteriorView:
         self.streams_active = active
 
     def _constrain_to_nav(self, desired: Vector3) -> Vector3:
-        for area in self.nav_areas:
-            if area.contains(desired.x, desired.y):
-                return Vector3(desired)
-        best: Optional[Vector3] = None
+        current_floor = self.position.z - PLAYER_HEIGHT
+        matches = [area for area in self.nav_areas if area.contains(desired.x, desired.y)]
+        if matches:
+            ascending = [
+                area
+                for area in matches
+                if area.floor_z > current_floor + 0.2 and area.floor_z - current_floor <= 2.2
+            ]
+            descending = [
+                area
+                for area in matches
+                if area.floor_z < current_floor - 0.2 and current_floor - area.floor_z <= 2.2
+            ]
+            if ascending:
+                target_area = min(ascending, key=lambda area: area.floor_z)
+            elif descending:
+                target_area = max(descending, key=lambda area: area.floor_z)
+            else:
+                target_area = min(matches, key=lambda area: abs(area.floor_z - current_floor))
+            return Vector3(desired.x, desired.y, target_area.floor_z + PLAYER_HEIGHT)
+
+        best_area: Optional[InteriorNavArea] = None
+        best_position: Optional[Vector3] = None
         best_distance = float("inf")
         for area in self.nav_areas:
             left, bottom, right, top = area.bounds
@@ -385,10 +408,11 @@ class FirstPersonInteriorView:
             distance_sq = dx * dx + dy * dy
             if distance_sq < best_distance:
                 best_distance = distance_sq
-                best = Vector3(clamped_x, clamped_y, desired.z)
-        if best is None:
+                best_area = area
+                best_position = Vector3(clamped_x, clamped_y, area.floor_z + PLAYER_HEIGHT)
+        if best_position is None:
             return Vector3(desired)
-        return best
+        return best_position
 
     def _resolve_no_walk(self, position: Vector3) -> Vector3:
         corrected = Vector3(position)

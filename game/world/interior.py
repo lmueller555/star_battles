@@ -47,6 +47,7 @@ class InteriorNavArea:
     id: str
     points: tuple[Vec3, ...]
     bounds: tuple[float, float, float, float]
+    floor_z: float
 
     def contains(self, x: float, y: float) -> bool:
         left, bottom, right, top = self.bounds
@@ -60,14 +61,20 @@ class InteriorNavArea:
             return None
         xs = [pt[0] for pt in points]
         ys = [pt[1] for pt in points]
+        zs = [pt[2] for pt in points]
         left = min(xs)
         right = max(xs)
         bottom = min(ys)
         top = max(ys)
+        if zs:
+            floor_z = sum(zs) / len(zs)
+        else:
+            floor_z = 0.0
         return cls(
             id=entry.get("id", "nav"),
             points=points,
             bounds=(left, bottom, right, top),
+            floor_z=floor_z,
         )
 
 

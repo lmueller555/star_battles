@@ -34,6 +34,90 @@
       ]
     },
     {
+      "id": "hangar_floor_skin",
+      "layer": "Floor",
+      "type": "polyline_closed",
+      "style": "floor_skin",
+      "points": [
+        [
+          -36.5,
+          -36.5,
+          0.04
+        ],
+        [
+          36.5,
+          -36.5,
+          0.04
+        ],
+        [
+          36.5,
+          36.5,
+          0.04
+        ],
+        [
+          -36.5,
+          36.5,
+          0.04
+        ]
+      ]
+    },
+    {
+      "id": "hangar_floor_stripe_0",
+      "layer": "Floor",
+      "type": "polyline_closed",
+      "style": "floor_skin",
+      "points": [
+        [
+          -13.2,
+          -32.0,
+          0.05
+        ],
+        [
+          -10.8,
+          -32.0,
+          0.05
+        ],
+        [
+          -10.8,
+          32.0,
+          0.05
+        ],
+        [
+          -13.2,
+          32.0,
+          0.05
+        ]
+      ]
+    },
+    {
+      "id": "hangar_floor_stripe_1",
+      "layer": "Floor",
+      "type": "polyline_closed",
+      "style": "floor_skin",
+      "points": [
+        [
+          10.8,
+          -32.0,
+          0.05
+        ],
+        [
+          13.2,
+          -32.0,
+          0.05
+        ],
+        [
+          13.2,
+          32.0,
+          0.05
+        ],
+        [
+          10.8,
+          32.0,
+          0.05
+        ]
+      ]
+    },
+    {
       "id": "hangar_wall_column_0",
       "layer": "Walls",
       "type": "polyline",
@@ -172,6 +256,72 @@
       ]
     },
     {
+      "id": "hangar_wall_skin_lower",
+      "layer": "Walls",
+      "type": "polyline",
+      "style": "wall_skin",
+      "points": [
+        [
+          -40.0,
+          -40.0,
+          3.0
+        ],
+        [
+          40.0,
+          -40.0,
+          3.0
+        ],
+        [
+          40.0,
+          40.0,
+          3.0
+        ],
+        [
+          -40.0,
+          40.0,
+          3.0
+        ],
+        [
+          -40.0,
+          -40.0,
+          3.0
+        ]
+      ]
+    },
+    {
+      "id": "hangar_wall_skin_upper",
+      "layer": "Walls",
+      "type": "polyline",
+      "style": "wall_skin",
+      "points": [
+        [
+          -40.0,
+          -40.0,
+          43.8
+        ],
+        [
+          40.0,
+          -40.0,
+          43.8
+        ],
+        [
+          40.0,
+          40.0,
+          43.8
+        ],
+        [
+          -40.0,
+          40.0,
+          43.8
+        ],
+        [
+          -40.0,
+          -40.0,
+          43.8
+        ]
+      ]
+    },
+    {
       "id": "hangar_ceiling",
       "layer": "Ceiling",
       "type": "polyline_closed",
@@ -196,6 +346,34 @@
           -40.0,
           40.0,
           45.0
+        ]
+      ]
+    },
+    {
+      "id": "hangar_ceiling_skin",
+      "layer": "Ceiling",
+      "type": "polyline_closed",
+      "style": "ceiling_skin",
+      "points": [
+        [
+          -34.0,
+          -34.0,
+          44.65
+        ],
+        [
+          34.0,
+          -34.0,
+          44.65
+        ],
+        [
+          34.0,
+          34.0,
+          44.65
+        ],
+        [
+          -34.0,
+          34.0,
+          44.65
         ]
       ]
     },
@@ -1491,6 +1669,246 @@
         [
           38.5,
           40.0,
+          6.8
+        ]
+      ]
+    },
+    {
+      "id": "hangar_catwalk_south",
+      "layer": "Fixtures",
+      "type": "polyline_closed",
+      "style": "catwalk",
+      "points": [
+        [
+          -38.5,
+          -40.0,
+          6.0
+        ],
+        [
+          38.5,
+          -40.0,
+          6.0
+        ],
+        [
+          38.5,
+          -38.5,
+          6.0
+        ],
+        [
+          -38.5,
+          -38.5,
+          6.0
+        ]
+      ]
+    },
+    {
+      "id": "hangar_catwalk_rail_south",
+      "layer": "Fixtures",
+      "type": "polyline",
+      "style": "catwalk",
+      "points": [
+        [
+          -38.5,
+          -38.5,
+          6.8
+        ],
+        [
+          38.5,
+          -38.5,
+          6.8
+        ]
+      ]
+    },
+    {
+      "id": "hangar_catwalk_north",
+      "layer": "Fixtures",
+      "type": "polyline_closed",
+      "style": "catwalk",
+      "points": [
+        [
+          -38.5,
+          40.0,
+          6.0
+        ],
+        [
+          38.5,
+          40.0,
+          6.0
+        ],
+        [
+          38.5,
+          38.5,
+          6.0
+        ],
+        [
+          -38.5,
+          38.5,
+          6.0
+        ]
+      ]
+    },
+    {
+      "id": "hangar_catwalk_rail_north",
+      "layer": "Fixtures",
+      "type": "polyline",
+      "style": "catwalk",
+      "points": [
+        [
+          -38.5,
+          38.5,
+          6.8
+        ],
+        [
+          38.5,
+          38.5,
+          6.8
+        ]
+      ]
+    },
+    {
+      "id": "hangar_stair_tread_0",
+      "layer": "Fixtures",
+      "type": "polyline_closed",
+      "style": "stair",
+      "points": [
+        [
+          -3.0,
+          31.7,
+          1.5
+        ],
+        [
+          3.0,
+          31.7,
+          1.5
+        ],
+        [
+          3.0,
+          33.2,
+          1.5
+        ],
+        [
+          -3.0,
+          33.2,
+          1.5
+        ]
+      ]
+    },
+    {
+      "id": "hangar_stair_tread_1",
+      "layer": "Fixtures",
+      "type": "polyline_closed",
+      "style": "stair",
+      "points": [
+        [
+          -3.0,
+          33.2,
+          3.0
+        ],
+        [
+          3.0,
+          33.2,
+          3.0
+        ],
+        [
+          3.0,
+          34.7,
+          3.0
+        ],
+        [
+          -3.0,
+          34.7,
+          3.0
+        ]
+      ]
+    },
+    {
+      "id": "hangar_stair_tread_2",
+      "layer": "Fixtures",
+      "type": "polyline_closed",
+      "style": "stair",
+      "points": [
+        [
+          -3.0,
+          34.7,
+          4.5
+        ],
+        [
+          3.0,
+          34.7,
+          4.5
+        ],
+        [
+          3.0,
+          36.2,
+          4.5
+        ],
+        [
+          -3.0,
+          36.2,
+          4.5
+        ]
+      ]
+    },
+    {
+      "id": "hangar_stair_tread_3",
+      "layer": "Fixtures",
+      "type": "polyline_closed",
+      "style": "stair",
+      "points": [
+        [
+          -3.0,
+          36.2,
+          6.0
+        ],
+        [
+          3.0,
+          36.2,
+          6.0
+        ],
+        [
+          3.0,
+          38.0,
+          6.0
+        ],
+        [
+          -3.0,
+          38.0,
+          6.0
+        ]
+      ]
+    },
+    {
+      "id": "hangar_stair_rail_left",
+      "layer": "Fixtures",
+      "type": "polyline",
+      "style": "catwalk",
+      "points": [
+        [
+          -3.0,
+          31.7,
+          0.8
+        ],
+        [
+          -3.0,
+          38.0,
+          6.8
+        ]
+      ]
+    },
+    {
+      "id": "hangar_stair_rail_right",
+      "layer": "Fixtures",
+      "type": "polyline",
+      "style": "catwalk",
+      "points": [
+        [
+          3.0,
+          31.7,
+          0.8
+        ],
+        [
+          3.0,
+          38.0,
           6.8
         ]
       ]
@@ -3440,27 +3858,227 @@
     },
     "navmesh": [
       {
-        "id": "hangar_nav_outer",
+        "id": "hangar_floor_nav",
+        "points": [
+          [
+            -38.5,
+            -38.5,
+            0.0
+          ],
+          [
+            38.5,
+            -38.5,
+            0.0
+          ],
+          [
+            38.5,
+            31.7,
+            0.0
+          ],
+          [
+            -38.5,
+            31.7,
+            0.0
+          ]
+        ]
+      },
+      {
+        "id": "hangar_stairs_lower",
+        "points": [
+          [
+            -3.0,
+            31.7,
+            1.5
+          ],
+          [
+            3.0,
+            31.7,
+            1.5
+          ],
+          [
+            3.0,
+            33.2,
+            1.5
+          ],
+          [
+            -3.0,
+            33.2,
+            1.5
+          ]
+        ]
+      },
+      {
+        "id": "hangar_stairs_mid",
+        "points": [
+          [
+            -3.0,
+            33.2,
+            3.0
+          ],
+          [
+            3.0,
+            33.2,
+            3.0
+          ],
+          [
+            3.0,
+            34.7,
+            3.0
+          ],
+          [
+            -3.0,
+            34.7,
+            3.0
+          ]
+        ]
+      },
+      {
+        "id": "hangar_stairs_upper",
+        "points": [
+          [
+            -3.0,
+            34.7,
+            4.5
+          ],
+          [
+            3.0,
+            34.7,
+            4.5
+          ],
+          [
+            3.0,
+            36.2,
+            4.5
+          ],
+          [
+            -3.0,
+            36.2,
+            4.5
+          ]
+        ]
+      },
+      {
+        "id": "hangar_stairs_crest",
+        "points": [
+          [
+            -3.0,
+            36.2,
+            6.0
+          ],
+          [
+            3.0,
+            36.2,
+            6.0
+          ],
+          [
+            3.0,
+            38.5,
+            6.0
+          ],
+          [
+            -3.0,
+            38.5,
+            6.0
+          ]
+        ]
+      },
+      {
+        "id": "hangar_catwalk_west_nav",
         "points": [
           [
             -40.0,
             -40.0,
-            0.0
+            6.0
+          ],
+          [
+            -38.5,
+            -40.0,
+            6.0
+          ],
+          [
+            -38.5,
+            40.0,
+            6.0
+          ],
+          [
+            -40.0,
+            40.0,
+            6.0
+          ]
+        ]
+      },
+      {
+        "id": "hangar_catwalk_east_nav",
+        "points": [
+          [
+            38.5,
+            -40.0,
+            6.0
           ],
           [
             40.0,
             -40.0,
-            0.0
+            6.0
           ],
           [
             40.0,
             40.0,
-            0.0
+            6.0
           ],
           [
+            38.5,
+            40.0,
+            6.0
+          ]
+        ]
+      },
+      {
+        "id": "hangar_catwalk_south_nav",
+        "points": [
+          [
+            -38.5,
             -40.0,
+            6.0
+          ],
+          [
+            38.5,
+            -40.0,
+            6.0
+          ],
+          [
+            38.5,
+            -38.5,
+            6.0
+          ],
+          [
+            -38.5,
+            -38.5,
+            6.0
+          ]
+        ]
+      },
+      {
+        "id": "hangar_catwalk_north_nav",
+        "points": [
+          [
+            -38.5,
             40.0,
-            0.0
+            6.0
+          ],
+          [
+            38.5,
+            40.0,
+            6.0
+          ],
+          [
+            38.5,
+            38.5,
+            6.0
+          ],
+          [
+            -38.5,
+            38.5,
+            6.0
           ]
         ]
       },
