@@ -1,7 +1,6 @@
 """Entry point for the Star Battles vector prototype."""
 from __future__ import annotations
 
-import atexit
 import cProfile
 import io
 import json
@@ -92,38 +91,21 @@ def main() -> None:
     )
 
     profiler = cProfile.Profile()
-    profiler_reported = {"value": False}
-
-    def gather_profiler_results() -> str | None:
-        if profiler_reported["value"]:
-            return None
-        profiler_reported["value"] = True
-        profiler.disable()
-        stats_stream = io.StringIO()
-        stats = pstats.Stats(profiler, stream=stats_stream)
-        stats.strip_dirs().sort_stats("cumulative").print_stats(25)
-        return stats_stream.getvalue()
-
-    def print_profiler_results() -> None:
-        stats_output = gather_profiler_results()
-        if stats_output:
-            print("\nProfiler results (top 25 cumulative):")
-            print(stats_output)
-
-    atexit.register(print_profiler_results)
-
     try:
         profiler.enable()
         loop.run()
     finally:
-        stats_output = gather_profiler_results()
+        profiler.disable()
+
+        stats_stream = io.StringIO()
+        stats = pstats.Stats(profiler, stream=stats_stream)
+        stats.strip_dirs().sort_stats("cumulative").print_stats(25)
 
         pygame.quit()
         print("\nUsage: WASD strafe, mouse to aim, Shift boost, Ctrl brake, Q/E vertical strafe, Z/C roll, LMB cannons, RMB missiles (needs lock), T target nearest, R cycle, F3 debug overlay.")
         print("TODO Milestone 2: add Escort/Line hulls, sector FTL map with 5+ systems, mining gameplay loop, fitting UI, expanded AI behaviours.")
-        if stats_output:
-            print("\nProfiler results (top 25 cumulative):")
-            print(stats_output)
+        print("\nProfiler results (top 25 cumulative):")
+        print(stats_stream.getvalue())
 
 
 if __name__ == "__main__":
