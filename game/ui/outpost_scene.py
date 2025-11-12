@@ -219,7 +219,8 @@ class OutpostInteriorScene(Scene):
         self.player.kinematics.rotation = Vector3(0.0, 0.0, 0.0)
         self.player.control = ShipControlState()
         self.player.target_id = None
-        self.world.add_ship(self.player)
+        if not any(ship is self.player for ship in self.world.ships):
+            self.world.add_ship(self.player)
         print(
             f"[DEBUG] Completed undocking while piloting: {self.player.frame.name}"
         )
