@@ -1,181 +1,260 @@
-SHIP_GUIDANCE (Scalable Edition)
+SHIP_GUIDANCE (Scalable Edition — with Upgradeable Stat Model)
 A) Global Rules (apply to every ship)
 
 Size classes: Strike (light) • Escort (medium) • Line (heavy) • Capital (XL).
 Roles: Interceptor (extra Engine slots), Assault (extra Hull slots), Command (extra Computer slots + highest energy), Multi-Role (balanced).
-Advanced variants: each base hull has an Advanced version with modest stat bumps, +1 in its signature slot family (Command: Computer; Interceptor: Engine; Assault: Hull), and extra Power Capacity/Recharge to sustain the added slots.
+Advanced variants: Each base hull has an Advanced version with modest stat bumps, +1 in its role’s signature slot family (Command: Computer; Interceptor: Engine; Assault: Hull), and extra Power Capacity/Recovery to sustain added modules.
 
-Spec fields every ship defines (units in parentheses):
+A.1 Canonical Spec Fields & Units
 
-Identity: name, class, role, level req, counterpart, upgrade path.
+These fields appear on the in-game ship panel. Record exact values and mark any upgradeable fields with a base value and a delta (the blue number on your panel).
 
-Economy: purchase cost (currency), upgrade cost (to Advanced), operating costs: Boost Cost (Tylium/sec), FTL Cost (Tylium/LY).
+Identity
 
-Slots: Weapons / Hull / Engine / Computer (Capitals: Guns / Launchers / Defensive Weapons instead of “Weapons”).
+name, class (Strike/Escort/Line/Capital), role, level_requirement, faction_counterpart, upgrade_to (Advanced …).
 
-Hull: Hull Points (HP), Hull Recovery (HP/s), Durability, Armor Value, Critical Defense.
+Economy
 
-Engine/Mobility: Speed & Boost Speed (m/s), Boost Cost (Tyl/s), Acceleration & Boost Accel (m/s²), Pitch/Yaw/Roll Speed (deg/s), Pitch/Yaw/Roll Accel (deg/s²), Inertial Compensation (m/s), Strafe Speed/Accel (if any), Avoidance, Avoidance Fading.
+purchase_cost (currency), upgrade_cost (to Advanced), operating: boost_cost (Tylium/sec), ftl_cost (Tylium/LY or as displayed).
 
-FTL: Range (LY), Charge Time (s), Cooldown (s), Cost (Tyl/LY).
+Equipment Slots (all families listed for consistency; use 0 when unsupported)
 
-Energy & Sensors: Power Points (capacity), Power Recovery (/s), Firewall Rating, Emitter Rating, Base DRADIS Range (m), Maximum DRADIS Range (m), Visual Range (m).
+Strike/Escort/Line: weapons, hull, engine, computer.
 
-Environmental: Max Radiation Level, Radioactive Decay, Radioresistance.
+Weapon subfamilies (if UI shows them): gun, launcher, defensive_weapon, special_weapon.
 
-Notes: frame traits (e.g., broad arcs), role bonuses (e.g., transponder discounts), pre-installed systems.
+Capital: guns, launchers, defensive_weapons + hull, engine, computer.
 
-Behavioral formulas & notes (textual, no code):
+When the panel shows counts like “4(+1)”, store:
 
-Hit chance: compare Attacker Accuracy vs Defender Avoidance → clamp to [0,1].
+base: 4
 
-Crit: (BaseCrit + Attacker bonus − Defender Critical Defense) → on hit, apply crit multiplier.
+advanced_delta: +1
 
-Armor: subtract Armor Value after penetration; ensure a minimum damage floor (e.g., ≥15% gets through).
+advanced_total: 5
 
-Movement: target Cruise/Boost speed; approach using (Boost) Acceleration; cap angular rates by Pitch/Yaw/Roll Speed; responsiveness via angular Accel.
+Hull / Survivability
 
-Inertial Compensation: higher = faster auto-trim of drift toward forward.
+hull_points, hull_recovery_per_sec, durability, armor_value, critical_defense.
 
-Energy: Power Points + Power Recovery fuel weapons/PD/EW; Command frames have the highest baselines; Advanced increases all roles appropriately.
+Engine / Mobility
 
-Sensors: DRADIS for detection; Visual for close ID; Firewall vs Emitter for EW contests.
+Linear: speed (m/s), boost_speed (m/s), acceleration (m/s²), boost_acceleration (m/s²), boost_cost (Tyl/s).
 
-FTL: allowed if distance ≤ Range, pay Cost = (Tyl/LY)×distance, obey Charge and Cooldown, obey interdiction rules if present.
+Angular: turning_speed (deg/s) (or per-axis), turning_acceleration (deg/s²) (or pitch/yaw/roll speed & accel if available), roll_speed, roll_acceleration.
 
-B) Ship Encyclopedia (paste-in sections; one per ship)
+Handling: inertial_compensation (m/s), strafe_speed, strafe_acceleration.
 
-How to grow this: When you add a ship, copy the “Per-ship section template” block and fill it with values shown on the game panel(s). If a field isn’t shown, leave it TBD and we’ll fill it when you share that panel.
+Evasion: avoidance, avoidance_fading.
 
-Per-ship section template (copy for new ships)
+FTL
+
+ftl_range (LY), ftl_charge_time (s), ftl_cooldown (s), ftl_cost (Tylium/LY), optional transponder_power_cost.
+
+Energy & Sensors / EW
+
+power_points (capacity), power_recovery_per_sec, firewall_rating, emitter_rating, dradis_range_base (m), dradis_range_max (m), visual_range (m).
+
+Environmental
+
+max_radiation_level, radioactive_decay, radioresistance.
+
+Notes
+
+Frame traits (e.g., wide firing arcs), role bonuses (e.g., transponder discounts), pre-installed systems.
+
+A.2 Upgradeable Fields (from the blue stats on your panel)
+
+Fields that can show a blue delta (meaning the Advanced variant increases them):
+
+Slots: weapons, engine, sometimes others (UI shows the + in parentheses)
+
+Hull: hull_points, hull_recovery_per_sec, durability
+
+Mobility: turning_speed, acceleration, speed, boost_speed
+
+Energy: power_points
+(If other fields display in blue on other frames, add them as upgradeable for those ships.)
+
+Recording convention: For any upgradeable field, store base, advanced_delta, and advanced_total = base + advanced_delta. Do not invent deltas—only use the UI numbers.
+
+A.3 Behavioral Formulas (text only)
+
+Hit chance: hit = clamp01( (AttackerAccuracy − DefenderAvoidance) / scale ).
+
+Critical: critChance = clamp01(BaseCrit + AttackerCrit − DefenderCriticalDefense).
+
+Armor: reduce damage by armor_value, then apply a minimum-throughput floor (≥15%).
+
+Movement: approach speed (or boost_speed) using (boost) acceleration; cap angular rates by turning_speed; responsiveness via turning_acceleration.
+
+Inertial Compensation: trims velocity toward forward; higher = less drift.
+
+Energy: power_points & power_recovery_per_sec govern weapons/PD/EW; Command ships trend highest.
+
+Sensors: DRADIS detects (base→max); Visual grants ID.
+
+FTL: allowed if distance ≤ ftl_range; pay ftl_cost×distance; obey ftl_charge_time and ftl_cooldown; interdiction rules if present.
+
+B) Ship Encyclopedia (drop-in sections; one per ship)
+
+How to add ships: Copy the template, fill with exact panel values. Mark any blue stat as (+Δ) and compute the advanced total.
+
+Per-ship section template
 
 [Class — Ship Name (Role)]
 Identity: Level Req · Counterpart · Upgrade To
 Economy: Purchase Cost · Upgrade Cost (→ Advanced) · Operating (Boost Cost, FTL Cost)
-Slots: Weapons · Hull · Engine · Computer (or Guns/Launchers/Defensive for Capitals)
-Hull: HP · Recovery/s · Durability · Armor · Critical Defense
-Engine/Mobility: Speed · Boost Speed · Boost Cost · Accel · Boost Accel · Inertial Comp · Avoidance · Avoidance Fading · Pitch/Yaw/Roll Speed · Pitch/Yaw/Roll Accel · Strafe Speed/Accel
-FTL: Range · Charge Time · Cooldown · Cost
-Energy & Sensors: Power Points · Power Recovery/s · Firewall · Emitter · Base DRADIS · Max DRADIS · Visual
+Slots: Weapons [base (+Δ) ⇒ total] · Hull · Engine [base (+Δ) ⇒ total] · Computer · (Gun/Launcher/Defensive/Special if shown)
+Hull: HP [base (+Δ) ⇒ total] · Recovery/s [base (+Δ) ⇒ total] · Durability [base (+Δ) ⇒ total] · Armor · Critical Defense
+Engine/Mobility: Speed [base (+Δ) ⇒ total] · Boost Speed [base (+Δ) ⇒ total] · Boost Cost · Accel [base (+Δ) ⇒ total] · Boost Accel · Turning Speed [base (+Δ) ⇒ total] · Turning Accel · Inertial Comp · Avoidance · Avoidance Fading · (Pitch/Yaw/Roll if available) · Strafe Speed/Accel
+FTL: Range · Charge Time · Cooldown · Cost · (Transponder Power Cost if present)
+Energy & Sensors: Power Points [base (+Δ) ⇒ total] · Power Recovery/s · Firewall · Emitter · DRADIS Base/Max · Visual
 Environmental: Max Radiation · Radioactive Decay · Radioresistance
 Pre-installed systems: …
 Traits & role notes: …
 Open items / TBD: …
 
 STRIKE CLASS
-Strike — Viper (design target: Mk VII; panel captured labels “Viper Mk II”—numbers below are transcribed as provided)
+Strike — Viper (panel label: “Viper Mk II”) — Role: Interceptor
 
-Identity:
+(If this section is intended to be “Viper Mk VII,” confirm—these numbers are taken verbatim from your Viper panel.)
 
-Class/Role: Strike · Multi-Role
+Identity
+
+Class/Role: Strike · Interceptor
 
 Level Requirement: 1
 
-Counterpart / Upgrade To: counterpart not provided · Advanced Viper (Mk VII) (TBD)
+Counterpart / Upgrade To: counterpart not provided · Advanced Viper (name TBD)
 
-Economy:
+Economy
 
-Purchase Cost: 100,000 (currency icon in panel; confirm whether Cubits or Tylium)
+Purchase Cost: 100,000 (currency icon—confirm Cubits vs Tylium)
 
-Operating: Boost Cost 0.5 Tyl/s · FTL Cost 1 (unit label not shown—normally Tyl/LY)
+Operating: Boost Cost 0.5 Tyl/s, FTL Cost 20 Tyl (panel uses a flat number; if this is per-LY elsewhere, note that for consistency)
 
 Upgrade Cost (→ Advanced): TBD
 
-Slots: (Mk VII commonly has 4/3/3/3; confirm from your in-game slots panel)
+Equipment Slots (all “Light” weight per panel)
 
-Weapons 4 · Hull 3 · Engine 3 · Computer 3 (pending confirmation)
+Weapons: 4 (+1) ⇒ 5
 
-Hull:
+Hull: 2
 
-Hull Points: 450 · Hull Recovery: 2.5/s · Durability: TBD
+Engine: 5 (+1) ⇒ 6
 
-Armor Value: 5 · Critical Defense: 80
+Computer: 2
 
-Engine / Mobility:
+Gun: 0 · Launcher: 0 · Defensive Weapon: 0 · Special Weapon: 0
 
-Speed: 55 m/s · Boost Speed: 90 m/s
+Hull / Survivability
 
-Boost Cost: 0.5 Tyl/s
+Hull Points: 585 (+135) ⇒ 720
 
-Acceleration: 13.5 m/s² · Boost Acceleration: 1.5 m/s²
+Hull Recovery: 4.5 (+2) /s ⇒ 6.5 /s
+
+Durability: 9,000 (+4,500) ⇒ 13,500
+
+Armor Value: 5
+
+Critical Defense: 80
+
+Engine / Mobility
+
+Turning Speed: 55 (+3) deg/s ⇒ 58 deg/s
+
+Turning Acceleration: 55 deg/s² (no blue delta shown)
 
 Inertial Compensation: 175 m/s
 
-Avoidance: 510 · Avoidance Fading: 0.75
+Acceleration: 16.2 (+2.7) m/s² ⇒ 18.9 m/s²
 
-Pitch/Yaw/Roll Speed: 52 / 52 / 182 deg/s
+Speed: 60 (+5) m/s ⇒ 65 m/s
 
-Pitch/Yaw/Roll Accel: 55 / 55 / 748 deg/s²
+Boost Speed: 110 (+3) m/s ⇒ 113 m/s
 
-Strafe Speed / Accel: 0 / 0
+Boost Cost: 0.5 Tyl/s
 
-FTL:
+Avoidance: 510
 
-Range: 90 LY · Charge Time: 15 s · Cooldown: 35 s · Cost: 1 (verify unit)
+Avoidance Fading: 0.75
 
-Energy & Sensors:
+(Pitch/Yaw/Roll breakdown not shown in this pane; use “Turning Speed” as the global cap for this section.)
 
-Power Points: 100 · Power Recovery: 5/s
+FTL
 
-Firewall / Emitter: 100 / 100
+FTL Range: 4.5 LY
 
-Base DRADIS / Max DRADIS: 1000 m / 2000 m
+FTL Charge Time: 15 s
+
+FTL Cooldown: 15 s (from first image; second shows 15—consistent)
+
+FTL Cost: 20 Tyl
+
+Energy & Sensors / EW
+
+Power Points: 150 (+50) ⇒ 200
+
+Power Recovery: 5 /s
+
+Firewall Rating: 100
+
+Emitter Rating: 100
+
+DRADIS Range: 2,000 m (panel shows single value; treat as Base/Max for now)
 
 Visual Range: 200 m
 
-Environmental:
+Environmental
 
-Max Radiation: 80 · Radioactive Decay: 0.5 · Radioresistance: 0
+(Not shown on this pane)
 
-Pre-installed systems:
+Pre-installed systems
 
-2× MEC-A6 “Fang” Light Autocannon (from your earlier Viper notes)
+2× MEC-A6 “Fang” Light Autocannon (from earlier Viper notes; keep unless superseded by this UI)
 
-Traits & role notes:
+Traits & role notes
 
-Balanced all-rounder Strike; good PD/missile denial when built for it.
+Interceptor frame with extra Engine slots base and additional Engine slot on Advanced (per global role rules).
 
-Open items / TBD:
+Blue stats encode the Viper’s Advanced upgrade deltas (already aggregated above).
 
-Confirm slot counts from the ship’s Equipment Slots panel.
+Open items / TBD
 
-Confirm currency type for purchase and the FTL Cost unit.
+Confirm currency for purchase (icon) and whether FTL Cost is per-jump or per-LY for this frame.
 
-Durability value.
+If your Mk VII uses different values than this panel, paste its pane and we’ll split Viper Mk II vs Viper Mk VII as separate entries.
 
 Strike — Raptor FR (Fast Recon)
 
-Identity:
+Identity
 
-Class/Role: Strike · (role not shown in panel; Recon/Multi-Role TBD)
+Class/Role: Strike · (role label not shown; Recon/Multi-Role TBD)
 
 Level Requirement: 1
 
-Counterpart / Upgrade To: TBD
+Economy
 
-Economy:
+Purchase Cost: 45,000 (confirm currency)
 
-Purchase Cost: 45,000 (currency icon in panel; confirm type)
+Operating: Boost Cost 0.6 Tyl/s, FTL Cost 1.5 (panel label uses a number; confirm per-jump vs per-LY)
 
-Operating: Boost Cost 0.6 Tyl/s · FTL Cost 1.5 (unit label not shown—normally Tyl/LY)
+Equipment Slots
 
-Upgrade Cost (→ Advanced): TBD
+Weapons / Hull / Engine / Computer: TBD (share its slot pane and we’ll fill base and (+Δ) if any)
 
-Slots:
+Gun / Launcher / Defensive / Special: TBD
 
-Weapons: TBD · Hull: TBD · Engine: TBD · Computer: TBD (panel didn’t show slot counts)
+Hull / Survivability
 
-Hull:
-
-Hull Points: 650 · Hull Recovery: 5/s · Durability: TBD
+Hull Points: 650 · Hull Recovery: 5 /s · Durability: TBD
 
 Armor Value: 5 · Critical Defense: 100
 
-Engine / Mobility:
+Engine / Mobility
 
-Speed: 52.5 m/s · Boost Speed: 77.5 m/s
-
-Boost Cost: 0.6 Tyl/s
+Speed: 52.5 m/s · Boost Speed: 77.5 m/s · Boost Cost: 0.6 Tyl/s
 
 Acceleration: 10 m/s² · Boost Acceleration: 4 m/s²
 
@@ -189,64 +268,64 @@ Pitch/Yaw/Roll Accel: 47.5 / 47.5 / 598.5 deg/s²
 
 Strafe Speed / Accel: 0 / 0
 
-FTL:
+FTL
 
-Range: 135 LY · Charge Time: 12.5 s · Cooldown: 30 s · Cost: 1.5 (verify unit)
+Range: 135 LY · Charge Time: 12.5 s · Cooldown: 30 s · Cost: 1.5
 
-Transponder Power Cost: −75 (discount; likely role or frame bonus)
+Transponder Power Cost: −75
 
-Energy & Sensors:
+Energy & Sensors / EW
 
-Power Points: 200 · Power Recovery: 6/s
+Power Points: 200 · Power Recovery: 6 /s
 
 Firewall / Emitter: 200 / 200
 
-Base DRADIS / Max DRADIS: 1500 m / 4000 m
+DRADIS Base/Max: 1,500 m / 4,000 m
 
 Visual Range: 600 m
 
-Environmental:
+Environmental
 
 Max Radiation: 130 · Radioactive Decay: 0.8 · Radioresistance: 0
 
-Pre-installed systems:
+Pre-installed systems
 
 TBD
 
-Traits & role notes:
+Traits & role notes
 
-Sensor-forward recon flavor (larger DRADIS & Visual than Viper); stronger energy pool.
+Recon-leaning Strike with larger sensors and bigger energy pool than Viper.
 
-Open items / TBD:
+Open items / TBD
 
-Provide the Equipment Slots panel for accurate slot counts.
+Provide the Raptor FR slot pane (to record base and (+Δ) values).
 
-Confirm currency type and the FTL Cost unit.
+Confirm purchase currency and FTL cost semantics.
 
-Durability value; formal role label.
+Durability value.
 
 ESCORT CLASS
 
-(Add per-ship sections here as you share panels — e.g., Scythe, Glaive, Maul…)
+(Add per-ship sections here — e.g., Scythe, Glaive (Command), Maul …)
 
 LINE CLASS
 
-(Add per-ship sections here — e.g., Gungnir, Aesir, Vanir, Jotunn…)
+(Add per-ship sections here — e.g., Gungnir, Vanir (Command), Aesir, Jotunn …)
 
 CAPITAL CLASS
 
-(Add per-ship sections here — e.g., Brimir / Surtur carriers, battlestars…)
+(Add per-ship sections here — e.g., Brimir carrier, Surtur, battlestars …)
 
-C) QA & Balance Guardrails (quick reference)
+C) QA & Balance Guardrails (reference)
 
-Duels (same tier): 8–14s TTK target bands.
+Duels (same tier): 8–14 s TTK target bands.
 
-Energy sustain: baseline builds ≥8–10s continuous fire + maneuver; Advanced +15–25%.
+Energy sustain: baseline builds ≥8–10 s of continuous fire + maneuver; Advanced +15–25%.
 
 Mobility ladder: Strike > Escort > Line > Capital.
 
-Sensors ladder: Larger hulls trend to higher DRADIS; Visual increases only modestly.
+Sensors ladder: Larger hulls trend to higher DRADIS; Visual rises modestly.
 
-FTL: Bigger hulls tend to longer Range and higher Cost; Command frames may have transponder discounts.
+FTL: Bigger hulls → longer Range and higher Cost; Command frames may have transponder discounts.
 
 Slot identity: Enforce role signatures (Interceptor=Engine, Assault=Hull, Command=Computer) on base & Advanced.
