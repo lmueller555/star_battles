@@ -1,7 +1,6 @@
 """Vector renderer built on pygame."""
 from __future__ import annotations
 
-from dataclasses import dataclass
 from math import ceil, floor
 import logging
 import math
@@ -13,6 +12,8 @@ from pygame.math import Vector3
 
 from game.combat.weapons import Projectile
 from game.render.camera import CameraFrameData, ChaseCamera
+from game.render.geometry import ShipFace, ShipGeometry
+from game.ships.outpost_skin import OUTPOST_SKIN
 from game.ships.ship import Ship
 from game.world.asteroids import Asteroid
 
@@ -25,6 +26,10 @@ SHIP_COLOR = (120, 220, 255)
 ENEMY_COLOR = (255, 80, 100)
 PROJECTILE_COLOR = (255, 200, 80)
 MISSILE_COLOR = (255, 140, 60)
+
+LIGHT_DIRECTION = Vector3(-0.35, 0.62, 0.72)
+if LIGHT_DIRECTION.length_squared() > 0.0:
+    LIGHT_DIRECTION = LIGHT_DIRECTION.normalize()
 
 # Engine layout presets by ship size. These are expressed using the same
 # lightweight local-space units as the wireframe definitions and roughly align
@@ -51,12 +56,7 @@ ENGINE_LAYOUTS: dict[str, list[Vector3]] = {
     "Outpost": [],
 }
 
-@dataclass
-class ShipGeometry:
-    vertices: List[Vector3]
-    edges: List[Tuple[int, int]]
-    radius: float
-
+ENGINE_LAYOUTS["Outpost"] = list(OUTPOST_SKIN.engine_layout)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -89,28 +89,8 @@ def _vertex_key(vector: Vector3) -> Tuple[float, float, float]:
     return (round(vector.x, 6), round(vector.y, 6), round(vector.z, 6))
 
 
-def _ship_geometry_from_edges(edges: Sequence[tuple[Vector3, Vector3]]) -> ShipGeometry:
-    vertex_map: Dict[Tuple[float, float, float], int] = {}
-    vertices: List[Vector3] = []
-    index_edges: List[Tuple[int, int]] = []
-    max_radius = 0.0
-    for start, end in edges:
-        start_key = _vertex_key(start)
-        end_key = _vertex_key(end)
-        if start_key not in vertex_map:
-            vertex_map[start_key] = len(vertices)
-            vertices.append(Vector3(start))
-            max_radius = max(max_radius, vertices[-1].length())
-        if end_key not in vertex_map:
-            vertex_map[end_key] = len(vertices)
-            vertices.append(Vector3(end))
-            max_radius = max(max_radius, vertices[-1].length())
-        index_edges.append((vertex_map[start_key], vertex_map[end_key]))
-    return ShipGeometry(vertices=vertices, edges=index_edges, radius=max_radius)
-
-
 def _build_ship_geometry_cache() -> Dict[str, ShipGeometry]:
-    return {name: _ship_geometry_from_edges(edge_list) for name, edge_list in WIREFRAMES.items()}
+    return {name: ShipGeometry.from_edges(edge_list) for name, edge_list in WIREFRAMES.items()}
 
 
 def _estimate_ship_radius(ship: Ship, geometry: ShipGeometry) -> float:
@@ -1170,6 +1150,7 @@ WIREFRAMES = {
 }
 
 SHIP_GEOMETRY_CACHE = _build_ship_geometry_cache()
+SHIP_GEOMETRY_CACHE["Outpost"] = OUTPOST_SKIN.geometry
 
 
 class VectorRenderer:
@@ -1371,6 +1352,57 @@ class VectorRenderer:
                 (int(end_screen.x), int(end_screen.y)),
                 width,
             )
+
+    def _shade_face_color(
+        self,
+        face: ShipFace,
+        right: Vector3,
+        up: Vector3,
+        forward: Vector3,
+    ) -> tuple[int, int, int]:
+        base = face.base_color
+        if face.accent > 1e-4:
+            base = _lighten(base, min(0.45, face.accent))
+        elif face.accent < -1e-4:
+            base = _darken(base, min(0.45, -face.accent))
+
+        normal_world = right * face.normal.x + up * face.normal.y + forward * face.normal.z
+        if normal_world.length_squared() <= 1e-6:
+            return base
+        normal_world = normal_world.normalize()
+        intensity = normal_world.dot(LIGHT_DIRECTION)
+        intensity = max(0.0, min(1.0, intensity * 0.6 + 0.4))
+        highlight = _lighten(base, 0.32)
+        shadow = _darken(base, 0.68)
+        return _blend(shadow, highlight, intensity)
+
+    def _draw_ship_skin(
+        self,
+        geometry: ShipGeometry,
+        projected: List[tuple[float, float]],
+        visibility: List[bool],
+        right: Vector3,
+        up: Vector3,
+        forward: Vector3,
+    ) -> None:
+        drew_face = False
+        for face in geometry.faces:
+            if len(face.indices) < 3:
+                continue
+            if not all(visibility[idx] for idx in face.indices):
+                continue
+            polygon = [projected[idx] for idx in face.indices]
+            color = self._shade_face_color(face, right, up, forward)
+            pygame.draw.polygon(
+                self.surface,
+                color,
+                [(int(round(px)), int(round(py))) for px, py in polygon],
+            )
+            if face.outline:
+                pygame.draw.aalines(self.surface, face.outline, True, polygon, blend=1)
+            drew_face = True
+        if drew_face:
+            self._frame_counters.objects_drawn_line += 1
 
     def _draw_hardpoints(
         self,
@@ -1674,29 +1706,40 @@ class VectorRenderer:
         )
         color = SHIP_COLOR if ship.team == "player" else ENEMY_COLOR
         line_mode = "line" if distance > 7500.0 else "aaline"
-        drawn_edges = False
-        for idx_a, idx_b in geometry.edges:
-            if not (visibility[idx_a] and visibility[idx_b]):
-                continue
-            ax, ay = projected[idx_a]
-            bx, by = projected[idx_b]
-            if line_mode == "line":
-                pygame.draw.line(
-                    self.surface,
-                    color,
-                    (int(round(ax)), int(round(ay))),
-                    (int(round(bx)), int(round(by))),
-                    1,
-                )
-            else:
-                pygame.draw.aaline(self.surface, color, (ax, ay), (bx, by), blend=1)
-            drawn_edges = True
 
-        if drawn_edges:
-            if line_mode == "line":
-                self._frame_counters.objects_drawn_line += 1
-            else:
-                self._frame_counters.objects_drawn_aaline += 1
+        if geometry.faces:
+            self._draw_ship_skin(
+                geometry,
+                projected,
+                visibility,
+                right,
+                up,
+                forward,
+            )
+        else:
+            drawn_edges = False
+            for idx_a, idx_b in geometry.edges:
+                if not (visibility[idx_a] and visibility[idx_b]):
+                    continue
+                ax, ay = projected[idx_a]
+                bx, by = projected[idx_b]
+                if line_mode == "line":
+                    pygame.draw.line(
+                        self.surface,
+                        color,
+                        (int(round(ax)), int(round(ay))),
+                        (int(round(bx)), int(round(by))),
+                        1,
+                    )
+                else:
+                    pygame.draw.aaline(self.surface, color, (ax, ay), (bx, by), blend=1)
+                drawn_edges = True
+
+            if drawn_edges:
+                if line_mode == "line":
+                    self._frame_counters.objects_drawn_line += 1
+                else:
+                    self._frame_counters.objects_drawn_aaline += 1
 
         speed = ship.kinematics.velocity.length()
         speed_intensity = 0.0
