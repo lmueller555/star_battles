@@ -575,7 +575,127 @@ Provide Advanced Rhino pane if available to record upgrade deltas (+Δ) for any 
 
 ESCORT CLASS
 
-(Add per-ship sections here — e.g., Scythe, Glaive (Command), Maul …)
+Escort — Glaive (Role: Command)
+
+Identity
+
+Class / Role: Escort · Command
+
+Role Bonus: −50 Transponder Power Cost (Command bonus).
+
+Counterpart / Upgrade To: Spectre / Advanced Glaive (if you’re tracking counterparts/upgrades)
+
+Economy
+
+Purchase Cost: 60,000 (confirm currency from icon)
+
+Operating: Boost Cost 1.8 Tyl/s, FTL Cost 80 Tyl
+
+Upgrade Cost (→ Advanced): TBD
+
+Equipment Slots (weight: Medium)
+
+Weapons: 6
+
+Hull: 2
+
+Engine: 2
+
+Computer: 5 (Command signature: large computer budget)
+
+Gun / Launcher / Defensive / Special: 0 / 0 / 0 / 0
+
+Hull / Survivability
+
+Hull Points: 1,700
+
+Hull Recovery: 15 /s
+
+Durability: 30,000
+
+Armor Value: 25
+
+Critical Defense: 100
+
+Engine / Mobility
+
+Speed: 37.5 m/s
+
+Boost Speed: 57.5 m/s
+
+Boost Cost: 1.8 Tyl/s
+
+Acceleration: 5 m/s²
+
+Boost Acceleration: 1.5 m/s²
+
+Inertial Compensation: 50 m/s
+
+Avoidance: 270
+
+Avoidance Fading: 0.75
+
+Pitch/Yaw Speed: 22.5 / 22.5 deg/s
+
+Pitch/Yaw Acceleration: 22.5 / 22.5 deg/s²
+
+Roll Speed: 39.375 deg/s
+
+Roll Acceleration: 39.375 deg/s²
+
+Strafe Speed / Accel: 0 / 0
+
+FTL
+
+Range: 8.25 LY
+
+Charge Time: 20 s
+
+Cooldown: 30 s
+
+Cost: 80 Tyl
+
+Transponder Power Cost: −50 (duplicates the role bonus here for clarity)
+
+Energy & Sensors / EW
+
+Power Points: 330
+
+Power Recovery: 12 /s
+
+Firewall Rating: 200
+
+Emitter Rating: 200
+
+DRADIS Base / Max: 1,250 m / 3,500 m
+
+Visual Range: 750 m
+
+Environmental
+
+Max Radiation Level: 160
+
+Radioactive Decay: 1.0
+
+Radioresistance: 0
+
+Pre-installed systems
+
+TBD (none shown on the pane)
+
+Traits & role notes
+
+Command-focused Escort with 5 Computer slots and a large energy pool, suitable for EW/support builds.
+
+Known for broad firing coverage via head and ring mounts (few blind spots) with a relatively exposed underside—pilots often roll to protect the belly.
+
+Trades agility for firepower + electronics, excels when screened by Strikes.
+
+Open items / TBD
+
+Confirm currency type for purchase.
+
+Provide Advanced Glaive pane (if available) to record upgrade deltas (+Δ) for blue stats/extra slots.
 
 LINE CLASS
 
