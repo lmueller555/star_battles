@@ -220,6 +220,9 @@ class OutpostInteriorScene(Scene):
         self.player.control = ShipControlState()
         self.player.target_id = None
         self.world.add_ship(self.player)
+        print(
+            f"[DEBUG] Completed undocking while piloting: {self.player.frame.name}"
+        )
         self.manager.activate(
             "sandbox",
             content=self.content,
