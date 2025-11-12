@@ -745,7 +745,7 @@ class OutpostInteriorScene(Scene):
             )
             for segment in segments
         ]
-        result = self._ship_embedder.embed(embed_input)
+        result = self._ship_embedder.embed(embed_input, frame_size=frame_size)
         if result:
             self._interior_view.set_ship_segments(result.segments)
             self._interior_view.set_dynamic_no_walk(result.safety_min, result.safety_max)
