@@ -195,6 +195,55 @@ def _elliptical_ring(
     ]
 
 
+def _stretched_oval_loop(
+    *,
+    sides: int,
+    center_y: float,
+    center_z: float,
+    half_width_x: float,
+    half_depth_z: float,
+    vertical_rake: float = 0.0,
+    vertical_crown: float = 0.0,
+    angle_offset: float = math.pi / 2.0,
+) -> list[Vector3]:
+    """Create an offset oval loop oriented along the ship's longitudinal axis."""
+
+    if sides <= 2:
+        return []
+    angle_step = 2.0 * math.pi / sides
+    points: list[Vector3] = []
+    for index in range(sides):
+        angle = angle_offset + index * angle_step
+        sin_angle = math.sin(angle)
+        cos_angle = math.cos(angle)
+        x = cos_angle * half_width_x
+        z = center_z + sin_angle * half_depth_z
+        y = center_y + sin_angle * vertical_rake + cos_angle * vertical_crown
+        points.append(Vector3(x, y, z))
+    return points
+
+
+def _connect_rings(
+    segments: list[tuple[Vector3, Vector3]],
+    ring_a: Sequence[Vector3],
+    ring_b: Sequence[Vector3],
+) -> None:
+    """Connect two perimeter rings, gracefully handling mismatched resolutions."""
+
+    if not ring_a or not ring_b:
+        return
+    count_a = len(ring_a)
+    count_b = len(ring_b)
+    for index_a, point_a in enumerate(ring_a):
+        fraction = index_a / count_a
+        target_index = int(fraction * count_b) % count_b
+        segments.append((point_a, ring_b[target_index]))
+    for index_b, point_b in enumerate(ring_b):
+        fraction = index_b / count_b
+        target_index = int(fraction * count_a) % count_a
+        segments.append((point_b, ring_a[target_index]))
+
+
 def _mirror_vector(point: Vector3) -> Vector3:
     return Vector3(-point.x, point.y, point.z)
 
@@ -929,86 +978,82 @@ def _build_raven_wireframe() -> list[tuple[Vector3, Vector3]]:
 def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
     segments: list[tuple[Vector3, Vector3]] = []
 
-    prow_tip = Vector3(0.0, 2.2, 4.2)
-    prow_chin = Vector3(0.0, 0.8, 3.9)
-    dorsal_neck = Vector3(0.0, 2.3, 3.4)
-    dorsal_ridge = Vector3(0.0, 2.1, 1.6)
+    oval_sides = 20
+
+    prow_tip = Vector3(0.0, 2.35, 4.4)
+    prow_chin = Vector3(0.0, 0.65, 4.1)
+    dorsal_neck = Vector3(0.0, 2.35, 3.2)
+    dorsal_ridge = Vector3(0.0, 2.05, 1.6)
     dorsal_mid = Vector3(0.0, 1.8, -0.8)
     stern_plate = Vector3(0.0, 1.0, -3.9)
-    ventral_neck = Vector3(0.0, 0.2, 2.4)
-    ventral_mid = Vector3(0.0, -0.5, -0.2)
+    ventral_neck = Vector3(0.0, 0.35, 2.4)
+    ventral_mid = Vector3(0.0, -0.45, -0.2)
     stern_keel = Vector3(0.0, -0.5, -4.2)
 
-    prow_upper_loop = [
-        Vector3(0.0, 2.2, 4.2),
-        Vector3(1.7, 2.0, 3.8),
-        Vector3(2.5, 1.7, 3.0),
-        Vector3(2.0, 1.6, 2.1),
-        Vector3(0.0, 1.7, 1.6),
-        Vector3(-2.0, 1.6, 2.1),
-        Vector3(-2.5, 1.7, 3.0),
-        Vector3(-1.7, 2.0, 3.8),
-    ]
+    prow_upper_loop = _stretched_oval_loop(
+        sides=oval_sides,
+        center_y=2.05,
+        center_z=3.1,
+        half_width_x=3.05,
+        half_depth_z=1.25,
+        vertical_rake=0.22,
+        vertical_crown=0.28,
+    )
     _loop_segments(segments, prow_upper_loop)
 
-    prow_lower_loop = [
-        Vector3(0.0, 0.8, 3.9),
-        Vector3(1.5, 0.6, 3.4),
-        Vector3(2.2, 0.4, 2.6),
-        Vector3(1.6, 0.3, 1.8),
-        Vector3(0.0, 0.2, 1.3),
-        Vector3(-1.6, 0.3, 1.8),
-        Vector3(-2.2, 0.4, 2.6),
-        Vector3(-1.5, 0.6, 3.4),
-    ]
+    prow_lower_loop = _stretched_oval_loop(
+        sides=oval_sides,
+        center_y=0.6,
+        center_z=3.0,
+        half_width_x=2.85,
+        half_depth_z=1.15,
+        vertical_rake=0.18,
+        vertical_crown=-0.12,
+    )
     _loop_segments(segments, prow_lower_loop)
 
-    neck_upper_loop = [
-        Vector3(0.0, 2.3, 3.2),
-        Vector3(1.5, 2.2, 2.8),
-        Vector3(1.9, 2.0, 2.0),
-        Vector3(1.4, 1.9, 1.2),
-        Vector3(0.0, 1.9, 0.8),
-        Vector3(-1.4, 1.9, 1.2),
-        Vector3(-1.9, 2.0, 2.0),
-        Vector3(-1.5, 2.2, 2.8),
-    ]
+    neck_upper_loop = _stretched_oval_loop(
+        sides=oval_sides,
+        center_y=1.95,
+        center_z=2.2,
+        half_width_x=2.25,
+        half_depth_z=0.9,
+        vertical_rake=0.18,
+        vertical_crown=0.22,
+    )
     _loop_segments(segments, neck_upper_loop)
 
-    neck_lower_loop = [
-        Vector3(0.0, 0.4, 2.8),
-        Vector3(1.3, 0.3, 2.4),
-        Vector3(1.6, 0.2, 1.7),
-        Vector3(1.1, 0.0, 0.9),
-        Vector3(0.0, -0.1, 0.6),
-        Vector3(-1.1, 0.0, 0.9),
-        Vector3(-1.6, 0.2, 1.7),
-        Vector3(-1.3, 0.3, 2.4),
-    ]
+    neck_lower_loop = _stretched_oval_loop(
+        sides=oval_sides,
+        center_y=0.4,
+        center_z=2.1,
+        half_width_x=2.05,
+        half_depth_z=0.85,
+        vertical_rake=0.16,
+        vertical_crown=-0.1,
+    )
     _loop_segments(segments, neck_lower_loop)
 
-    mid_upper_loop = [
-        Vector3(0.0, 2.0, 1.0),
-        Vector3(2.1, 1.8, 0.6),
-        Vector3(2.7, 1.6, -0.6),
-        Vector3(2.1, 1.5, -1.8),
-        Vector3(0.0, 1.4, -2.2),
-        Vector3(-2.1, 1.5, -1.8),
-        Vector3(-2.7, 1.6, -0.6),
-        Vector3(-2.1, 1.8, 0.6),
-    ]
+    mid_upper_loop = _stretched_oval_loop(
+        sides=oval_sides,
+        center_y=1.7,
+        center_z=0.4,
+        half_width_x=1.55,
+        half_depth_z=1.7,
+        vertical_rake=0.15,
+        vertical_crown=0.18,
+    )
     _loop_segments(segments, mid_upper_loop)
 
-    mid_lower_loop = [
-        Vector3(0.0, -0.2, 0.8),
-        Vector3(1.9, -0.3, 0.4),
-        Vector3(2.4, -0.5, -0.8),
-        Vector3(1.8, -0.6, -2.0),
-        Vector3(0.0, -0.7, -2.4),
-        Vector3(-1.8, -0.6, -2.0),
-        Vector3(-2.4, -0.5, -0.8),
-        Vector3(-1.9, -0.3, 0.4),
-    ]
+    mid_lower_loop = _stretched_oval_loop(
+        sides=oval_sides,
+        center_y=-0.25,
+        center_z=0.2,
+        half_width_x=1.35,
+        half_depth_z=1.6,
+        vertical_rake=0.22,
+        vertical_crown=-0.12,
+    )
     _loop_segments(segments, mid_lower_loop)
 
     stern_upper_loop = [
@@ -1039,15 +1084,12 @@ def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
     lower_loops = [prow_lower_loop, neck_lower_loop, mid_lower_loop, stern_lower_loop]
 
     for upper_ring, lower_ring in zip(upper_loops, lower_loops):
-        for upper, lower in zip(upper_ring, lower_ring):
-            segments.append((upper, lower))
+        _connect_rings(segments, upper_ring, lower_ring)
 
     for previous, nxt in zip(upper_loops, upper_loops[1:]):
-        for left, right in zip(previous, nxt):
-            segments.append((left, right))
+        _connect_rings(segments, previous, nxt)
     for previous, nxt in zip(lower_loops, lower_loops[1:]):
-        for left, right in zip(previous, nxt):
-            segments.append((left, right))
+        _connect_rings(segments, previous, nxt)
 
     dorsal_spine = [prow_tip, dorsal_neck, dorsal_ridge, Vector3(0.0, 1.9, 0.4), dorsal_mid, stern_plate]
     for start, end in zip(dorsal_spine, dorsal_spine[1:]):
@@ -1063,10 +1105,10 @@ def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
         segments.append((midpoint, Vector3(-loop[1].x, loop[1].y, loop[1].z)))
 
     module_ridges = [
-        Vector3(-1.4, 1.5, 0.8),
-        Vector3(-1.6, 1.4, -0.2),
-        Vector3(-1.6, 1.4, -1.2),
-        Vector3(-1.4, 1.5, -2.0),
+        Vector3(-1.25, 1.5, 0.9),
+        Vector3(-1.35, 1.4, -0.1),
+        Vector3(-1.35, 1.4, -1.2),
+        Vector3(-1.2, 1.5, -2.0),
     ]
     for point in module_ridges:
         mirrored = _mirror_vector(point)
@@ -1075,9 +1117,9 @@ def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
         segments.append((mirrored, Vector3(mirrored.x, 0.9, mirrored.z)))
 
     strake_points = [
-        Vector3(-2.4, 1.7, 2.8),
-        Vector3(-2.9, 1.4, 1.4),
-        Vector3(-3.0, 1.2, 0.2),
+        Vector3(-3.1, 1.8, 3.1),
+        Vector3(-3.3, 1.5, 2.2),
+        Vector3(-3.1, 1.2, 1.0),
     ]
     for point in strake_points:
         mirrored = _mirror_vector(point)
