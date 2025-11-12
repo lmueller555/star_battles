@@ -662,10 +662,22 @@ class OutpostInteriorScene(Scene):
 
         entry_point = station_pos - approach_dir * entry_distance
         start_point = Vector3(current_pos)
-        if distance < entry_distance * 0.85:
-            start_point = station_pos - approach_dir * (entry_distance + max(220.0, self.station.docking_radius * 0.25))
-            self.player.kinematics.position = Vector3(start_point)
         dock_point = station_pos - approach_dir * dock_offset
+
+        frame_size = getattr(getattr(self.player, "frame", None), "size", "")
+        use_docking_arm = frame_size.lower() in {"strike", "escort"}
+        if use_docking_arm:
+            arm_target = self._select_docking_arm_target(station_pos, approach_dir, current_pos)
+            if arm_target is not None:
+                reference_point, anchor_point = arm_target
+                dock_point = anchor_point
+                approach_span = max(entry_distance - dock_offset, 0.0)
+                entry_point = dock_point - approach_dir * approach_span
+
+        if distance < entry_distance * 0.85:
+            start_offset = max(220.0, self.station.docking_radius * 0.25)
+            start_point = entry_point - approach_dir * start_offset
+            self.player.kinematics.position = Vector3(start_point)
 
         start_forward = self.player.kinematics.basis.forward
         if start_forward.length_squared() <= 1e-5:
@@ -708,6 +720,77 @@ class OutpostInteriorScene(Scene):
             self.cutscene_camera.right = Vector3(1.0, 0.0, 0.0)
 
         self.cutscene_station_ship = self._locate_station_visual(station_pos, approach_dir)
+
+    def _select_docking_arm_target(
+        self,
+        station_pos: Vector3,
+        approach_dir: Vector3,
+        reference: Vector3,
+    ) -> Optional[tuple[Vector3, Vector3]]:
+        """Identify the closest docking arm endpoint and its anchor point."""
+
+        candidates = self._outpost_docking_arm_waypoints(station_pos, approach_dir)
+        if not candidates:
+            return None
+        best: Optional[tuple[Vector3, Vector3]] = None
+        best_distance = float("inf")
+        for reference_point, anchor_point in candidates:
+            distance = reference.distance_to(reference_point)
+            if distance < best_distance:
+                best = (reference_point, anchor_point)
+                best_distance = distance
+        return best
+
+    def _outpost_docking_arm_waypoints(
+        self, station_pos: Vector3, approach_dir: Vector3
+    ) -> list[tuple[Vector3, Vector3]]:
+        """Build reference points for the Outpost's docking arms."""
+
+        forward = Vector3(approach_dir)
+        forward = -forward
+        if forward.length_squared() <= 1e-6:
+            forward = Vector3(0.0, 0.0, 1.0)
+        else:
+            forward = forward.normalize()
+
+        up = Vector3(0.0, 1.0, 0.0)
+        right = forward.cross(up)
+        if right.length_squared() <= 1e-6:
+            if abs(forward.y) > 0.99:
+                right = Vector3(1.0, 0.0, 0.0)
+            else:
+                right = Vector3(-forward.z, 0.0, forward.x)
+        right = right.normalize()
+        up = right.cross(forward)
+        if up.length_squared() <= 1e-6:
+            up = Vector3(0.0, 1.0, 0.0)
+        else:
+            up = up.normalize()
+
+        tail_z = -640.0
+        nose_z = 560.0
+        hull_length = nose_z - tail_z
+        docking_arm_start_z = tail_z + hull_length * 0.35
+        docking_arm_end_z = min(nose_z - 30.0, docking_arm_start_z + hull_length * 0.5)
+        max_half_width = 250.0
+        docking_arm_offset_x = max_half_width + 70.0
+        docking_arm_offset_y = -58.0
+        docking_arm_radius = 38.0
+        cone_height = docking_arm_radius * 0.18
+
+        def _transform(local: Vector3) -> Vector3:
+            return station_pos + right * local.x + up * local.y + forward * local.z
+
+        candidates: list[tuple[Vector3, Vector3]] = []
+        for sign in (-1.0, 1.0):
+            lateral = sign * docking_arm_offset_x
+            tip_reference = Vector3(lateral, docking_arm_offset_y, docking_arm_end_z + cone_height)
+            tip_anchor = Vector3(lateral, docking_arm_offset_y, docking_arm_end_z)
+            base_reference = Vector3(lateral, docking_arm_offset_y, docking_arm_start_z - cone_height)
+            base_anchor = Vector3(lateral, docking_arm_offset_y, docking_arm_start_z)
+            candidates.append((_transform(tip_reference), _transform(tip_anchor)))
+            candidates.append((_transform(base_reference), _transform(base_anchor)))
+        return candidates
 
     def _load_interior_definition(self) -> None:
         self.interior = None
