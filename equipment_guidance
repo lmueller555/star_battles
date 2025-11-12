@@ -260,3 +260,37 @@ Durability & cost: Show item Durability and Price on the card. Items at 0% canno
 Preview deltas: On hover/select, compute the delta vs current ship (+X / −Y) and show it in green/red for: Speed, Boost Speed, Accel, Turn Speed/Accel, Avoidance, Armor, Hull, etc.
 
 Upgrade preview: If the user holds the “Max Upgrade” hotkey (your UI shows [SHIFT]), switch the stat block to show the level-cap values (once you’ve captured them).
+
+Weapons (Medium/Heavy hardpoints – Line class only)
+
+MEC-L31(S) “Talon” — Heavy Cannon Battery (L1)
+
+Damage: 35 – 70 (upgrades)
+Armor Piercing: 35
+Range: 0 – 1700 m
+Optimal Range: 675 m (upgrades)
+Accuracy: 125
+Critical Offense: 100
+Reload: 4 s
+Power Cost: 25
+Firing Arc: 180°
+Cost: 20 000
+Durability: 17 500 / 17 500
+
+Effect: General-purpose heavy cannon battery for Line-class ships.
+Delivers high single-shot kinetic impact with moderate firing arc and substantial energy draw.
+Performs best at medium-long range near its optimal distance; severe energy cost and long reload make timing important.
+
+Upgrade model: Increase Damage and Optimal Range per level. Other fields remain fixed unless higher-level data show otherwise.
+
+Implementation notes:
+
+Treat as a standard ballistic cannon using the same hit, armor, and crit formulas as Strike-class autocannons.
+
+Each shot consumes Power Cost energy instantly on fire; cannot queue fire until reload complete.
+
+Integrates with Line-class hardpoints only (enforce ship-class check in Store & Fitting UI).
+
+Accuracy 125 is below Strike-grade light weapons, so large targets are preferred; apply normal accuracy_scale (≈ 400 baseline).
+
+Use Optimal Range for falloff curve (peak DPS near 675 m, taper toward 1700 m max).
