@@ -1,7 +1,7 @@
 """Vector renderer built on pygame."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from math import ceil, floor
 import logging
 import math
@@ -13,31 +13,6 @@ from pygame.math import Vector3
 
 from game.combat.weapons import Projectile
 from game.render.camera import CameraFrameData, ChaseCamera
-from game.ships.outpost_data import (
-    CollisionHull,
-    OUTPOST_COLLISION_HULLS,
-    OUTPOST_DOCKING_ARM_OFFSET_X,
-    OUTPOST_DOCKING_ARM_OFFSET_Y,
-    OUTPOST_DOCKING_ARM_RADIUS,
-    OUTPOST_DOCKING_ARM_RING_SIDES,
-    OUTPOST_DOCKING_ARM_SECTIONS,
-    OUTPOST_DOCKING_ARM_VERTICAL_RADIUS,
-    OUTPOST_ENGINE_DEPTH,
-    OUTPOST_ENGINE_HOUSING_BACK_Z,
-    OUTPOST_ENGINE_HOUSING_FRONT_Z,
-    OUTPOST_ENGINE_HOUSING_HALF_HEIGHT,
-    OUTPOST_ENGINE_HOUSING_HALF_WIDTH,
-    OUTPOST_ENGINE_NOZZLE_INSET,
-    OUTPOST_ENGINE_OFFSET_X,
-    OUTPOST_ENGINE_OFFSET_Y,
-    OUTPOST_ENGINE_RADIUS_X,
-    OUTPOST_ENGINE_RADIUS_Y,
-    OUTPOST_HULL_PROFILE,
-    OUTPOST_HULL_RING_SIDES,
-    OUTPOST_NOSE_FORWARD_OFFSET,
-    OUTPOST_NOSE_VENTRAL_OFFSET,
-    docking_arm_centerline,
-)
 from game.ships.ship import Ship
 from game.world.asteroids import Asteroid
 
@@ -50,30 +25,6 @@ SHIP_COLOR = (120, 220, 255)
 ENEMY_COLOR = (255, 80, 100)
 PROJECTILE_COLOR = (255, 200, 80)
 MISSILE_COLOR = (255, 140, 60)
-
-LIGHT_DIRECTION = Vector3(-0.35, 0.82, -0.46).normalize()
-
-HULL_BASE_COLOR = (108, 120, 140)
-HULL_ACCENT_COLOR = (134, 148, 170)
-HULL_SHADOW_COLOR = (82, 92, 108)
-DOCKING_ARM_COLOR = (104, 116, 132)
-DOCKING_STRIPE_COLOR = (176, 168, 96)
-ENGINE_COWL_COLOR = (96, 110, 132)
-ENGINE_NOZZLE_COLOR = (54, 64, 84)
-ENGINE_GLOW_COLOR = (220, 184, 120)
-WINDOW_COLOR = (180, 220, 255)
-
-
-@dataclass
-class ShipFace:
-    """Triangular surface used to render filled ship skins."""
-
-    vertices: tuple[int, int, int]
-    normal: Vector3
-    base_color: tuple[int, int, int]
-    tint: float
-    emissive: tuple[int, int, int] | None
-    center: Vector3
 
 # Engine layout presets by ship size. These are expressed using the same
 # lightweight local-space units as the wireframe definitions and roughly align
@@ -105,9 +56,6 @@ class ShipGeometry:
     vertices: List[Vector3]
     edges: List[Tuple[int, int]]
     radius: float
-    faces: List[ShipFace] = field(default_factory=list)
-    collision_hulls: List[CollisionHull] = field(default_factory=list)
-    engine_nozzles: List[Vector3] = field(default_factory=list)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -162,12 +110,7 @@ def _ship_geometry_from_edges(edges: Sequence[tuple[Vector3, Vector3]]) -> ShipG
 
 
 def _build_ship_geometry_cache() -> Dict[str, ShipGeometry]:
-    cache = {
-        name: _ship_geometry_from_edges(edge_list)
-        for name, edge_list in WIREFRAMES.items()
-    }
-    cache["Outpost"] = _build_outpost_skin_geometry()
-    return cache
+    return {name: _ship_geometry_from_edges(edge_list) for name, edge_list in WIREFRAMES.items()}
 
 
 def _estimate_ship_radius(ship: Ship, geometry: ShipGeometry) -> float:
@@ -228,432 +171,6 @@ def _elliptical_ring(
 
 def _mirror_vector(point: Vector3) -> Vector3:
     return Vector3(-point.x, point.y, point.z)
-
-
-def _build_outpost_skin_geometry() -> ShipGeometry:
-    """Generate a skinned mesh for Outpost-class stations."""
-
-    vertices: List[Vector3] = []
-    faces: List[ShipFace] = []
-
-    def add_vertex(vector: Vector3) -> int:
-        vertices.append(Vector3(vector))
-        return len(vertices) - 1
-
-    def add_triangle(
-        idx_a: int,
-        idx_b: int,
-        idx_c: int,
-        color: tuple[int, int, int],
-        tint: float = 0.0,
-        emissive: tuple[int, int, int] | None = None,
-    ) -> None:
-        a = vertices[idx_a]
-        b = vertices[idx_b]
-        c = vertices[idx_c]
-        normal_vec = (b - a).cross(c - a)
-        if normal_vec.length_squared() <= 1e-9:
-            return
-        center = (a + b + c) / 3.0
-        if normal_vec.dot(center) < 0.0:
-            idx_b, idx_c = idx_c, idx_b
-            b, c = c, b
-            normal_vec = (b - a).cross(c - a)
-            if normal_vec.length_squared() <= 1e-9:
-                return
-        normal = normal_vec.normalize()
-        faces.append(ShipFace((idx_a, idx_b, idx_c), normal, color, tint, emissive, center))
-
-    def add_quad(
-        idx_a: int,
-        idx_b: int,
-        idx_c: int,
-        idx_d: int,
-        color: tuple[int, int, int],
-        tint: float = 0.0,
-        emissive: tuple[int, int, int] | None = None,
-    ) -> None:
-        add_triangle(idx_a, idx_b, idx_c, color, tint, emissive)
-        add_triangle(idx_a, idx_c, idx_d, color, tint, emissive)
-
-    hull_rings: List[list[int]] = []
-    for z_pos, half_width, half_height in OUTPOST_HULL_PROFILE:
-        ring_indices: list[int] = []
-        for point in _elliptical_ring(
-            z_pos,
-            half_width,
-            half_height,
-            sides=OUTPOST_HULL_RING_SIDES,
-        ):
-            ring_indices.append(add_vertex(point))
-        hull_rings.append(ring_indices)
-
-    ring_count = len(hull_rings)
-    for ring_index in range(ring_count - 1):
-        current_ring = hull_rings[ring_index]
-        next_ring = hull_rings[ring_index + 1]
-        progress = ring_index / max(1, ring_count - 1)
-        for step in range(OUTPOST_HULL_RING_SIDES):
-            a = current_ring[step]
-            b = next_ring[step]
-            c = next_ring[(step + 1) % OUTPOST_HULL_RING_SIDES]
-            d = current_ring[(step + 1) % OUTPOST_HULL_RING_SIDES]
-            color = HULL_BASE_COLOR
-            if step % 7 == 0:
-                color = HULL_ACCENT_COLOR
-            elif step % 3 == 0:
-                color = HULL_SHADOW_COLOR
-            avg_y = (
-                vertices[a].y
-                + vertices[b].y
-                + vertices[c].y
-                + vertices[d].y
-            ) * 0.25
-            tint = 0.0
-            if avg_y > 28.0:
-                tint += 0.12
-            elif avg_y < -32.0:
-                tint -= 0.12
-            tint += (progress - 0.4) * 0.08
-            add_quad(a, b, c, d, color, tint)
-
-    nose_z = OUTPOST_HULL_PROFILE[-1][0]
-    nose_tip = add_vertex(
-        Vector3(0.0, 40.0, nose_z + OUTPOST_NOSE_FORWARD_OFFSET)
-    )
-    ventral_spear = add_vertex(
-        Vector3(0.0, -35.0, nose_z + OUTPOST_NOSE_VENTRAL_OFFSET)
-    )
-    final_ring = hull_rings[-1]
-    for step in range(OUTPOST_HULL_RING_SIDES):
-        a = final_ring[step]
-        b = final_ring[(step + 1) % OUTPOST_HULL_RING_SIDES]
-        avg_y = (vertices[a].y + vertices[b].y) * 0.5
-        nose_color = HULL_ACCENT_COLOR if avg_y >= 0.0 else HULL_BASE_COLOR
-        spear_color = HULL_SHADOW_COLOR if avg_y < 0.0 else HULL_BASE_COLOR
-        add_triangle(a, nose_tip, b, nose_color, 0.18)
-        add_triangle(a, b, ventral_spear, spear_color, -0.08)
-
-    # Reinforced tail housing for the engine block.
-    top_front_left = add_vertex(
-        Vector3(
-            -OUTPOST_ENGINE_HOUSING_HALF_WIDTH,
-            OUTPOST_ENGINE_HOUSING_HALF_HEIGHT,
-            OUTPOST_ENGINE_HOUSING_FRONT_Z,
-        )
-    )
-    top_back_left = add_vertex(
-        Vector3(
-            -OUTPOST_ENGINE_HOUSING_HALF_WIDTH + 20.0,
-            OUTPOST_ENGINE_HOUSING_HALF_HEIGHT + 8.0,
-            OUTPOST_ENGINE_HOUSING_BACK_Z,
-        )
-    )
-    top_back_right = add_vertex(
-        Vector3(
-            OUTPOST_ENGINE_HOUSING_HALF_WIDTH - 20.0,
-            OUTPOST_ENGINE_HOUSING_HALF_HEIGHT + 8.0,
-            OUTPOST_ENGINE_HOUSING_BACK_Z,
-        )
-    )
-    top_front_right = add_vertex(
-        Vector3(
-            OUTPOST_ENGINE_HOUSING_HALF_WIDTH,
-            OUTPOST_ENGINE_HOUSING_HALF_HEIGHT,
-            OUTPOST_ENGINE_HOUSING_FRONT_Z,
-        )
-    )
-    bottom_front_left = add_vertex(
-        Vector3(
-            -OUTPOST_ENGINE_HOUSING_HALF_WIDTH,
-            -OUTPOST_ENGINE_HOUSING_HALF_HEIGHT,
-            OUTPOST_ENGINE_HOUSING_FRONT_Z,
-        )
-    )
-    bottom_back_left = add_vertex(
-        Vector3(
-            -OUTPOST_ENGINE_HOUSING_HALF_WIDTH + 20.0,
-            -OUTPOST_ENGINE_HOUSING_HALF_HEIGHT - 8.0,
-            OUTPOST_ENGINE_HOUSING_BACK_Z,
-        )
-    )
-    bottom_back_right = add_vertex(
-        Vector3(
-            OUTPOST_ENGINE_HOUSING_HALF_WIDTH - 20.0,
-            -OUTPOST_ENGINE_HOUSING_HALF_HEIGHT - 8.0,
-            OUTPOST_ENGINE_HOUSING_BACK_Z,
-        )
-    )
-    bottom_front_right = add_vertex(
-        Vector3(
-            OUTPOST_ENGINE_HOUSING_HALF_WIDTH,
-            -OUTPOST_ENGINE_HOUSING_HALF_HEIGHT,
-            OUTPOST_ENGINE_HOUSING_FRONT_Z,
-        )
-    )
-
-    top_frame = [
-        top_front_left,
-        top_front_right,
-        top_back_right,
-        top_back_left,
-    ]
-    bottom_frame = [
-        bottom_front_left,
-        bottom_back_left,
-        bottom_back_right,
-        bottom_front_right,
-    ]
-
-    add_quad(
-        top_front_left,
-        top_front_right,
-        top_back_right,
-        top_back_left,
-        HULL_ACCENT_COLOR,
-        0.14,
-    )
-    add_quad(
-        bottom_front_left,
-        bottom_front_right,
-        bottom_back_right,
-        bottom_back_left,
-        HULL_SHADOW_COLOR,
-        -0.16,
-    )
-    add_quad(
-        top_front_left,
-        bottom_front_left,
-        bottom_front_right,
-        top_front_right,
-        HULL_BASE_COLOR,
-        0.02,
-    )
-    add_quad(
-        top_back_left,
-        top_back_right,
-        bottom_back_right,
-        bottom_back_left,
-        HULL_BASE_COLOR,
-        -0.04,
-    )
-    add_quad(
-        top_front_left,
-        top_back_left,
-        bottom_back_left,
-        bottom_front_left,
-        HULL_BASE_COLOR,
-        0.04,
-    )
-    add_quad(
-        top_front_right,
-        bottom_front_right,
-        bottom_back_right,
-        top_back_right,
-        HULL_BASE_COLOR,
-        0.04,
-    )
-
-    housing_mount_targets: dict[tuple[int, int], int] = {
-        (-1, 1): top_front_left,
-        (-1, -1): bottom_front_left,
-        (1, 1): top_front_right,
-        (1, -1): bottom_front_right,
-    }
-
-    # Engine nacelles with glowing nozzles and mounting struts.
-    engine_nozzle_positions: list[Vector3] = []
-    for sign in (-1, 1):
-        for vertical in (-1, 1):
-            center = Vector3(
-                sign * OUTPOST_ENGINE_OFFSET_X,
-                vertical * OUTPOST_ENGINE_OFFSET_Y,
-                OUTPOST_ENGINE_HOUSING_BACK_Z + OUTPOST_ENGINE_DEPTH,
-            )
-            ring: list[int] = []
-            nozzle_ring: list[int] = []
-            ring_sides = 14
-            for step in range(ring_sides):
-                angle = step * (2.0 * math.pi / ring_sides)
-                outer = Vector3(
-                    center.x + math.cos(angle) * OUTPOST_ENGINE_RADIUS_X,
-                    center.y + math.sin(angle) * OUTPOST_ENGINE_RADIUS_Y,
-                    center.z,
-                )
-                ring.append(add_vertex(outer))
-                nozzle = Vector3(
-                    center.x + math.cos(angle) * OUTPOST_ENGINE_RADIUS_X * 0.68,
-                    center.y + math.sin(angle) * OUTPOST_ENGINE_RADIUS_Y * 0.68,
-                    OUTPOST_ENGINE_HOUSING_BACK_Z + OUTPOST_ENGINE_NOZZLE_INSET,
-                )
-                nozzle_ring.append(add_vertex(nozzle))
-            mount_index = housing_mount_targets[(sign, vertical)]
-            for step in range(ring_sides):
-                a = ring[step]
-                b = ring[(step + 1) % ring_sides]
-                c = nozzle_ring[(step + 1) % ring_sides]
-                d = nozzle_ring[step]
-                inner_color = ENGINE_COWL_COLOR if step % 2 else ENGINE_NOZZLE_COLOR
-                inner_tint = -0.02 if step % 2 else -0.08
-                add_quad(a, b, c, d, inner_color, inner_tint)
-                if step % 3 == 0:
-                    add_triangle(mount_index, a, b, HULL_BASE_COLOR, 0.06)
-            nozzle_center = add_vertex(
-                Vector3(
-                    center.x,
-                    center.y,
-                    OUTPOST_ENGINE_HOUSING_BACK_Z + OUTPOST_ENGINE_NOZZLE_INSET - 4.0,
-                )
-            )
-            engine_nozzle_positions.append(Vector3(vertices[nozzle_center]))
-            for idx in range(ring_sides):
-                a = nozzle_ring[idx]
-                b = nozzle_ring[(idx + 1) % ring_sides]
-                add_triangle(a, nozzle_center, b, ENGINE_GLOW_COLOR, 0.25, ENGINE_GLOW_COLOR)
-
-    # Docking arms running along the mid hull.
-    arm_start_z, arm_end_z, _ = docking_arm_centerline()
-    docking_arm_caps: dict[int, dict[str, int | list[int]]] = {sign: {} for sign in (-1, 1)}
-    for sign in (-1, 1):
-        previous_ring: list[int] | None = None
-        for section_index in range(OUTPOST_DOCKING_ARM_SECTIONS):
-            if OUTPOST_DOCKING_ARM_SECTIONS == 1:
-                position_fraction = 0.0
-            else:
-                position_fraction = section_index / (OUTPOST_DOCKING_ARM_SECTIONS - 1)
-            z_pos = arm_start_z + (arm_end_z - arm_start_z) * position_fraction
-            center = Vector3(sign * OUTPOST_DOCKING_ARM_OFFSET_X, OUTPOST_DOCKING_ARM_OFFSET_Y, z_pos)
-            ring: list[int] = []
-            for step in range(OUTPOST_DOCKING_ARM_RING_SIDES):
-                angle = step * (2.0 * math.pi / OUTPOST_DOCKING_ARM_RING_SIDES)
-                vertex = Vector3(
-                    center.x + math.cos(angle) * OUTPOST_DOCKING_ARM_RADIUS,
-                    center.y + math.sin(angle) * OUTPOST_DOCKING_ARM_VERTICAL_RADIUS,
-                    center.z,
-                )
-                ring.append(add_vertex(vertex))
-            if section_index == 0:
-                docking_arm_caps[sign]["base_ring"] = ring
-                docking_arm_caps[sign]["base_center"] = add_vertex(center)
-            if section_index == OUTPOST_DOCKING_ARM_SECTIONS - 1:
-                docking_arm_caps[sign]["tip_ring"] = ring
-                docking_arm_caps[sign]["tip_center"] = add_vertex(center)
-            if previous_ring is not None:
-                for step in range(OUTPOST_DOCKING_ARM_RING_SIDES):
-                    a = previous_ring[step]
-                    b = previous_ring[(step + 1) % OUTPOST_DOCKING_ARM_RING_SIDES]
-                    c = ring[(step + 1) % OUTPOST_DOCKING_ARM_RING_SIDES]
-                    d = ring[step]
-                    color = DOCKING_ARM_COLOR
-                    tint = 0.02
-                    y_avg = (
-                        vertices[a].y
-                        + vertices[b].y
-                        + vertices[c].y
-                        + vertices[d].y
-                    ) * 0.25
-                    if y_avg < OUTPOST_DOCKING_ARM_OFFSET_Y - 4.0:
-                        color = DOCKING_STRIPE_COLOR
-                        tint = 0.3
-                    elif step % 3 == 0:
-                        tint = 0.12
-                    add_quad(a, b, c, d, color, tint)
-            previous_ring = ring
-
-    cone_height = OUTPOST_DOCKING_ARM_RADIUS * 0.18
-    for sign in (-1, 1):
-        tip_ring = docking_arm_caps[sign].get("tip_ring")
-        tip_center_index = docking_arm_caps[sign].get("tip_center")
-        if isinstance(tip_ring, list) and isinstance(tip_center_index, int):
-            tip_center = vertices[tip_center_index]
-            forward_tip = add_vertex(
-                Vector3(tip_center.x, tip_center.y, tip_center.z + cone_height)
-            )
-            ring_len = len(tip_ring)
-            for idx in range(ring_len):
-                a = tip_ring[idx]
-                b = tip_ring[(idx + 1) % ring_len]
-                add_triangle(a, forward_tip, b, DOCKING_ARM_COLOR, 0.18)
-        base_ring = docking_arm_caps[sign].get("base_ring")
-        base_center_index = docking_arm_caps[sign].get("base_center")
-        if isinstance(base_ring, list) and isinstance(base_center_index, int):
-            base_center = vertices[base_center_index]
-            aft_tip = add_vertex(
-                Vector3(base_center.x, base_center.y, base_center.z - cone_height)
-            )
-            ring_len = len(base_ring)
-            for idx in range(ring_len):
-                a = base_ring[idx]
-                b = base_ring[(idx + 1) % ring_len]
-                add_triangle(a, aft_tip, b, DOCKING_ARM_COLOR, -0.12)
-
-    hull_attachment_indices = {1: 2, -1: 6}
-    connector_positions = [
-        arm_start_z + (arm_end_z - arm_start_z) * fraction
-        for fraction in (0.1, 0.5, 0.9)
-    ]
-    for sign in (-1, 1):
-        for z_pos in connector_positions:
-            nearest_ring = min(
-                hull_rings,
-                key=lambda ring: abs(vertices[ring[0]].z - z_pos),
-            )
-            hull_point = nearest_ring[hull_attachment_indices[sign]]
-            base_ring = docking_arm_caps[sign].get("base_ring")
-            if not isinstance(base_ring, list):
-                continue
-            arm_surface = base_ring[OUTPOST_DOCKING_ARM_RING_SIDES // 4]
-            brace_lower = base_ring[(OUTPOST_DOCKING_ARM_RING_SIDES * 3) // 4]
-            add_triangle(hull_point, arm_surface, brace_lower, HULL_BASE_COLOR, 0.08)
-
-    # Add forward observation windows along the dorsal ridge.
-    if len(hull_rings) >= 3:
-        dorsal_ring = hull_rings[-3]
-        nose_ring = hull_rings[-2]
-        dorsal_indices = [
-            dorsal_ring[(OUTPOST_HULL_RING_SIDES // 4 + offset) % OUTPOST_HULL_RING_SIDES]
-            for offset in (-1, 0, 1)
-        ]
-        nose_indices = [
-            nose_ring[(OUTPOST_HULL_RING_SIDES // 4 + offset) % OUTPOST_HULL_RING_SIDES]
-            for offset in (-1, 0, 1)
-        ]
-        add_quad(
-            dorsal_indices[0],
-            nose_indices[0],
-            nose_indices[1],
-            dorsal_indices[1],
-            WINDOW_COLOR,
-            0.4,
-            WINDOW_COLOR,
-        )
-        add_quad(
-            dorsal_indices[1],
-            nose_indices[1],
-            nose_indices[2],
-            dorsal_indices[2],
-            WINDOW_COLOR,
-            0.35,
-            WINDOW_COLOR,
-        )
-
-    max_radius = 0.0
-    for vertex in vertices:
-        max_radius = max(max_radius, vertex.length())
-
-    collision_hulls = [
-        CollisionHull(Vector3(hull.center), Vector3(hull.radii))
-        for hull in OUTPOST_COLLISION_HULLS
-    ]
-
-    return ShipGeometry(
-        vertices=vertices,
-        edges=[],
-        radius=max_radius,
-        faces=faces,
-        collision_hulls=collision_hulls,
-        engine_nozzles=engine_nozzle_positions,
-    )
 
 
 def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
@@ -1654,17 +1171,6 @@ WIREFRAMES = {
 
 SHIP_GEOMETRY_CACHE = _build_ship_geometry_cache()
 
-if SHIP_GEOMETRY_CACHE["Outpost"].engine_nozzles:
-    ENGINE_LAYOUTS["Outpost"] = [Vector3(nozzle) for nozzle in SHIP_GEOMETRY_CACHE["Outpost"].engine_nozzles]
-else:
-    engine_z = OUTPOST_ENGINE_HOUSING_BACK_Z + OUTPOST_ENGINE_NOZZLE_INSET - 4.0
-    ENGINE_LAYOUTS["Outpost"] = [
-        Vector3(-OUTPOST_ENGINE_OFFSET_X, -OUTPOST_ENGINE_OFFSET_Y, engine_z),
-        Vector3(OUTPOST_ENGINE_OFFSET_X, -OUTPOST_ENGINE_OFFSET_Y, engine_z),
-        Vector3(-OUTPOST_ENGINE_OFFSET_X, OUTPOST_ENGINE_OFFSET_Y, engine_z),
-        Vector3(OUTPOST_ENGINE_OFFSET_X, OUTPOST_ENGINE_OFFSET_Y, engine_z),
-    ]
-
 
 class VectorRenderer:
     def __init__(self, surface: pygame.Surface) -> None:
@@ -1771,17 +1277,16 @@ class VectorRenderer:
         state: RenderSpatialState,
         origin: Vector3,
         basis: tuple[Vector3, Vector3, Vector3],
-    ) -> tuple[List[tuple[float, float]], List[bool], List[float]]:
+    ) -> tuple[List[tuple[float, float]], List[bool]]:
         cache = self._vertex_cache.setdefault(id(ship), ProjectedVertexCache())
         if (
             cache.camera_revision == frame.revision
             and cache.world_revision == state.world_revision
         ):
-            return cache.vertices, cache.visibility, cache.depths
+            return cache.vertices, cache.visibility
         right, up, forward = basis
         vertices_2d: List[tuple[float, float]] = []
         visibility: List[bool] = []
-        depths: List[float] = []
         min_x = float("inf")
         max_x = float("-inf")
         min_y = float("inf")
@@ -1791,13 +1296,12 @@ class VectorRenderer:
             screen, visible = frame.project_point(world)
             vertices_2d.append((screen.x, screen.y))
             visibility.append(visible)
-            depths.append(screen.z)
             if visible:
                 min_x = min(min_x, screen.x)
                 max_x = max(max_x, screen.x)
                 min_y = min(min_y, screen.y)
                 max_y = max(max_y, screen.y)
-        cache.update(frame.revision, state.world_revision, vertices_2d, visibility, depths)
+        cache.update(frame.revision, state.world_revision, vertices_2d, visibility)
         if min_x <= max_x and min_y <= max_y:
             state.cached_screen_rect = (min_x, min_y, max_x, max_y)
             state.cached_camera_revision = frame.revision
@@ -1805,7 +1309,7 @@ class VectorRenderer:
             state.clear_cached_projection()
         self._frame_counters.vertices_projected_total += len(geometry.vertices)
         self._frame_counters.objects_projected += 1
-        return vertices_2d, visibility, depths
+        return vertices_2d, visibility
 
     @staticmethod
     def _local_to_world(
@@ -1816,72 +1320,6 @@ class VectorRenderer:
         local: Vector3,
     ) -> Vector3:
         return origin + right * local.x + up * local.y + forward * local.z
-
-    def _draw_ship_surfaces(
-        self,
-        frame: CameraFrameData,
-        geometry: ShipGeometry,
-        projected: Sequence[tuple[float, float]],
-        visibility: Sequence[bool],
-        depths: Sequence[float],
-        origin: Vector3,
-        basis: tuple[Vector3, Vector3, Vector3],
-    ) -> None:
-        if not geometry.faces:
-            return
-
-        right, up, forward = basis
-        batches: list[tuple[float, list[tuple[int, int]], tuple[int, int, int], tuple[int, int, int] | None]] = []
-        for face in geometry.faces:
-            indices = face.vertices
-            if not all(visibility[idx] for idx in indices):
-                continue
-            world_normal = (
-                right * face.normal.x
-                + up * face.normal.y
-                + forward * face.normal.z
-            )
-            if world_normal.length_squared() <= 1e-9:
-                continue
-            world_normal = world_normal.normalize()
-            if world_normal.dot(frame.forward) >= -0.01:
-                continue
-            screen_points = [projected[idx] for idx in indices]
-            polygon = [
-                (int(round(point[0])), int(round(point[1])))
-                for point in screen_points
-            ]
-            depth = sum(depths[idx] for idx in indices) / len(indices)
-
-            light = max(0.0, world_normal.dot(LIGHT_DIRECTION))
-            tint = face.tint
-            vertical = max(-1.0, min(1.0, face.center.y / 280.0))
-            lateral = max(-1.0, min(1.0, face.center.x / 320.0))
-            tint += vertical * 0.08 + lateral * 0.04
-            shade = 0.32 + 0.62 * light + tint
-            shade = max(0.18, min(1.55, shade))
-            base_color = face.base_color
-            shaded = tuple(
-                int(max(0, min(255, round(component * shade))))
-                for component in base_color
-            )
-            final_color = shaded
-            emissive_color = face.emissive
-            if emissive_color is not None:
-                final_color = _blend(shaded, emissive_color, 0.6)
-            batches.append((depth, polygon, final_color, emissive_color))
-
-        if not batches:
-            return
-
-        batches.sort(key=lambda entry: entry[0], reverse=True)
-        for _, polygon, color, emissive in batches:
-            if len(polygon) < 3:
-                continue
-            pygame.draw.polygon(self.surface, color, polygon)
-            if emissive is not None and len(polygon) >= 3:
-                outline = _lighten(emissive, 0.3)
-                pygame.draw.aalines(self.surface, outline, True, polygon, blend=1)
 
     def _draw_speed_streaks(
         self,
@@ -2226,7 +1664,7 @@ class VectorRenderer:
 
         origin = ship.kinematics.position
         right, up, forward = _ship_axes(ship)
-        projected, visibility, depths = self._project_ship_vertices(
+        projected, visibility = self._project_ship_vertices(
             ship,
             geometry,
             frame,
@@ -2235,28 +1673,24 @@ class VectorRenderer:
             (right, up, forward),
         )
         color = SHIP_COLOR if ship.team == "player" else ENEMY_COLOR
-        if geometry.faces:
-            self._draw_ship_surfaces(frame, geometry, projected, visibility, depths, origin, (right, up, forward))
-
         line_mode = "line" if distance > 7500.0 else "aaline"
         drawn_edges = False
-        if geometry.edges and not geometry.faces:
-            for idx_a, idx_b in geometry.edges:
-                if not (visibility[idx_a] and visibility[idx_b]):
-                    continue
-                ax, ay = projected[idx_a]
-                bx, by = projected[idx_b]
-                if line_mode == "line":
-                    pygame.draw.line(
-                        self.surface,
-                        color,
-                        (int(round(ax)), int(round(ay))),
-                        (int(round(bx)), int(round(by))),
-                        1,
-                    )
-                else:
-                    pygame.draw.aaline(self.surface, color, (ax, ay), (bx, by), blend=1)
-                drawn_edges = True
+        for idx_a, idx_b in geometry.edges:
+            if not (visibility[idx_a] and visibility[idx_b]):
+                continue
+            ax, ay = projected[idx_a]
+            bx, by = projected[idx_b]
+            if line_mode == "line":
+                pygame.draw.line(
+                    self.surface,
+                    color,
+                    (int(round(ax)), int(round(ay))),
+                    (int(round(bx)), int(round(by))),
+                    1,
+                )
+            else:
+                pygame.draw.aaline(self.surface, color, (ax, ay), (bx, by), blend=1)
+            drawn_edges = True
 
         if drawn_edges:
             if line_mode == "line":
