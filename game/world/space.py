@@ -3,8 +3,7 @@ from __future__ import annotations
 
 import math
 import random
-import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Iterable, List, Optional, TYPE_CHECKING
 
 from pygame.math import Vector3
@@ -19,13 +18,7 @@ from game.combat.weapons import (
 from game.engine.logger import ChannelLogger, GameLogger
 from game.math.ballistics import compute_lead
 from game.ships.flight import update_ship_flight
-from game.ships.ship import (
-    BasisTelemetry,
-    Ship,
-    WeaponMount,
-    begin_basis_frame,
-    basis_metrics_snapshot,
-)
+from game.ships.ship import Ship, WeaponMount
 from game.world.sector import SectorMap
 from game.world.station import DockingStation, StationDatabase
 from game.world.mining import (
@@ -103,67 +96,6 @@ if TYPE_CHECKING:
     from game.world.ai import ShipAI
 
 
-@dataclass
-class CollisionTelemetry:
-    collidables: int = 0
-    pairs_considered: int = 0
-    pairs_culled: int = 0
-    duration_ms: float = 0.0
-
-    def copy(self) -> "CollisionTelemetry":
-        return CollisionTelemetry(
-            collidables=self.collidables,
-            pairs_considered=self.pairs_considered,
-            pairs_culled=self.pairs_culled,
-            duration_ms=self.duration_ms,
-        )
-
-
-@dataclass
-class AITelemetry:
-    total: int = 0
-    updated: int = 0
-    duration_ms: float = 0.0
-    bucket_totals: dict[str, int] = field(
-        default_factory=lambda: {"near": 0, "mid": 0, "far": 0}
-    )
-    bucket_updates: dict[str, int] = field(
-        default_factory=lambda: {"near": 0, "mid": 0, "far": 0}
-    )
-
-    def reset_buckets(self) -> None:
-        for bucket in ("near", "mid", "far"):
-            self.bucket_totals[bucket] = 0
-            self.bucket_updates[bucket] = 0
-
-    def copy(self) -> "AITelemetry":
-        return AITelemetry(
-            total=self.total,
-            updated=self.updated,
-            duration_ms=self.duration_ms,
-            bucket_totals=dict(self.bucket_totals),
-            bucket_updates=dict(self.bucket_updates),
-        )
-
-
-@dataclass
-class WorldTelemetry:
-    basis: BasisTelemetry
-    collisions: CollisionTelemetry
-    ai: AITelemetry
-
-    def copy(self) -> "WorldTelemetry":
-        return WorldTelemetry(
-            basis=BasisTelemetry(
-                frame=self.basis.frame,
-                hits=self.basis.hits,
-                misses=self.basis.misses,
-            ),
-            collisions=self.collisions.copy(),
-            ai=self.ai.copy(),
-        )
-
-
 def _is_strike_ship(ship: "Ship | None") -> bool:
     return ship is not None and ship.frame.size.lower() == "strike"
 
@@ -203,19 +135,6 @@ class SpaceWorld:
         self.asteroids = AsteroidField()
         self.asteroids.enter_system(self.current_system_id)
         self._ai: dict[int, "ShipAI"] = {}
-        self._frame_index: int = 0
-        self._collision_cell_size = max(COLLISION_RADII.values()) * 2.0
-        self._collision_grid: dict[tuple[int, int, int], list[int]] = {}
-        self._collision_pair_cache: set[tuple[int, int]] = set()
-        self._collision_metrics = CollisionTelemetry()
-        self._collision_log_timer: float = 0.0
-        self._ai_metrics = AITelemetry()
-        self._ai_log_timer: float = 0.0
-        self._telemetry = WorldTelemetry(
-            basis=basis_metrics_snapshot(),
-            collisions=self._collision_metrics.copy(),
-            ai=self._ai_metrics.copy(),
-        )
 
     def _team_outpost_anchor(self, team: str | None) -> Ship | None:
         if team is None:
@@ -254,53 +173,8 @@ class SpaceWorld:
 
     def add_ship(self, ship: Ship, ai: "ShipAI | None" = None) -> None:
         self.ships.append(ship)
-        ship.kinematics.begin_frame(self._frame_index)
         if ai:
             self._ai[id(ship)] = ai
-
-    def populate_enemy_buffer(self, source: Ship, buffer: list[Ship]) -> None:
-        for candidate in self.ships:
-            if candidate is source or not candidate.is_alive():
-                continue
-            if candidate.team == source.team:
-                continue
-            buffer.append(candidate)
-
-    def _nearest_player_distance(
-        self, ship: Ship, player_positions: list[Vector3]
-    ) -> float:
-        if not player_positions:
-            return 0.0
-        position = ship.kinematics.position
-        best = math.inf
-        for player_pos in player_positions:
-            distance = position.distance_to(player_pos)
-            if distance < best:
-                best = distance
-        return best
-
-    def _ai_bucket_for(
-        self, controller: "ShipAI", player_positions: list[Vector3]
-    ) -> tuple[str, int]:
-        ship = controller.ship
-        target = controller.target if controller.target and controller.target.is_alive() else None
-        if ship.collision_recoil > 0.01:
-            controller.force_next_update()
-            return "near", 1
-        if target is not None:
-            return "near", 1
-        distance = self._nearest_player_distance(ship, player_positions)
-        if distance <= 2000.0:
-            return "near", 1
-        if distance <= 6000.0:
-            interval = 3 if distance <= 3600.0 else 5
-            return "mid", interval
-        interval = 12
-        if controller._sentry_radius > 0.0 and distance > controller._sentry_radius * 1.5:
-            interval = 24
-        if ship.kinematics.velocity.length_squared() < 1.0:
-            interval = max(interval, 18)
-        return "far", interval
 
     def remove_ship(self, ship: Ship) -> None:
         """Remove a ship from the active simulation."""
@@ -364,55 +238,23 @@ class SpaceWorld:
         self.threat_timer = state.threat_timer
         self.mining.resume(state.mining)
         self.asteroids.resume(state.asteroids)
-        for ship in self.ships:
-            ship.kinematics.begin_frame(self._frame_index)
 
     def update(self, dt: float) -> None:
         physics_log = self.logger.channel("physics")
         weapons_log = self.logger.channel("weapons")
         ftl_log = self.logger.channel("ftl")
-        ai_log = self.logger.channel("ai")
-
-        self._frame_index += 1
-        begin_basis_frame(self._frame_index)
 
         self.asteroids.update(dt)
 
-        player_positions = [
-            Vector3(ship.kinematics.position)
-            for ship in self.ships
-            if ship.team == "player" and ship.is_alive()
-        ]
-        if not player_positions and self.ships:
-            player_positions = [Vector3(self.ships[0].kinematics.position)]
-
+        # Reset per-frame collision feedback.
         for ship in self.ships:
-            ship.kinematics.begin_frame(self._frame_index)
             ship.collision_recoil = 0.0
 
-        updated_controllers: list["ShipAI"] = []
-        ai_elapsed = 0.0
-        self._ai_metrics.total = 0
-        self._ai_metrics.updated = 0
-        self._ai_metrics.duration_ms = 0.0
-        self._ai_metrics.reset_buckets()
-
+        # Update any AI controllers before physics so they can steer.
         for ship_id, controller in list(self._ai.items()):
-            ship = controller.ship
-            if not ship.is_alive():
+            if not controller.ship.is_alive():
                 continue
-            bucket, interval = self._ai_bucket_for(controller, player_positions)
-            controller.configure_tick(bucket, interval)
-            self._ai_metrics.bucket_totals[bucket] += 1
-            self._ai_metrics.total += 1
-            if not controller.should_update(self._frame_index):
-                continue
-            start_time = time.perf_counter()
             controller.update(self, dt)
-            ai_elapsed += time.perf_counter() - start_time
-            updated_controllers.append(controller)
-            self._ai_metrics.updated += 1
-            self._ai_metrics.bucket_updates[bucket] += 1
 
         for ship in self.ships:
             if not ship.is_alive():
@@ -420,10 +262,6 @@ class SpaceWorld:
             update_ship_flight(ship, dt, logger=physics_log)
 
         self._resolve_collisions(physics_log)
-
-        for controller in self._ai.values():
-            if controller.ship.collision_recoil > 0.05:
-                controller.force_next_update()
 
         for ship in self.ships:
             if ship.target_id is not None:
@@ -507,46 +345,10 @@ class SpaceWorld:
                 self._execute_jump(ftl_log)
 
         # Allow AI controllers to react post-physics (weapon fire, state machines).
-        for controller in updated_controllers:
+        for ship_id, controller in list(self._ai.items()):
             if not controller.ship.is_alive():
                 continue
             controller.post_update(self, dt)
-
-        self._ai_metrics.duration_ms = ai_elapsed * 1000.0
-        self._collision_log_timer += dt
-        self._ai_log_timer += dt
-        self._telemetry = WorldTelemetry(
-            basis=basis_metrics_snapshot(),
-            collisions=self._collision_metrics.copy(),
-            ai=self._ai_metrics.copy(),
-        )
-
-        if physics_log.enabled and self._collision_log_timer >= 3.0:
-            self._collision_log_timer = 0.0
-            metrics = self._collision_metrics
-            physics_log.debug(
-                "Collisions: %d bodies, %d pairs (%d culled) in %.2f ms",
-                metrics.collidables,
-                metrics.pairs_considered,
-                metrics.pairs_culled,
-                metrics.duration_ms,
-            )
-        if ai_log.enabled and self._ai_log_timer >= 3.0:
-            self._ai_log_timer = 0.0
-            buckets = self._ai_metrics.bucket_updates
-            totals = self._ai_metrics.bucket_totals
-            ai_log.debug(
-                "AI: %d/%d updated (near %d/%d, mid %d/%d, far %d/%d) in %.2f ms",
-                self._ai_metrics.updated,
-                self._ai_metrics.total,
-                buckets["near"],
-                totals["near"],
-                buckets["mid"],
-                totals["mid"],
-                buckets["far"],
-                totals["far"],
-                self._ai_metrics.duration_ms,
-            )
 
     def activate_countermeasure(self, ship: Ship) -> tuple[bool, str]:
         if ship.countermeasure_cooldown > 0.0:
@@ -609,10 +411,9 @@ class SpaceWorld:
         mount.cooldown = weapon.cooldown
         if is_strike:
             mount.cooldown = 0.6
-        basis = ship.kinematics.basis
-        forward = basis.forward
-        right = basis.right
-        up = basis.up
+        forward = ship.kinematics.forward()
+        right = ship.kinematics.right()
+        up = ship.kinematics.up()
         muzzle = self._weapon_muzzle_position(ship, mount, forward, right, up)
         target_ship: Ship | None = None
         target_asteroid: Asteroid | None = None
@@ -958,79 +759,45 @@ class SpaceWorld:
         return COLLISION_MASS.get(ship.frame.size, 1.5)
 
     def _resolve_collisions(self, logger: ChannelLogger | None) -> None:
-        start_time = time.perf_counter()
-        grid = self._collision_grid
-        grid.clear()
-        pair_cache = self._collision_pair_cache
-        pair_cache.clear()
-        cell_size = self._collision_cell_size
-        collidables: list[tuple[Ship, float, float]] = []
-
-        for ship in self.ships:
-            if not ship.is_alive():
+        count = len(self.ships)
+        for i in range(count):
+            ship_a = self.ships[i]
+            if not ship_a.is_alive():
                 continue
-            radius = self._collision_radius(ship)
-            mass = self._collision_mass(ship)
-            index = len(collidables)
-            collidables.append((ship, radius, mass))
-            position = ship.kinematics.position
-            min_x = math.floor((position.x - radius) / cell_size)
-            max_x = math.floor((position.x + radius) / cell_size)
-            min_y = math.floor((position.y - radius) / cell_size)
-            max_y = math.floor((position.y + radius) / cell_size)
-            min_z = math.floor((position.z - radius) / cell_size)
-            max_z = math.floor((position.z + radius) / cell_size)
-            for cx in range(min_x, max_x + 1):
-                for cy in range(min_y, max_y + 1):
-                    for cz in range(min_z, max_z + 1):
-                        cell = (cx, cy, cz)
-                        grid.setdefault(cell, []).append(index)
-
-        candidate_pairs = 0
-        culled_pairs = 0
-        for occupants in grid.values():
-            count = len(occupants)
-            if count < 2:
-                continue
-            for i in range(count):
-                index_a = occupants[i]
-                for j in range(i + 1, count):
-                    index_b = occupants[j]
-                    pair = (min(index_a, index_b), max(index_a, index_b))
-                    if pair in pair_cache:
-                        continue
-                    pair_cache.add(pair)
-                    candidate_pairs += 1
-                    ship_a, radius_a, mass_a = collidables[pair[0]]
-                    ship_b, radius_b, mass_b = collidables[pair[1]]
-                    offset = ship_b.kinematics.position - ship_a.kinematics.position
-                    min_distance = radius_a + radius_b
-                    if offset.length_squared() >= min_distance * min_distance:
-                        culled_pairs += 1
-                        continue
-                    distance = offset.length()
-                    if distance <= 1e-3:
-                        normal = Vector3(0.0, 0.0, 1.0)
-                    else:
-                        normal = offset.normalize()
-                    penetration = min_distance - distance
-                    correction = normal * (penetration * 0.5)
-                    ship_a.kinematics.position -= correction
-                    ship_b.kinematics.position += correction
-                    relative_velocity = ship_b.kinematics.velocity - ship_a.kinematics.velocity
-                    closing_speed = relative_velocity.dot(normal)
-                    if closing_speed < 0.0:
-                        impulse_mag = -(1.0 + COLLISION_RESTITUTION) * closing_speed
-                        impulse_mag /= (1.0 / mass_a + 1.0 / mass_b)
-                        impulse = normal * impulse_mag
-                        ship_a.kinematics.velocity -= impulse / mass_a
-                        ship_b.kinematics.velocity += impulse / mass_b
-                    impact_speed = max(0.0, -closing_speed)
-                    if impact_speed <= 0.0 and penetration <= 0.01:
-                        continue
-                    damage_base = impact_speed * (mass_a + mass_b) * 0.5 * COLLISION_DAMAGE_SCALE
-                    if damage_base <= 0.0:
-                        continue
+            radius_a = self._collision_radius(ship_a)
+            mass_a = self._collision_mass(ship_a)
+            for j in range(i + 1, count):
+                ship_b = self.ships[j]
+                if not ship_b.is_alive():
+                    continue
+                radius_b = self._collision_radius(ship_b)
+                mass_b = self._collision_mass(ship_b)
+                offset = ship_b.kinematics.position - ship_a.kinematics.position
+                distance = offset.length()
+                min_distance = radius_a + radius_b
+                if distance >= min_distance:
+                    continue
+                if distance <= 1e-3:
+                    normal = Vector3(0.0, 0.0, 1.0)
+                else:
+                    normal = offset.normalize()
+                penetration = min_distance - distance
+                correction = normal * (penetration * 0.5)
+                ship_a.kinematics.position -= correction
+                ship_b.kinematics.position += correction
+                relative_velocity = ship_b.kinematics.velocity - ship_a.kinematics.velocity
+                closing_speed = relative_velocity.dot(normal)
+                if closing_speed < 0.0:
+                    impulse_mag = -(1.0 + COLLISION_RESTITUTION) * closing_speed
+                    impulse_mag /= (1.0 / mass_a + 1.0 / mass_b)
+                    impulse = normal * impulse_mag
+                    ship_a.kinematics.velocity -= impulse / mass_a
+                    ship_b.kinematics.velocity += impulse / mass_b
+                impact_speed = max(0.0, -closing_speed)
+                if impact_speed <= 0.0 and penetration <= 0.01:
+                    continue
+                damage_base = impact_speed * (mass_a + mass_b) * 0.5 * COLLISION_DAMAGE_SCALE
+                if damage_base > 0.0:
                     total_mass = mass_a + mass_b
                     self._apply_collision_damage(ship_a, damage_base * (mass_b / total_mass))
                     self._apply_collision_damage(ship_b, damage_base * (mass_a / total_mass))
@@ -1045,12 +812,6 @@ class SpaceWorld:
                             impact_speed,
                             damage_base,
                         )
-
-        metrics = self._collision_metrics
-        metrics.collidables = len(collidables)
-        metrics.pairs_considered = candidate_pairs
-        metrics.pairs_culled = culled_pairs
-        metrics.duration_ms = (time.perf_counter() - start_time) * 1000.0
 
     def start_mining(self, ship: Ship) -> tuple[bool, str]:
         mining_log = self.logger.channel("mining")
@@ -1072,11 +833,6 @@ class SpaceWorld:
     def mining_active(self) -> bool:
         node = self.mining.active_node()
         return bool(node and node.active)
-
-    def telemetry_snapshot(self) -> WorldTelemetry:
-        snapshot = self._telemetry.copy()
-        snapshot.basis = basis_metrics_snapshot()
-        return snapshot
 
     def step_mining(
         self,
@@ -1103,10 +859,4 @@ class SpaceWorld:
         return state
 
 
-__all__ = [
-    "AITelemetry",
-    "CollisionTelemetry",
-    "SpaceWorld",
-    "SpaceWorldState",
-    "WorldTelemetry",
-]
+__all__ = ["SpaceWorld", "SpaceWorldState"]

@@ -14,7 +14,6 @@ from game.sensors.dradis import DradisSystem
 from game.ui.sector_map import map_display_rect
 from game.world.mining import MiningHUDState
 from game.ships.ship import Ship
-from game.world.space import WorldTelemetry
 from game.ships.flight import effective_thruster_speed
 
 
@@ -399,14 +398,7 @@ class HUD:
             size = 5 if contact.detected else 3
             pygame.draw.circle(self.surface, color, (int(projected.x), int(projected.y)), size, 1)
 
-    def draw_overlay(
-        self,
-        sim_dt: float,
-        fps: float,
-        player: Ship,
-        target: Optional[Ship],
-        telemetry: WorldTelemetry | None = None,
-    ) -> None:
+    def draw_overlay(self, sim_dt: float, fps: float, player: Ship, target: Optional[Ship]) -> None:
         if not self.overlay_enabled:
             return
         lines = [
@@ -418,25 +410,6 @@ class HUD:
             distance = player.kinematics.position.distance_to(target.kinematics.position)
             lines.append(f"Target dist: {format_distance(distance)}")
             lines.append(f"Lock: {player.lock_progress*100:.0f}%")
-        if telemetry:
-            basis = telemetry.basis
-            total_basis = basis.hits + basis.misses
-            hit_rate = (basis.hits / total_basis * 100.0) if total_basis else 0.0
-            lines.append(
-                f"Basis cache: {basis.hits}/{total_basis} hits ({hit_rate:.1f}%) frame {basis.frame}"
-            )
-            collisions = telemetry.collisions
-            lines.append(
-                f"Collisions: {collisions.pairs_considered} pairs, {collisions.pairs_culled} culled, {collisions.duration_ms:.2f} ms"
-            )
-            ai = telemetry.ai
-            lines.append(
-                f"AI updates: {ai.updated}/{ai.total} ({ai.duration_ms:.2f} ms)"
-            )
-            for bucket in ("near", "mid", "far"):
-                total = ai.bucket_totals.get(bucket, 0)
-                updated = ai.bucket_updates.get(bucket, 0)
-                lines.append(f"  {bucket.title()}: {updated}/{total}")
         for i, line in enumerate(lines):
             text = self.font.render(line, True, (200, 220, 255))
             self.surface.blit(text, (20, 140 + i * 18))
@@ -457,7 +430,6 @@ class HUD:
         ship_button_hovered: bool = False,
         target_overlay: TargetOverlay | None = None,
         weapon_slots: Sequence[WeaponSlotHUDState] | None = None,
-        telemetry: WorldTelemetry | None = None,
     ) -> None:
         self.draw_lead(camera, player, target, projectile_speed)
         self.draw_target_panel(camera, player, target)
@@ -469,7 +441,7 @@ class HUD:
         self.draw_dradis(dradis)
         self.draw_ship_info_button(player, ship_info_open, ship_button_hovered)
         self.draw_flank_speed_slider(player)
-        self.draw_overlay(sim_dt, fps, player, target, telemetry)
+        self.draw_overlay(sim_dt, fps, player, target)
         if docking_prompt:
             name, distance, radius = docking_prompt
             self.draw_docking_prompt(name, distance, radius)
