@@ -13,13 +13,10 @@ from game.ships.ship import Ship
 # These values were derived from the existing wireframe definitions so the
 # camera can scale its follow distance without needing to import the renderer
 # module (avoiding circular imports).
-# Tuned chase distances per hull size. The strike value matches the raw
-# wireframe length, while larger hulls use reduced effective lengths so their
-# screen presence remains comparable to the pre-docking tuning.
 DEFAULT_SHIP_LENGTHS: dict[str, float] = {
     "Strike": 4.5,
-    "Escort": 100.0,
-    "Line": 360.0,
+    "Escort": 124.0,
+    "Line": 458.0,
     "Outpost": 1270.0,
 }
 
