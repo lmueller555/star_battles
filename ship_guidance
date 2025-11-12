@@ -933,6 +933,113 @@ Confirm currency type for purchase.
 
 Provide Advanced Glaive pane (if available) to record upgrade deltas (+Δ) for blue stats/extra slots.
 
+ESCORT — SCYTHE (INTERCEPTOR)
+
+Summary/Identity
+Smallest Colonial escort hull tuned for high thrust-to-mass and fast response. Interceptor role (engine-heavy). No level gate in our build (ignore the in-game level notice).
+
+Acquisition & Economy
+
+Purchase cost: 600,000 cubits
+
+Operating costs: Boost Cost 1.5 tyl/sec; FTL Cost: 80 tyl/LY
+
+FTL charge/cooldown: 20 s / 35 s
+
+Slot Layout (Medium-size slots)
+
+Weapons: 4
+
+Hull: 2
+
+Engine: 4
+
+Computer: 2
+
+Gun/Launcher/Defensive/Special weapon: 0 (n/a for escorts in our schema; use the generic “Weapons” family)
+
+Role Bonus (Interceptor, systematic—not BSGO-claimed):
+Per our project rules, Interceptors receive more engine slots than other roles in the same size class.
+
+Advanced Scythe (design rule): +1 additional Engine slot (total 5), modest energy bump to sustain the extra engine module.
+
+Stat Block (baseline, exact values)
+Ship handling & mobility
+
+Acceleration: 5 m/s²
+
+Boost Acceleration: 1.5 m/s²
+
+Speed (cruise): 40 m/s
+
+Boost Speed: 60 m/s
+
+Inertial Compensation: 50 m/s
+
+Turning Speed: 25 deg/s (Pitch/Yaw) • Roll Speed: 50 deg/s
+
+Turning Acceleration: 25 deg/s² (Pitch/Yaw) • Roll Acceleration: 50 deg/s²
+
+Avoidance: 290
+
+Avoidance Fading: 0.75
+
+Boost Cost: 1.5 tyl/sec
+
+Survivability
+
+Hull Points: 1,400
+
+Hull Recovery: 7.8 /sec
+
+Durability: 14,000
+
+Armor: 25
+
+Critical Defense: 80
+
+Energy / EW / Sensors
+
+Power (capacity): 200
+
+Power Recharge: 10 /sec
+
+Firewall Rating: 100
+
+Emitter Rating: 100
+
+Base DRADIS Range: 1,250 m
+
+Maximum DRADIS Range: 2,500 m
+
+Visual Range: 250 m
+
+FTL
+
+FTL Range (map value): 6.75 LY (UI “135” scaled x20)
+
+FTL Charge: 20 s
+
+FTL Cost: 80 tyl/LY
+
+Environmental
+
+Max Radiation Level: 140
+
+Radioactive Decay: 0.9
+
+Radioresistance: 0
+
+Implementation Notes (use these as the coder’s checklist)
+
+Hardpoints/Arcs: 4 weapon mounts; treat as medium-class hardpoints with escort-typical lateral coverage. No special dorsal/ventral coverage rules for Scythe (unlike Glaive).
+
+Interceptor feel: Keep the control response snappy: enforce high turning accel (25 deg/s²) and noticeable drift with modest inertial compensation (50 m/s).
+
+TTK & stamina guardrails: despite low armor, the 7.8/s hull regen lets it reset between skirmishes; ensure sustained boost is limited by 10/s power recharge and 1.5 tyl/s drain.
+
+Advanced upgrade hooks: add +1 Engine slot; increase Power to comfortably support an extra engine mod (+10–20 capacity, +1–2/s recharge), leave survivability nearly unchanged to preserve role identity.
+
 LINE CLASS
 
 Line — Vanir (Role: Command)
