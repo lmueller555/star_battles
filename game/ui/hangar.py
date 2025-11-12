@@ -12,7 +12,7 @@ from pygame.math import Vector2
 from game.assets.content import ContentManager, ItemData
 from game.ships.ship import Ship, WeaponMount
 from game.world.station import DockingStation
-from game.ui.ship_info import DEFAULT_ANCHORS, MODEL_LAYOUTS
+from game.ui.ship_info import DEFAULT_ANCHORS, MODEL_LAYOUTS, get_model_layout
 from game.ui.strike_store import CATALOG, ItemCardData, StoreFilters, StoreItem, fitting, store
 from game.ui.equipment_upgrade import EQUIPMENT_UPGRADE_SPECS, EquipmentUpgradeModel
 
@@ -2264,7 +2264,7 @@ class HangarView:
 
     # ------------------------------------------------------------------
     def _build_ship_layout(self, ship: Ship, rect: pygame.Rect) -> tuple[List[tuple[int, int]], List[_SlotDisplay]]:
-        layout = MODEL_LAYOUTS.get(ship.frame.size, MODEL_LAYOUTS["Strike"])
+        layout = get_model_layout(ship.frame.size, ship.frame.id)
         shape_points: Iterable[Tuple[float, float]] = layout.get("shape", MODEL_LAYOUTS["Strike"]["shape"])
         shape = [Vector2(point) for point in shape_points]
         slot_counts = self._slot_counts(ship)
