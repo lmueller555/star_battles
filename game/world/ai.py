@@ -31,6 +31,8 @@ _NEAR_DISTANCE = 2000.0
 _MID_DISTANCE = 6000.0
 _FAR_SENTINEL_DISTANCE = 6000.0
 
+_AI_LOOK_SCALE = 6.0  # matches player keyboard look scaling
+
 class ShipAI:
     """Base AI controller that manages throttle and weapon firing."""
 
@@ -213,9 +215,11 @@ class ShipAI:
         up = basis.up
         local_x = desired.dot(right)
         local_y = desired.dot(up)
-        look = Vector3(local_x, local_y, 0.0) * strength
-        if look.length() > 1.0:
-            look.scale_to_length(1.0)
+        look = Vector3(local_x, local_y, 0.0) * strength * _AI_LOOK_SCALE
+        abs_strength = abs(strength)
+        max_magnitude = _AI_LOOK_SCALE * abs_strength if abs_strength > 0.0 else _AI_LOOK_SCALE
+        if look.length() > max_magnitude:
+            look.scale_to_length(max_magnitude)
         self.ship.control.look_delta = look
 
     def _allow_missile_shot(self, distance: float) -> bool:
