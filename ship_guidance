@@ -1040,6 +1040,133 @@ TTK & stamina guardrails: despite low armor, the 7.8/s hull regen lets it reset 
 
 Advanced upgrade hooks: add +1 Engine slot; increase Power to comfortably support an extra engine mod (+10–20 capacity, +1–2/s recharge), leave survivability nearly unchanged to preserve role identity.
 
+Escort — Maul (Assault)
+
+Summary
+Sturdy, heavily armored escort optimized for close-in brawling and guard duty. As an Assault role hull, Maul favors extra Hull slots and strong baseline survivability at the cost of speed and agility.
+
+Identity & Economy
+
+Class / Role: Escort / Assault
+
+Level Requirement: 1 (use for now)
+
+Purchase Cost: 600,000 cubits
+
+Counterpart: TBD
+
+Upgrade Path: Advanced Maul (improved stats + additional Hull slot per Assault rules)
+
+Slot Layout (Medium-size mounts)
+
+Weapons: 4
+
+Guns: 0
+
+Launchers: 0
+
+Defensive Weapons: 0
+
+Special Weapons: 1
+
+Hull: 4 (Assault identity)
+
+Engine: 2
+
+Computer: 2
+
+Hull Systems (survivability)
+
+Hull Points: 2,000
+
+Hull Recovery: 8.9 / sec
+
+Durability: 16,000
+
+Armor: 30
+
+Critical Defense: 120
+
+Engine / Flight Systems (mobility)
+
+Avoidance: 250
+
+Turning Speed: 20 deg/sec
+
+Turning Acceleration: 20 deg/sec²
+
+Inertial Compensation: 50 m/sec
+
+Acceleration: 4 m/sec²
+
+Cruise Speed: 35 m/sec
+
+Boost Speed: 55 m/sec
+
+Boost Cost: 2.1 Tyl/sec
+
+Pitch/Yaw Speed: 20 each; Roll Speed: 30
+
+Pitch/Yaw Accel: 20 each; Roll Accel: 30
+
+Strafe Speed / Accel: 0 / 0
+
+FTL Systems
+
+Range: 7.5 LY
+
+Charge: 20 sec
+
+Cooldown: 32.5 sec
+
+Cost: 80 Tyl/LY
+
+Computer / Energy / Sensors
+
+Power (capacity): 200
+
+Power Recharge: 10 / sec
+
+Firewall Rating: 150
+
+Emitter Rating: 150
+
+DRADIS Range: 3,000 m (base DRADIS 1,250 m; max DRADIS 3,000 m)
+
+Visual Range: 300 m
+
+Environmental
+
+Max Radiation Level: 170
+
+Radioactive Decay: 1.1
+
+Radioresistance: 0
+
+Role & Upgrade Notes
+
+Assault identity: gains more Hull slots than other Escort roles; Advanced Maul adds +1 Hull slot (and minor energy/survivability bumps).
+
+Designed to trade speed/turn for armor and sustained presence on objective.
+
+Frame Traits & Design Intent
+
+Largest of the three Escort frames; reinforced plating and high durability.
+
+Best used as a frontline screen or station guard; pairs well with Command escorts that supply buffs/ECM.
+
+Weaknesses: slowest handling among escorts; vulnerable to kiting and EW drain if isolated.
+
+Implementation Checklist
+
+Enforce slot family sizes (all Medium).
+
+Apply Assault role rule (+Hull slots, +1 more when upgraded).
+
+Verify boost drain vs recharge allows ~8–10 s of continuous boost with typical engine modules.
+
+Validate TTK vs peers: Maul should outlast Scythe/Glaive in equal DPS trades but lose chase potential.
+
 LINE CLASS
 
 Line — Vanir (Role: Command)
