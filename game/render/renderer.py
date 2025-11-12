@@ -196,10 +196,10 @@ def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
 
     ring_sides = 18
     previous_ring: list[Vector3] | None = None
-    hull_sections: list[list[Vector3]] = []
+    hull_sections: list[tuple[float, list[Vector3]]] = []
     for z_pos, half_width, half_height in hull_profile:
         ring = _elliptical_ring(z_pos, half_width, half_height, sides=ring_sides)
-        hull_sections.append(ring)
+        hull_sections.append((z_pos, ring))
         _loop_segments(segments, ring)
         if previous_ring is not None:
             for current, previous in zip(ring, previous_ring):
@@ -212,7 +212,7 @@ def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
 
     nose_tip = Vector3(0.0, 40.0, hull_profile[-1][0] + 80.0)
     ventral_spear = Vector3(0.0, -35.0, hull_profile[-1][0] + 70.0)
-    final_section = hull_sections[-1]
+    final_section = hull_sections[-1][1]
     _loop_segments(
         segments,
         [
@@ -233,18 +233,18 @@ def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
     tail_z = hull_profile[0][0]
     tail_half_width = hull_profile[0][1]
     tail_half_height = hull_profile[0][2]
-    housing_front_z = tail_z + 24.0
-    housing_back_z = tail_z - 62.0
-    housing_half_width = tail_half_width + 32.0
-    housing_half_height = tail_half_height + 36.0
+    housing_front_z = tail_z + 18.0
+    housing_back_z = tail_z - 48.0
+    housing_half_width = tail_half_width + 18.0
+    housing_half_height = tail_half_height + 22.0
 
     top_front_left = Vector3(-housing_half_width, housing_half_height, housing_front_z)
-    top_back_left = Vector3(-housing_half_width + 28.0, housing_half_height + 12.0, housing_back_z)
-    top_back_right = Vector3(housing_half_width - 28.0, housing_half_height + 12.0, housing_back_z)
+    top_back_left = Vector3(-housing_half_width + 20.0, housing_half_height + 8.0, housing_back_z)
+    top_back_right = Vector3(housing_half_width - 20.0, housing_half_height + 8.0, housing_back_z)
     top_front_right = Vector3(housing_half_width, housing_half_height, housing_front_z)
     bottom_front_left = Vector3(-housing_half_width, -housing_half_height, housing_front_z)
-    bottom_back_left = Vector3(-housing_half_width + 28.0, -housing_half_height - 12.0, housing_back_z)
-    bottom_back_right = Vector3(housing_half_width - 28.0, -housing_half_height - 12.0, housing_back_z)
+    bottom_back_left = Vector3(-housing_half_width + 20.0, -housing_half_height - 8.0, housing_back_z)
+    bottom_back_right = Vector3(housing_half_width - 20.0, -housing_half_height - 8.0, housing_back_z)
     bottom_front_right = Vector3(housing_half_width, -housing_half_height, housing_front_z)
 
     top_frame = [top_front_left, top_back_left, top_back_right, top_front_right]
@@ -274,12 +274,12 @@ def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
         (1, -1): bottom_front_right,
     }
 
-    engine_offset_x = tail_half_width - 28.0
-    engine_offset_y = tail_half_height - 24.0
-    engine_radius_x = 38.0
-    engine_radius_y = 30.0
-    engine_depth = 26.0
-    nozzle_inset = 6.0
+    engine_offset_x = tail_half_width - 36.0
+    engine_offset_y = tail_half_height - 30.0
+    engine_radius_x = 30.0
+    engine_radius_y = 24.0
+    engine_depth = 18.0
+    nozzle_inset = 5.0
     for sign in (-1, 1):
         for vertical in (-1, 1):
             center = Vector3(
@@ -321,13 +321,75 @@ def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
 
             anchor_index = ring_sides // 6 if sign > 0 else (ring_sides * 5) // 6
             anchor_index += 0 if vertical > 0 else ring_sides // 2
-            hull_anchor = hull_sections[1][anchor_index % ring_sides]
-            segments.append((mount, hull_anchor))
+            hull_anchor_ring = hull_sections[1][1]
+            segments.append((mount, hull_anchor_ring[anchor_index % ring_sides]))
+
+    max_half_width = max(half_width for _, half_width, _ in hull_profile)
+    hull_length = hull_profile[-1][0] - tail_z
+    docking_arm_length = hull_length * 0.5
+    docking_arm_start_z = tail_z + hull_length * 0.35
+    docking_arm_end_z = min(hull_profile[-1][0] - 30.0, docking_arm_start_z + docking_arm_length)
+    docking_arm_offset_x = max_half_width + 70.0
+    docking_arm_offset_y = -58.0
+    docking_arm_radius = 38.0
+    docking_arm_vertical_radius = docking_arm_radius * 0.78
+    docking_arm_ring_sides = 14
+    docking_arm_sections = 7
+
+    def _nearest_hull_ring(z_value: float) -> list[Vector3]:
+        return min(hull_sections, key=lambda entry: abs(entry[0] - z_value))[1]
+
+    for sign in (-1, 1):
+        previous_arm_ring: list[Vector3] | None = None
+        for section_index in range(docking_arm_sections):
+            if docking_arm_sections == 1:
+                position_fraction = 0.0
+            else:
+                position_fraction = section_index / (docking_arm_sections - 1)
+            z_pos = docking_arm_start_z + (docking_arm_end_z - docking_arm_start_z) * position_fraction
+            center = Vector3(sign * docking_arm_offset_x, docking_arm_offset_y, z_pos)
+            arm_ring: list[Vector3] = []
+            for step in range(docking_arm_ring_sides):
+                angle = step * (2.0 * math.pi / docking_arm_ring_sides)
+                arm_ring.append(
+                    Vector3(
+                        center.x + math.cos(angle) * docking_arm_radius,
+                        center.y + math.sin(angle) * docking_arm_vertical_radius,
+                        center.z,
+                    )
+                )
+            _loop_segments(segments, arm_ring)
+            if previous_arm_ring is not None:
+                for current, previous in zip(arm_ring, previous_arm_ring):
+                    segments.append((current, previous))
+            previous_arm_ring = arm_ring
+
+    hull_attachment_indices = {1: 2, -1: 6}
+    connector_positions = [
+        docking_arm_start_z + (docking_arm_end_z - docking_arm_start_z) * fraction
+        for fraction in (0.1, 0.5, 0.9)
+    ]
+    for sign in (-1, 1):
+        for z_pos in connector_positions:
+            hull_ring = _nearest_hull_ring(z_pos)
+            hull_point = hull_ring[hull_attachment_indices[sign]]
+            arm_surface = Vector3(
+                sign * docking_arm_offset_x - sign * docking_arm_radius,
+                docking_arm_offset_y,
+                z_pos,
+            )
+            segments.append((hull_point, arm_surface))
+            brace_lower = Vector3(
+                arm_surface.x,
+                docking_arm_offset_y - docking_arm_vertical_radius * 0.6,
+                z_pos,
+            )
+            segments.append((arm_surface, brace_lower))
 
     plating_lines = []
     for fraction in (0.15, 0.35, 0.65, 0.85):
         idx = int(fraction * (len(hull_sections) - 1))
-        plating_lines.append(hull_sections[idx])
+        plating_lines.append(hull_sections[idx][1])
     for section in plating_lines:
         for offset in range(0, ring_sides, 2):
             segments.append((section[offset], section[(offset + 2) % ring_sides]))
