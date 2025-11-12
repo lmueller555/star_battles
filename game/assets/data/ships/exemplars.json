@@ -7,22 +7,50 @@
     "level_requirement": 1,
     "faction": "Colonial Fleet",
     "counterpart": null,
-    "upgrade_to": null,
+    "upgrade_to": "advanced_viper_mk_ii",
     "stats": {
-      "hull_points": 450,
-      "hull_recovery_per_sec": 2.5,
-      "durability": 9000,
+      "hull_points": {
+        "base": 450,
+        "advanced_delta": 135,
+        "advanced_total": 585
+      },
+      "hull_recovery_per_sec": {
+        "base": 2.5,
+        "advanced_delta": 2.0,
+        "advanced_total": 4.5
+      },
+      "durability": {
+        "base": 9000,
+        "advanced_delta": 4500,
+        "advanced_total": 13500
+      },
       "armor_value": 5,
       "critical_defense": 80,
       "avoidance_rating": 510,
       "avoidance_fading": 0.75,
-      "speed": 55,
-      "boost_speed": 90,
-      "acceleration": 13.5,
+      "speed": {
+        "base": 55,
+        "advanced_delta": 5,
+        "advanced_total": 60
+      },
+      "boost_speed": {
+        "base": 90,
+        "advanced_delta": 20,
+        "advanced_total": 110
+      },
+      "acceleration": {
+        "base": 13.5,
+        "advanced_delta": 2.7,
+        "advanced_total": 16.2
+      },
       "boost_acceleration": 1.5,
       "strafe_speed": 0,
       "strafe_acceleration": 0,
-      "turn_rate": 55,
+      "turn_rate": {
+        "base": 55,
+        "advanced_delta": 3,
+        "advanced_total": 58
+      },
       "turn_accel": 55,
       "pitch_speed": 55,
       "yaw_speed": 55,
@@ -32,7 +60,11 @@
       "roll_acceleration": 748,
       "inertial_compensation": 175,
       "boost_cost": 0.5,
-      "power_points": 100,
+      "power_points": {
+        "base": 100,
+        "advanced_delta": 50,
+        "advanced_total": 150
+      },
       "power_recovery_per_sec": 5,
       "firewall_rating": 100,
       "emitter_rating": 100,
@@ -50,23 +82,85 @@
       "radioresistance": 0
     },
     "slots": {
-      "weapons": {"cannon": 4},
+      "weapons": {
+        "cannon": {
+          "base": 4,
+          "advanced_delta": 1,
+          "advanced_total": 5
+        }
+      },
       "hull": 2,
-      "engine": 5,
+      "engine": {
+        "base": 5,
+        "advanced_delta": 1,
+        "advanced_total": 6
+      },
       "computer": 2,
       "utility": 1
     },
     "hardpoints": [
-      {"id": "hp_viper2_port_outer", "slot": "cannon", "position": [-1.2, -0.08, 1.2], "gimbal": 28, "tracking_speed": 250, "group": "primary"},
-      {"id": "hp_viper2_port_inner", "slot": "cannon", "position": [-0.7, -0.1, 2.0], "gimbal": 24, "tracking_speed": 240, "group": "primary"},
-      {"id": "hp_viper2_starboard_inner", "slot": "cannon", "position": [0.7, -0.1, 2.0], "gimbal": 24, "tracking_speed": 240, "group": "primary"},
-      {"id": "hp_viper2_starboard_outer", "slot": "cannon", "position": [1.2, -0.08, 1.2], "gimbal": 28, "tracking_speed": 250, "group": "primary"}
+      {
+        "id": "hp_viper2_port_outer",
+        "slot": "cannon",
+        "position": [
+          -1.2,
+          -0.08,
+          1.2
+        ],
+        "gimbal": 28,
+        "tracking_speed": 250,
+        "group": "primary"
+      },
+      {
+        "id": "hp_viper2_port_inner",
+        "slot": "cannon",
+        "position": [
+          -0.7,
+          -0.1,
+          2.0
+        ],
+        "gimbal": 24,
+        "tracking_speed": 240,
+        "group": "primary"
+      },
+      {
+        "id": "hp_viper2_starboard_inner",
+        "slot": "cannon",
+        "position": [
+          0.7,
+          -0.1,
+          2.0
+        ],
+        "gimbal": 24,
+        "tracking_speed": 240,
+        "group": "primary"
+      },
+      {
+        "id": "hp_viper2_starboard_outer",
+        "slot": "cannon",
+        "position": [
+          1.2,
+          -0.08,
+          1.2
+        ],
+        "gimbal": 28,
+        "tracking_speed": 250,
+        "group": "primary"
+      }
     ],
     "economy": {
-      "purchase": {"tylium": 100000},
-      "operating": {"boost": 0.5, "ftl": 20}
+      "purchase": {
+        "tylium": 100000
+      },
+      "operating": {
+        "boost": 0.5,
+        "ftl": 20
+      }
     },
-    "equipment": {"modules": {}, "weapons": {}},
+    "equipment": {
+      "modules": {},
+      "weapons": {}
+    },
     "role_bonuses": [
       "Interceptor frame provides additional engine capacity."
     ],
@@ -80,10 +174,10 @@
     "name": "Viper Mk VII",
     "role": "Multi-Role",
     "size": "Strike",
-    "level_requirement": 8,
+    "level_requirement": 1,
     "faction": "Colonial Fleet",
-    "counterpart": "Cylon Raider",
-    "upgrade_to": null,
+    "counterpart": "Cylon War Raider",
+    "upgrade_to": "advanced_viper_mk_vii",
     "stats": {
       "hull_points": 585,
       "hull_recovery_per_sec": 4.5,
@@ -126,33 +220,79 @@
       "radioresistance": 0
     },
     "slots": {
-      "weapons": {"cannon": 3, "launcher": 1},
+      "weapons": {
+        "cannon": 3,
+        "launcher": 1
+      },
       "hull": 3,
       "engine": 3,
       "computer": 3,
       "utility": 2
     },
     "hardpoints": [
-      {"id": "hp_viper_port", "slot": "cannon", "position": [-0.8, -0.12, 2.4], "gimbal": 24, "tracking_speed": 240, "group": "primary"},
-      {"id": "hp_viper_starboard", "slot": "cannon", "position": [0.8, -0.12, 2.4], "gimbal": 24, "tracking_speed": 240, "group": "primary"},
-      {"id": "hp_viper_center", "slot": "cannon", "position": [0.0, -0.18, 2.6], "gimbal": 28, "tracking_speed": 220, "group": "primary"},
-      {"id": "hp_viper_missile", "slot": "launcher", "position": [0.0, -0.4, 1.5], "gimbal": 36, "tracking_speed": 200, "group": "aux"}
+      {
+        "id": "hp_viper_port",
+        "slot": "cannon",
+        "position": [
+          -0.8,
+          -0.12,
+          2.4
+        ],
+        "gimbal": 24,
+        "tracking_speed": 240,
+        "group": "primary"
+      },
+      {
+        "id": "hp_viper_starboard",
+        "slot": "cannon",
+        "position": [
+          0.8,
+          -0.12,
+          2.4
+        ],
+        "gimbal": 24,
+        "tracking_speed": 240,
+        "group": "primary"
+      },
+      {
+        "id": "hp_viper_center",
+        "slot": "cannon",
+        "position": [
+          0.0,
+          -0.18,
+          2.6
+        ],
+        "gimbal": 28,
+        "tracking_speed": 220,
+        "group": "primary"
+      },
+      {
+        "id": "hp_viper_missile",
+        "slot": "launcher",
+        "position": [
+          0.0,
+          -0.4,
+          1.5
+        ],
+        "gimbal": 36,
+        "tracking_speed": 200,
+        "group": "aux"
+      }
     ],
     "economy": {
-      "purchase": {"tylium": 6800},
-      "upgrade": {"tylium": 8800, "level": 12},
-      "operating": {"boost": 0.75, "ftl": 30}
+      "purchase": {
+        "tylium": 45000
+      },
+      "operating": {
+        "boost": 0.75,
+        "ftl": 30
+      }
     },
     "equipment": {
-      "modules": {
-        "computer": ["eccm_mk1"],
-        "utility": ["point_defense_mk1", "flare_launcher_mk1"]
-      },
+      "modules": {},
       "weapons": {
         "hp_viper_port": "mec_a6",
-        "hp_viper_starboard": "mec_a6",
-        "hp_viper_center": "mec_a6",
-        "hp_viper_missile": "missile_launcher_mk1"
+        "hp_viper_starboard": "mec_a6"
       }
     },
     "role_bonuses": [
@@ -214,22 +354,65 @@
       "radioresistance": 0
     },
     "slots": {
-      "weapons": {"cannon": 3},
+      "weapons": {
+        "cannon": 3
+      },
       "hull": 1,
       "engine": 4,
       "computer": 5,
       "utility": 2
     },
     "hardpoints": [
-      {"id": "hp_raptor_port", "slot": "cannon", "position": [-0.9, -0.1, 1.6], "gimbal": 30, "tracking_speed": 200, "group": "primary"},
-      {"id": "hp_raptor_starboard", "slot": "cannon", "position": [0.9, -0.1, 1.6], "gimbal": 30, "tracking_speed": 200, "group": "primary"},
-      {"id": "hp_raptor_dorsal", "slot": "cannon", "position": [0.0, 0.4, 2.0], "gimbal": 36, "tracking_speed": 180, "group": "primary"}
+      {
+        "id": "hp_raptor_port",
+        "slot": "cannon",
+        "position": [
+          -0.9,
+          -0.1,
+          1.6
+        ],
+        "gimbal": 30,
+        "tracking_speed": 200,
+        "group": "primary"
+      },
+      {
+        "id": "hp_raptor_starboard",
+        "slot": "cannon",
+        "position": [
+          0.9,
+          -0.1,
+          1.6
+        ],
+        "gimbal": 30,
+        "tracking_speed": 200,
+        "group": "primary"
+      },
+      {
+        "id": "hp_raptor_dorsal",
+        "slot": "cannon",
+        "position": [
+          0.0,
+          0.4,
+          2.0
+        ],
+        "gimbal": 36,
+        "tracking_speed": 180,
+        "group": "primary"
+      }
     ],
     "economy": {
-      "purchase": {"tylium": 45000},
-      "operating": {"boost": 0.6, "ftl": 30}
+      "purchase": {
+        "tylium": 45000
+      },
+      "operating": {
+        "boost": 0.6,
+        "ftl": 30
+      }
     },
-    "equipment": {"modules": {}, "weapons": {}},
+    "equipment": {
+      "modules": {},
+      "weapons": {}
+    },
     "role_bonuses": [
       "Command bonus reduces transponder power usage by 75."
     ],
@@ -289,22 +472,65 @@
       "radioresistance": 0
     },
     "slots": {
-      "weapons": {"cannon": 3},
+      "weapons": {
+        "cannon": 3
+      },
       "hull": 3,
       "engine": 3,
       "computer": 2,
       "utility": 2
     },
     "hardpoints": [
-      {"id": "hp_viper3_port", "slot": "cannon", "position": [-0.85, -0.14, 2.2], "gimbal": 26, "tracking_speed": 235, "group": "primary"},
-      {"id": "hp_viper3_starboard", "slot": "cannon", "position": [0.85, -0.14, 2.2], "gimbal": 26, "tracking_speed": 235, "group": "primary"},
-      {"id": "hp_viper3_center", "slot": "cannon", "position": [0.0, -0.18, 2.5], "gimbal": 30, "tracking_speed": 210, "group": "primary"}
+      {
+        "id": "hp_viper3_port",
+        "slot": "cannon",
+        "position": [
+          -0.85,
+          -0.14,
+          2.2
+        ],
+        "gimbal": 26,
+        "tracking_speed": 235,
+        "group": "primary"
+      },
+      {
+        "id": "hp_viper3_starboard",
+        "slot": "cannon",
+        "position": [
+          0.85,
+          -0.14,
+          2.2
+        ],
+        "gimbal": 26,
+        "tracking_speed": 235,
+        "group": "primary"
+      },
+      {
+        "id": "hp_viper3_center",
+        "slot": "cannon",
+        "position": [
+          0.0,
+          -0.18,
+          2.5
+        ],
+        "gimbal": 30,
+        "tracking_speed": 210,
+        "group": "primary"
+      }
     ],
     "economy": {
-      "purchase": {"tylium": 23000},
-      "operating": {"boost": 0.5, "ftl": 30}
+      "purchase": {
+        "tylium": 23000
+      },
+      "operating": {
+        "boost": 0.5,
+        "ftl": 30
+      }
     },
-    "equipment": {"modules": {}, "weapons": {}},
+    "equipment": {
+      "modules": {},
+      "weapons": {}
+    },
     "role_bonuses": [],
     "traits": [
       "Balanced strike with flexible loadout and reliable handling."
@@ -362,23 +588,77 @@
       "radioresistance": 0
     },
     "slots": {
-      "weapons": {"cannon": 4},
+      "weapons": {
+        "cannon": 4
+      },
       "hull": 5,
       "engine": 2,
       "computer": 2,
       "utility": 2
     },
     "hardpoints": [
-      {"id": "hp_rhino_port_front", "slot": "cannon", "position": [-0.9, -0.05, 1.8], "gimbal": 32, "tracking_speed": 210, "group": "primary"},
-      {"id": "hp_rhino_port_rear", "slot": "cannon", "position": [-1.1, -0.02, 0.6], "gimbal": 30, "tracking_speed": 190, "group": "primary"},
-      {"id": "hp_rhino_starboard_front", "slot": "cannon", "position": [0.9, -0.05, 1.8], "gimbal": 32, "tracking_speed": 210, "group": "primary"},
-      {"id": "hp_rhino_starboard_rear", "slot": "cannon", "position": [1.1, -0.02, 0.6], "gimbal": 30, "tracking_speed": 190, "group": "primary"}
+      {
+        "id": "hp_rhino_port_front",
+        "slot": "cannon",
+        "position": [
+          -0.9,
+          -0.05,
+          1.8
+        ],
+        "gimbal": 32,
+        "tracking_speed": 210,
+        "group": "primary"
+      },
+      {
+        "id": "hp_rhino_port_rear",
+        "slot": "cannon",
+        "position": [
+          -1.1,
+          -0.02,
+          0.6
+        ],
+        "gimbal": 30,
+        "tracking_speed": 190,
+        "group": "primary"
+      },
+      {
+        "id": "hp_rhino_starboard_front",
+        "slot": "cannon",
+        "position": [
+          0.9,
+          -0.05,
+          1.8
+        ],
+        "gimbal": 32,
+        "tracking_speed": 210,
+        "group": "primary"
+      },
+      {
+        "id": "hp_rhino_starboard_rear",
+        "slot": "cannon",
+        "position": [
+          1.1,
+          -0.02,
+          0.6
+        ],
+        "gimbal": 30,
+        "tracking_speed": 190,
+        "group": "primary"
+      }
     ],
     "economy": {
-      "purchase": {"tylium": 36000},
-      "operating": {"boost": 0.7, "ftl": 30}
+      "purchase": {
+        "tylium": 36000
+      },
+      "operating": {
+        "boost": 0.7,
+        "ftl": 30
+      }
     },
-    "equipment": {"modules": {}, "weapons": {}},
+    "equipment": {
+      "modules": {},
+      "weapons": {}
+    },
     "role_bonuses": [
       "Assault frame grants additional hull module capacity."
     ],
@@ -438,21 +718,53 @@
       "radioresistance": 0
     },
     "slots": {
-      "weapons": {"gun": 2},
+      "weapons": {
+        "gun": 2
+      },
       "hull": 2,
       "engine": 2,
       "computer": 1,
       "utility": 1
     },
     "hardpoints": [
-      {"id": "hp_raven_port", "slot": "gun", "position": [-0.6, -0.05, 1.9], "gimbal": 34, "tracking_speed": 250, "group": "primary"},
-      {"id": "hp_raven_starboard", "slot": "gun", "position": [0.6, -0.05, 1.9], "gimbal": 34, "tracking_speed": 250, "group": "primary"}
+      {
+        "id": "hp_raven_port",
+        "slot": "gun",
+        "position": [
+          -0.6,
+          -0.05,
+          1.9
+        ],
+        "gimbal": 34,
+        "tracking_speed": 250,
+        "group": "primary"
+      },
+      {
+        "id": "hp_raven_starboard",
+        "slot": "gun",
+        "position": [
+          0.6,
+          -0.05,
+          1.9
+        ],
+        "gimbal": 34,
+        "tracking_speed": 250,
+        "group": "primary"
+      }
     ],
     "economy": {
-      "purchase": {"tylium": 35000},
-      "operating": {"boost": 0.5, "ftl": 1}
+      "purchase": {
+        "tylium": 35000
+      },
+      "operating": {
+        "boost": 0.5,
+        "ftl": 1
+      }
     },
-    "equipment": {"modules": {}, "weapons": {}},
+    "equipment": {
+      "modules": {},
+      "weapons": {}
+    },
     "role_bonuses": [
       "Force recon chassis enjoys extremely low FTL costs."
     ],
@@ -468,7 +780,7 @@
     "size": "Escort",
     "level_requirement": 14,
     "faction": "Colonial Fleet",
-    "counterpart": "Cylon Command Raider",
+    "counterpart": "Spectre",
     "upgrade_to": null,
     "stats": {
       "hull_points": 1700,
@@ -512,46 +824,109 @@
       "radioresistance": 0
     },
     "slots": {
-      "weapons": {"cannon": 5, "launcher": 1},
+      "weapons": {
+        "cannon": 5,
+        "launcher": 1
+      },
       "hull": 2,
       "engine": 2,
       "computer": 5,
       "utility": 2
     },
     "hardpoints": [
-      {"id": "hp_glaive_front", "slot": "cannon", "position": [0.0, 0.2, 3.2], "gimbal": 32, "tracking_speed": 220, "group": "primary"},
-      {"id": "hp_glaive_port", "slot": "cannon", "position": [-1.8, 0.0, 1.4], "gimbal": 45, "tracking_speed": 180, "group": "primary"},
-      {"id": "hp_glaive_starboard", "slot": "cannon", "position": [1.8, 0.0, 1.4], "gimbal": 45, "tracking_speed": 180, "group": "primary"},
-      {"id": "hp_glaive_dorsal", "slot": "cannon", "position": [0.0, 0.9, 1.2], "gimbal": 55, "tracking_speed": 160, "group": "primary"},
-      {"id": "hp_glaive_ventral", "slot": "cannon", "position": [0.0, -0.9, 1.2], "gimbal": 55, "tracking_speed": 160, "group": "primary"},
-      {"id": "hp_glaive_launcher", "slot": "launcher", "position": [0.0, -0.4, 2.6], "gimbal": 40, "tracking_speed": 160, "group": "aux"}
+      {
+        "id": "hp_glaive_front",
+        "slot": "cannon",
+        "position": [
+          0.0,
+          0.2,
+          3.2
+        ],
+        "gimbal": 32,
+        "tracking_speed": 220,
+        "group": "primary"
+      },
+      {
+        "id": "hp_glaive_port",
+        "slot": "cannon",
+        "position": [
+          -1.8,
+          0.0,
+          1.4
+        ],
+        "gimbal": 45,
+        "tracking_speed": 180,
+        "group": "primary"
+      },
+      {
+        "id": "hp_glaive_starboard",
+        "slot": "cannon",
+        "position": [
+          1.8,
+          0.0,
+          1.4
+        ],
+        "gimbal": 45,
+        "tracking_speed": 180,
+        "group": "primary"
+      },
+      {
+        "id": "hp_glaive_dorsal",
+        "slot": "cannon",
+        "position": [
+          0.0,
+          0.9,
+          1.2
+        ],
+        "gimbal": 55,
+        "tracking_speed": 160,
+        "group": "primary"
+      },
+      {
+        "id": "hp_glaive_ventral",
+        "slot": "cannon",
+        "position": [
+          0.0,
+          -0.9,
+          1.2
+        ],
+        "gimbal": 55,
+        "tracking_speed": 160,
+        "group": "primary"
+      },
+      {
+        "id": "hp_glaive_launcher",
+        "slot": "launcher",
+        "position": [
+          0.0,
+          -0.4,
+          2.6
+        ],
+        "gimbal": 40,
+        "tracking_speed": 160,
+        "group": "aux"
+      }
     ],
     "economy": {
-      "purchase": {"tylium": 14800, "merits": 160},
-      "upgrade": {"tylium": 18600, "level": 18},
-      "operating": {"boost": 1.8, "ftl": 80}
-    },
-    "equipment": {
-      "modules": {
-        "computer": ["eccm_mk1", "jammer_mk1"],
-        "utility": ["point_defense_mk1"]
+      "purchase": {
+        "tylium": 60000
       },
-      "weapons": {
-        "hp_glaive_front": "heavy_cannon_mk1",
-        "hp_glaive_port": "light_cannon_mk1",
-        "hp_glaive_starboard": "light_cannon_mk1",
-        "hp_glaive_dorsal": "light_cannon_mk1",
-        "hp_glaive_ventral": "light_cannon_mk1",
-        "hp_glaive_launcher": "missile_launcher_mk1"
+      "operating": {
+        "boost": 1.8,
+        "ftl": 80
       }
     },
+    "equipment": {
+      "modules": {},
+      "weapons": {}
+    },
     "role_bonuses": [
-      "Command uplink reduces transponder power costs by 10%."
+      "Command bonus reduces transponder power usage by 50."
     ],
     "traits": [
-      "Ring batteries provide near-360° coverage, but the belly remains exposed."
+      "Ring-mounted batteries provide broad coverage with an exposed underside."
     ],
-    "notes": "Escort command hull that supports fleets with high computer capacity."
+    "notes": "Command-focused escort with ample computer capacity for EW and fleet support."
   },
   {
     "id": "scythe_interceptor",
@@ -604,23 +979,77 @@
       "radioresistance": 0
     },
     "slots": {
-      "weapons": {"cannon": 4},
+      "weapons": {
+        "cannon": 4
+      },
       "hull": 2,
       "engine": 4,
       "computer": 2,
       "utility": 2
     },
     "hardpoints": [
-      {"id": "hp_scythe_port_front", "slot": "cannon", "position": [-1.6, -0.05, 1.2], "gimbal": 32, "tracking_speed": 210, "group": "primary"},
-      {"id": "hp_scythe_port_rear", "slot": "cannon", "position": [-1.2, -0.02, -0.2], "gimbal": 28, "tracking_speed": 190, "group": "primary"},
-      {"id": "hp_scythe_starboard_front", "slot": "cannon", "position": [1.6, -0.05, 1.2], "gimbal": 32, "tracking_speed": 210, "group": "primary"},
-      {"id": "hp_scythe_starboard_rear", "slot": "cannon", "position": [1.2, -0.02, -0.2], "gimbal": 28, "tracking_speed": 190, "group": "primary"}
+      {
+        "id": "hp_scythe_port_front",
+        "slot": "cannon",
+        "position": [
+          -1.6,
+          -0.05,
+          1.2
+        ],
+        "gimbal": 32,
+        "tracking_speed": 210,
+        "group": "primary"
+      },
+      {
+        "id": "hp_scythe_port_rear",
+        "slot": "cannon",
+        "position": [
+          -1.2,
+          -0.02,
+          -0.2
+        ],
+        "gimbal": 28,
+        "tracking_speed": 190,
+        "group": "primary"
+      },
+      {
+        "id": "hp_scythe_starboard_front",
+        "slot": "cannon",
+        "position": [
+          1.6,
+          -0.05,
+          1.2
+        ],
+        "gimbal": 32,
+        "tracking_speed": 210,
+        "group": "primary"
+      },
+      {
+        "id": "hp_scythe_starboard_rear",
+        "slot": "cannon",
+        "position": [
+          1.2,
+          -0.02,
+          -0.2
+        ],
+        "gimbal": 28,
+        "tracking_speed": 190,
+        "group": "primary"
+      }
     ],
     "economy": {
-      "purchase": {"cubits": 600000},
-      "operating": {"boost": 1.5, "ftl": 80}
+      "purchase": {
+        "cubits": 600000
+      },
+      "operating": {
+        "boost": 1.5,
+        "ftl": 80
+      }
     },
-    "equipment": {"modules": {}, "weapons": {}},
+    "equipment": {
+      "modules": {},
+      "weapons": {}
+    },
     "role_bonuses": [
       "Interceptor frame provides additional engine capacity."
     ],
@@ -680,24 +1109,90 @@
       "radioresistance": 0
     },
     "slots": {
-      "weapons": {"cannon": 4, "special": 1},
+      "weapons": {
+        "cannon": 4,
+        "special": 1
+      },
       "hull": 4,
       "engine": 2,
       "computer": 2,
       "utility": 2
     },
     "hardpoints": [
-      {"id": "hp_maul_port_forward", "slot": "cannon", "position": [-2.2, -0.1, 1.8], "gimbal": 34, "tracking_speed": 200, "group": "primary"},
-      {"id": "hp_maul_starboard_forward", "slot": "cannon", "position": [2.2, -0.1, 1.8], "gimbal": 34, "tracking_speed": 200, "group": "primary"},
-      {"id": "hp_maul_port_aft", "slot": "cannon", "position": [-1.6, -0.05, -0.4], "gimbal": 28, "tracking_speed": 170, "group": "primary"},
-      {"id": "hp_maul_starboard_aft", "slot": "cannon", "position": [1.6, -0.05, -0.4], "gimbal": 28, "tracking_speed": 170, "group": "primary"},
-      {"id": "hp_maul_spinal", "slot": "special", "position": [0.0, -0.2, 2.6], "gimbal": 24, "tracking_speed": 160, "group": "aux"}
+      {
+        "id": "hp_maul_port_forward",
+        "slot": "cannon",
+        "position": [
+          -2.2,
+          -0.1,
+          1.8
+        ],
+        "gimbal": 34,
+        "tracking_speed": 200,
+        "group": "primary"
+      },
+      {
+        "id": "hp_maul_starboard_forward",
+        "slot": "cannon",
+        "position": [
+          2.2,
+          -0.1,
+          1.8
+        ],
+        "gimbal": 34,
+        "tracking_speed": 200,
+        "group": "primary"
+      },
+      {
+        "id": "hp_maul_port_aft",
+        "slot": "cannon",
+        "position": [
+          -1.6,
+          -0.05,
+          -0.4
+        ],
+        "gimbal": 28,
+        "tracking_speed": 170,
+        "group": "primary"
+      },
+      {
+        "id": "hp_maul_starboard_aft",
+        "slot": "cannon",
+        "position": [
+          1.6,
+          -0.05,
+          -0.4
+        ],
+        "gimbal": 28,
+        "tracking_speed": 170,
+        "group": "primary"
+      },
+      {
+        "id": "hp_maul_spinal",
+        "slot": "special",
+        "position": [
+          0.0,
+          -0.2,
+          2.6
+        ],
+        "gimbal": 24,
+        "tracking_speed": 160,
+        "group": "aux"
+      }
     ],
     "economy": {
-      "purchase": {"cubits": 600000},
-      "operating": {"boost": 2.1, "ftl": 80}
+      "purchase": {
+        "cubits": 600000
+      },
+      "operating": {
+        "boost": 2.1,
+        "ftl": 80
+      }
     },
-    "equipment": {"modules": {}, "weapons": {}},
+    "equipment": {
+      "modules": {},
+      "weapons": {}
+    },
     "role_bonuses": [
       "Assault frame provides expanded hull module capacity."
     ],
@@ -757,29 +1252,113 @@
       "radioresistance": 0
     },
     "slots": {
-      "weapons": {"cannon": 4, "launcher": 2},
+      "weapons": {
+        "cannon": 4,
+        "launcher": 2
+      },
       "hull": 2,
       "engine": 2,
       "computer": 4,
       "utility": 2
     },
     "hardpoints": [
-      {"id": "hp_vanir_fore", "slot": "cannon", "position": [0.0, 0.4, 5.4], "gimbal": 30, "tracking_speed": 160, "group": "primary"},
-      {"id": "hp_vanir_port", "slot": "cannon", "position": [-2.4, 0.2, 3.2], "gimbal": 35, "tracking_speed": 150, "group": "primary"},
-      {"id": "hp_vanir_starboard", "slot": "cannon", "position": [2.4, 0.2, 3.2], "gimbal": 35, "tracking_speed": 150, "group": "primary"},
-      {"id": "hp_vanir_aft", "slot": "cannon", "position": [0.0, 0.2, -2.8], "gimbal": 28, "tracking_speed": 140, "group": "primary"},
-      {"id": "hp_vanir_launcher_port", "slot": "launcher", "position": [-1.6, -0.6, 1.2], "gimbal": 35, "tracking_speed": 140, "group": "aux"},
-      {"id": "hp_vanir_launcher_starboard", "slot": "launcher", "position": [1.6, -0.6, 1.2], "gimbal": 35, "tracking_speed": 140, "group": "aux"}
+      {
+        "id": "hp_vanir_fore",
+        "slot": "cannon",
+        "position": [
+          0.0,
+          0.4,
+          5.4
+        ],
+        "gimbal": 30,
+        "tracking_speed": 160,
+        "group": "primary"
+      },
+      {
+        "id": "hp_vanir_port",
+        "slot": "cannon",
+        "position": [
+          -2.4,
+          0.2,
+          3.2
+        ],
+        "gimbal": 35,
+        "tracking_speed": 150,
+        "group": "primary"
+      },
+      {
+        "id": "hp_vanir_starboard",
+        "slot": "cannon",
+        "position": [
+          2.4,
+          0.2,
+          3.2
+        ],
+        "gimbal": 35,
+        "tracking_speed": 150,
+        "group": "primary"
+      },
+      {
+        "id": "hp_vanir_aft",
+        "slot": "cannon",
+        "position": [
+          0.0,
+          0.2,
+          -2.8
+        ],
+        "gimbal": 28,
+        "tracking_speed": 140,
+        "group": "primary"
+      },
+      {
+        "id": "hp_vanir_launcher_port",
+        "slot": "launcher",
+        "position": [
+          -1.6,
+          -0.6,
+          1.2
+        ],
+        "gimbal": 35,
+        "tracking_speed": 140,
+        "group": "aux"
+      },
+      {
+        "id": "hp_vanir_launcher_starboard",
+        "slot": "launcher",
+        "position": [
+          1.6,
+          -0.6,
+          1.2
+        ],
+        "gimbal": 35,
+        "tracking_speed": 140,
+        "group": "aux"
+      }
     ],
     "economy": {
-      "purchase": {"tylium": 23200, "merits": 260},
-      "upgrade": {"tylium": 28800, "level": 22},
-      "operating": {"boost": 5.4, "ftl": 250}
+      "purchase": {
+        "tylium": 23200,
+        "merits": 260
+      },
+      "upgrade": {
+        "tylium": 28800,
+        "level": 22
+      },
+      "operating": {
+        "boost": 5.4,
+        "ftl": 250
+      }
     },
     "equipment": {
       "modules": {
-        "computer": ["eccm_mk1", "jammer_mk1"],
-        "utility": ["point_defense_mk1", "flare_launcher_mk1"]
+        "computer": [
+          "eccm_mk1",
+          "jammer_mk1"
+        ],
+        "utility": [
+          "point_defense_mk1",
+          "flare_launcher_mk1"
+        ]
       },
       "weapons": {
         "hp_vanir_fore": "heavy_cannon_mk1",
@@ -849,33 +1428,163 @@
       "radioresistance": 0
     },
     "slots": {
-      "weapons": {"guns": 4, "launcher": 2, "defensive": 4},
+      "weapons": {
+        "guns": 4,
+        "launcher": 2,
+        "defensive": 4
+      },
       "hull": 2,
       "engine": 3,
       "computer": 3,
       "utility": 3
     },
     "hardpoints": [
-      {"id": "hp_brimir_bow", "slot": "gun", "position": [0.0, 0.5, 14.0], "gimbal": 25, "tracking_speed": 120, "group": "primary"},
-      {"id": "hp_brimir_port", "slot": "gun", "position": [-4.8, 0.3, 6.0], "gimbal": 35, "tracking_speed": 110, "group": "primary"},
-      {"id": "hp_brimir_starboard", "slot": "gun", "position": [4.8, 0.3, 6.0], "gimbal": 35, "tracking_speed": 110, "group": "primary"},
-      {"id": "hp_brimir_dorsal", "slot": "gun", "position": [0.0, 2.2, 4.0], "gimbal": 45, "tracking_speed": 100, "group": "primary"},
-      {"id": "hp_brimir_launcher_port", "slot": "launcher", "position": [-2.6, -0.8, 3.0], "gimbal": 32, "tracking_speed": 120, "group": "aux"},
-      {"id": "hp_brimir_launcher_starboard", "slot": "launcher", "position": [2.6, -0.8, 3.0], "gimbal": 32, "tracking_speed": 120, "group": "aux"},
-      {"id": "hp_brimir_pd_port", "slot": "defensive", "position": [-4.2, 1.2, -1.0], "gimbal": 60, "tracking_speed": 200, "group": "defense"},
-      {"id": "hp_brimir_pd_starboard", "slot": "defensive", "position": [4.2, 1.2, -1.0], "gimbal": 60, "tracking_speed": 200, "group": "defense"},
-      {"id": "hp_brimir_pd_dorsal", "slot": "defensive", "position": [0.0, 2.6, -1.5], "gimbal": 75, "tracking_speed": 220, "group": "defense"},
-      {"id": "hp_brimir_pd_ventral", "slot": "defensive", "position": [0.0, -2.6, -1.5], "gimbal": 75, "tracking_speed": 220, "group": "defense"}
+      {
+        "id": "hp_brimir_bow",
+        "slot": "gun",
+        "position": [
+          0.0,
+          0.5,
+          14.0
+        ],
+        "gimbal": 25,
+        "tracking_speed": 120,
+        "group": "primary"
+      },
+      {
+        "id": "hp_brimir_port",
+        "slot": "gun",
+        "position": [
+          -4.8,
+          0.3,
+          6.0
+        ],
+        "gimbal": 35,
+        "tracking_speed": 110,
+        "group": "primary"
+      },
+      {
+        "id": "hp_brimir_starboard",
+        "slot": "gun",
+        "position": [
+          4.8,
+          0.3,
+          6.0
+        ],
+        "gimbal": 35,
+        "tracking_speed": 110,
+        "group": "primary"
+      },
+      {
+        "id": "hp_brimir_dorsal",
+        "slot": "gun",
+        "position": [
+          0.0,
+          2.2,
+          4.0
+        ],
+        "gimbal": 45,
+        "tracking_speed": 100,
+        "group": "primary"
+      },
+      {
+        "id": "hp_brimir_launcher_port",
+        "slot": "launcher",
+        "position": [
+          -2.6,
+          -0.8,
+          3.0
+        ],
+        "gimbal": 32,
+        "tracking_speed": 120,
+        "group": "aux"
+      },
+      {
+        "id": "hp_brimir_launcher_starboard",
+        "slot": "launcher",
+        "position": [
+          2.6,
+          -0.8,
+          3.0
+        ],
+        "gimbal": 32,
+        "tracking_speed": 120,
+        "group": "aux"
+      },
+      {
+        "id": "hp_brimir_pd_port",
+        "slot": "defensive",
+        "position": [
+          -4.2,
+          1.2,
+          -1.0
+        ],
+        "gimbal": 60,
+        "tracking_speed": 200,
+        "group": "defense"
+      },
+      {
+        "id": "hp_brimir_pd_starboard",
+        "slot": "defensive",
+        "position": [
+          4.2,
+          1.2,
+          -1.0
+        ],
+        "gimbal": 60,
+        "tracking_speed": 200,
+        "group": "defense"
+      },
+      {
+        "id": "hp_brimir_pd_dorsal",
+        "slot": "defensive",
+        "position": [
+          0.0,
+          2.6,
+          -1.5
+        ],
+        "gimbal": 75,
+        "tracking_speed": 220,
+        "group": "defense"
+      },
+      {
+        "id": "hp_brimir_pd_ventral",
+        "slot": "defensive",
+        "position": [
+          0.0,
+          -2.6,
+          -1.5
+        ],
+        "gimbal": 75,
+        "tracking_speed": 220,
+        "group": "defense"
+      }
     ],
     "economy": {
-      "purchase": {"tylium": 36000, "cubits": 120, "merits": 320},
-      "upgrade": {"tylium": 42000, "level": 32},
-      "operating": {"boost": 18, "ftl": 600}
+      "purchase": {
+        "tylium": 36000,
+        "cubits": 120,
+        "merits": 320
+      },
+      "upgrade": {
+        "tylium": 42000,
+        "level": 32
+      },
+      "operating": {
+        "boost": 18,
+        "ftl": 600
+      }
     },
     "equipment": {
       "modules": {
-        "computer": ["eccm_mk1", "jammer_mk1"],
-        "utility": ["point_defense_mk1", "flare_launcher_mk1"]
+        "computer": [
+          "eccm_mk1",
+          "jammer_mk1"
+        ],
+        "utility": [
+          "point_defense_mk1",
+          "flare_launcher_mk1"
+        ]
       },
       "weapons": {
         "hp_brimir_bow": "heavy_cannon_mk1",
@@ -946,35 +1655,185 @@
       "radioresistance": 0
     },
     "slots": {
-      "weapons": {"guns": 6, "launcher": 2, "defensive": 4},
+      "weapons": {
+        "guns": 6,
+        "launcher": 2,
+        "defensive": 4
+      },
       "hull": 6,
       "engine": 0,
       "computer": 6,
       "utility": 6
     },
     "hardpoints": [
-      {"id": "hp_outpost_north", "slot": "gun", "position": [0.0, 60.0, 260.0], "gimbal": 35, "tracking_speed": 36, "group": "primary"},
-      {"id": "hp_outpost_south", "slot": "gun", "position": [0.0, -60.0, -260.0], "gimbal": 35, "tracking_speed": 36, "group": "primary"},
-      {"id": "hp_outpost_east", "slot": "gun", "position": [260.0, 0.0, 0.0], "gimbal": 42, "tracking_speed": 32, "group": "primary"},
-      {"id": "hp_outpost_west", "slot": "gun", "position": [-260.0, 0.0, 0.0], "gimbal": 42, "tracking_speed": 32, "group": "primary"},
-      {"id": "hp_outpost_dorsal", "slot": "gun", "position": [0.0, 260.0, 0.0], "gimbal": 28, "tracking_speed": 30, "group": "primary"},
-      {"id": "hp_outpost_ventral", "slot": "gun", "position": [0.0, -260.0, 0.0], "gimbal": 28, "tracking_speed": 30, "group": "primary"},
-      {"id": "hp_outpost_launcher_port", "slot": "launcher", "position": [-180.0, 120.0, 180.0], "gimbal": 30, "tracking_speed": 24, "group": "aux"},
-      {"id": "hp_outpost_launcher_starboard", "slot": "launcher", "position": [180.0, 120.0, 180.0], "gimbal": 30, "tracking_speed": 24, "group": "aux"},
-      {"id": "hp_outpost_pd_north", "slot": "defensive", "position": [0.0, 180.0, 220.0], "gimbal": 70, "tracking_speed": 180, "group": "defense"},
-      {"id": "hp_outpost_pd_south", "slot": "defensive", "position": [0.0, -180.0, -220.0], "gimbal": 70, "tracking_speed": 180, "group": "defense"},
-      {"id": "hp_outpost_pd_east", "slot": "defensive", "position": [220.0, 0.0, 180.0], "gimbal": 75, "tracking_speed": 180, "group": "defense"},
-      {"id": "hp_outpost_pd_west", "slot": "defensive", "position": [-220.0, 0.0, 180.0], "gimbal": 75, "tracking_speed": 180, "group": "defense"}
+      {
+        "id": "hp_outpost_north",
+        "slot": "gun",
+        "position": [
+          0.0,
+          60.0,
+          260.0
+        ],
+        "gimbal": 35,
+        "tracking_speed": 36,
+        "group": "primary"
+      },
+      {
+        "id": "hp_outpost_south",
+        "slot": "gun",
+        "position": [
+          0.0,
+          -60.0,
+          -260.0
+        ],
+        "gimbal": 35,
+        "tracking_speed": 36,
+        "group": "primary"
+      },
+      {
+        "id": "hp_outpost_east",
+        "slot": "gun",
+        "position": [
+          260.0,
+          0.0,
+          0.0
+        ],
+        "gimbal": 42,
+        "tracking_speed": 32,
+        "group": "primary"
+      },
+      {
+        "id": "hp_outpost_west",
+        "slot": "gun",
+        "position": [
+          -260.0,
+          0.0,
+          0.0
+        ],
+        "gimbal": 42,
+        "tracking_speed": 32,
+        "group": "primary"
+      },
+      {
+        "id": "hp_outpost_dorsal",
+        "slot": "gun",
+        "position": [
+          0.0,
+          260.0,
+          0.0
+        ],
+        "gimbal": 28,
+        "tracking_speed": 30,
+        "group": "primary"
+      },
+      {
+        "id": "hp_outpost_ventral",
+        "slot": "gun",
+        "position": [
+          0.0,
+          -260.0,
+          0.0
+        ],
+        "gimbal": 28,
+        "tracking_speed": 30,
+        "group": "primary"
+      },
+      {
+        "id": "hp_outpost_launcher_port",
+        "slot": "launcher",
+        "position": [
+          -180.0,
+          120.0,
+          180.0
+        ],
+        "gimbal": 30,
+        "tracking_speed": 24,
+        "group": "aux"
+      },
+      {
+        "id": "hp_outpost_launcher_starboard",
+        "slot": "launcher",
+        "position": [
+          180.0,
+          120.0,
+          180.0
+        ],
+        "gimbal": 30,
+        "tracking_speed": 24,
+        "group": "aux"
+      },
+      {
+        "id": "hp_outpost_pd_north",
+        "slot": "defensive",
+        "position": [
+          0.0,
+          180.0,
+          220.0
+        ],
+        "gimbal": 70,
+        "tracking_speed": 180,
+        "group": "defense"
+      },
+      {
+        "id": "hp_outpost_pd_south",
+        "slot": "defensive",
+        "position": [
+          0.0,
+          -180.0,
+          -220.0
+        ],
+        "gimbal": 70,
+        "tracking_speed": 180,
+        "group": "defense"
+      },
+      {
+        "id": "hp_outpost_pd_east",
+        "slot": "defensive",
+        "position": [
+          220.0,
+          0.0,
+          180.0
+        ],
+        "gimbal": 75,
+        "tracking_speed": 180,
+        "group": "defense"
+      },
+      {
+        "id": "hp_outpost_pd_west",
+        "slot": "defensive",
+        "position": [
+          -220.0,
+          0.0,
+          180.0
+        ],
+        "gimbal": 75,
+        "tracking_speed": 180,
+        "group": "defense"
+      }
     ],
     "economy": {
-      "purchase": {"tylium": 0},
-      "upgrade": {"tylium": 0, "level": 0},
-      "operating": {"boost": 0, "ftl": 0}
+      "purchase": {
+        "tylium": 0
+      },
+      "upgrade": {
+        "tylium": 0,
+        "level": 0
+      },
+      "operating": {
+        "boost": 0,
+        "ftl": 0
+      }
     },
     "equipment": {
       "modules": {
-        "computer": ["eccm_mk1", "jammer_mk1"],
-        "utility": ["point_defense_mk1", "flare_launcher_mk1"]
+        "computer": [
+          "eccm_mk1",
+          "jammer_mk1"
+        ],
+        "utility": [
+          "point_defense_mk1",
+          "flare_launcher_mk1"
+        ]
       },
       "weapons": {
         "hp_outpost_north": "heavy_cannon_mk1",

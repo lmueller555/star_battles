@@ -1,15 +1,55 @@
 """Ship stat definitions and aggregation."""
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import ClassVar, Dict
+from dataclasses import dataclass, field
+from typing import Any, ClassVar, Dict, Optional, Tuple
 
 
-def _lookup(data: Dict[str, float], *keys: str, default: float) -> float:
-    for key in keys:
+@dataclass
+class UpgradeValue:
+    """Container for upgradeable stat values."""
+
+    base: float
+    advanced_delta: float = 0.0
+    advanced_total: Optional[float] = None
+
+    def __post_init__(self) -> None:
+        if self.advanced_total is None:
+            self.advanced_total = self.base + self.advanced_delta
+
+    def as_tuple(self) -> Tuple[float, float, float]:
+        total = self.advanced_total if self.advanced_total is not None else self.base + self.advanced_delta
+        return (self.base, self.advanced_delta, total)
+
+
+def _coerce_upgrade(value: Any, default: float) -> Tuple[float, Optional[UpgradeValue]]:
+    if isinstance(value, dict):
+        base_raw = value.get("base", value.get("value", default))
+        base = float(base_raw) if base_raw is not None else float(default)
+        delta_raw = value.get("advanced_delta", value.get("delta", 0.0))
+        delta = float(delta_raw) if delta_raw is not None else 0.0
+        total_raw = value.get("advanced_total")
+        total = float(total_raw) if total_raw is not None else None
+        upgrade = UpgradeValue(base=base, advanced_delta=delta, advanced_total=total)
+        return base, upgrade
+    if value is None:
+        return float(default), None
+    try:
+        return float(value), None
+    except (TypeError, ValueError):
+        return float(default), None
+
+
+def _extract_stat(
+    data: Dict[str, Any],
+    field: str,
+    *aliases: str,
+    default: float,
+) -> Tuple[float, Optional[UpgradeValue]]:
+    for key in (field, *aliases):
         if key in data and data[key] is not None:
-            return float(data[key])
-    return float(default)
+            return _coerce_upgrade(data[key], default)
+    return float(default), None
 
 
 @dataclass
@@ -54,6 +94,7 @@ class ShipStats:
     max_radiation_level: float
     radioactive_decay: float
     radioresistance: float
+    upgrades: Dict[str, UpgradeValue] = field(default_factory=dict, repr=False)
 
     _ALIASES: ClassVar[Dict[str, str]] = {
         "hull_hp": "hull_points",
@@ -86,43 +127,243 @@ class ShipStats:
         return getattr(self, target)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, float]) -> "ShipStats":
-        avoidance_value = _lookup(data, "avoidance_rating", "avoidance", default=0.05)
-        if avoidance_value > 1.0:
-            avoidance_rating = avoidance_value
-            avoidance = avoidance_value / 1000.0
-        else:
-            avoidance_rating = avoidance_value * 1000.0
-            avoidance = avoidance_value
+    def from_dict(cls, data: Dict[str, Any]) -> "ShipStats":
+        upgrades: Dict[str, UpgradeValue] = {}
 
-        speed = _lookup(data, "speed", "max_speed", default=80.0)
-        boost_speed = _lookup(data, "boost_speed", default=speed)
-        acceleration = _lookup(data, "acceleration", default=55.0)
-        boost_acceleration = _lookup(
-            data, "boost_acceleration", default=_lookup(data, "boost_accel", default=acceleration)
+        hull_points, hull_points_up = _extract_stat(data, "hull_points", "hull_hp", default=1000.0)
+        if hull_points_up:
+            upgrades["hull_points"] = hull_points_up
+        hull_regen, hull_regen_up = _extract_stat(
+            data, "hull_recovery_per_sec", "hull_regen", default=5.0
         )
-        strafe_speed = _lookup(data, "strafe_speed", "strafe_cap", default=0.0)
-        strafe_accel = _lookup(data, "strafe_acceleration", "strafe_accel", default=0.0)
-        turn_rate = _lookup(data, "turn_rate", default=90.0)
-        turn_accel = _lookup(data, "turn_accel", default=180.0)
-        pitch_speed = _lookup(data, "pitch_speed", default=turn_rate)
-        yaw_speed = _lookup(data, "yaw_speed", default=turn_rate)
-        roll_speed = _lookup(data, "roll_speed", default=turn_rate)
-        pitch_accel = _lookup(data, "pitch_acceleration", default=turn_accel)
-        yaw_accel = _lookup(data, "yaw_acceleration", default=turn_accel)
-        roll_accel = _lookup(data, "roll_acceleration", default=turn_accel)
-        dradis_max = _lookup(data, "dradis_range_max", "dradis_range", default=3000.0)
-        dradis_base = _lookup(data, "dradis_range_base", default=dradis_max)
+        if hull_regen_up:
+            upgrades["hull_recovery_per_sec"] = hull_regen_up
+        durability, durability_up = _extract_stat(data, "durability", default=200.0)
+        if durability_up:
+            upgrades["durability"] = durability_up
+        armor_value, armor_up = _extract_stat(data, "armor_value", "armor", default=100.0)
+        if armor_up:
+            upgrades["armor_value"] = armor_up
+        crit_defense, crit_up = _extract_stat(data, "critical_defense", "crit_defense", default=0.05)
+        if crit_up:
+            upgrades["critical_defense"] = crit_up
 
-        return cls(
-            hull_points=_lookup(data, "hull_points", "hull_hp", default=1000.0),
-            hull_recovery_per_sec=_lookup(data, "hull_recovery_per_sec", "hull_regen", default=5.0),
-            durability=_lookup(data, "durability", default=200.0),
-            armor_value=_lookup(data, "armor_value", "armor", default=100.0),
-            critical_defense=_lookup(data, "critical_defense", "crit_defense", default=0.05),
+        avoidance_raw, avoidance_up = _extract_stat(
+            data, "avoidance_rating", "avoidance", default=0.05
+        )
+        if avoidance_raw > 1.0:
+            avoidance_rating = avoidance_raw
+            avoidance = avoidance_raw / 1000.0
+            rating_upgrade = avoidance_up
+        else:
+            avoidance_rating = avoidance_raw * 1000.0
+            avoidance = avoidance_raw
+            rating_upgrade = None
+            if avoidance_up:
+                # Convert avoidance upgrades (ratio-based) into rating space
+                rating_base = avoidance_raw * 1000.0
+                rating_delta = avoidance_up.advanced_delta * 1000.0
+                rating_total = avoidance_up.advanced_total
+                rating_total = (
+                    rating_total * 1000.0
+                    if rating_total is not None
+                    else rating_base + rating_delta
+                )
+                rating_upgrade = UpgradeValue(
+                    base=rating_base,
+                    advanced_delta=rating_delta,
+                    advanced_total=rating_total,
+                )
+        if rating_upgrade:
+            upgrades["avoidance_rating"] = rating_upgrade
+            advanced_total = rating_upgrade.advanced_total or (
+                rating_upgrade.base + rating_upgrade.advanced_delta
+            )
+            new_avoidance = (
+                advanced_total / 1000.0
+                if advanced_total > 1.0
+                else advanced_total
+            )
+            avoidance_delta = new_avoidance - avoidance
+            upgrades["avoidance"] = UpgradeValue(
+                base=avoidance,
+                advanced_delta=avoidance_delta,
+                advanced_total=avoidance + avoidance_delta,
+            )
+
+        avoidance_fading, avoidance_fading_up = _extract_stat(
+            data, "avoidance_fading", default=0.75
+        )
+        if avoidance_fading_up:
+            upgrades["avoidance_fading"] = avoidance_fading_up
+
+        speed, speed_up = _extract_stat(data, "speed", "max_speed", default=80.0)
+        if speed_up:
+            upgrades["speed"] = speed_up
+        boost_speed, boost_speed_up = _extract_stat(
+            data, "boost_speed", default=speed
+        )
+        if boost_speed_up:
+            upgrades["boost_speed"] = boost_speed_up
+        acceleration, acceleration_up = _extract_stat(data, "acceleration", default=55.0)
+        if acceleration_up:
+            upgrades["acceleration"] = acceleration_up
+        boost_acceleration, boost_accel_up = _extract_stat(
+            data,
+            "boost_acceleration",
+            "boost_accel",
+            default=acceleration,
+        )
+        if boost_accel_up:
+            upgrades["boost_acceleration"] = boost_accel_up
+        strafe_speed, strafe_speed_up = _extract_stat(
+            data, "strafe_speed", "strafe_cap", default=0.0
+        )
+        if strafe_speed_up:
+            upgrades["strafe_speed"] = strafe_speed_up
+        strafe_accel, strafe_accel_up = _extract_stat(
+            data, "strafe_acceleration", "strafe_accel", default=0.0
+        )
+        if strafe_accel_up:
+            upgrades["strafe_acceleration"] = strafe_accel_up
+        turn_rate, turn_rate_up = _extract_stat(data, "turn_rate", default=90.0)
+        if turn_rate_up:
+            upgrades["turn_rate"] = turn_rate_up
+        turn_accel, turn_accel_up = _extract_stat(data, "turn_accel", default=180.0)
+        if turn_accel_up:
+            upgrades["turn_accel"] = turn_accel_up
+        pitch_speed, pitch_speed_up = _extract_stat(
+            data, "pitch_speed", default=turn_rate
+        )
+        if pitch_speed_up:
+            upgrades["pitch_speed"] = pitch_speed_up
+        yaw_speed, yaw_speed_up = _extract_stat(
+            data, "yaw_speed", default=turn_rate
+        )
+        if yaw_speed_up:
+            upgrades["yaw_speed"] = yaw_speed_up
+        roll_speed, roll_speed_up = _extract_stat(
+            data, "roll_speed", default=turn_rate
+        )
+        if roll_speed_up:
+            upgrades["roll_speed"] = roll_speed_up
+        pitch_accel, pitch_accel_up = _extract_stat(
+            data, "pitch_acceleration", default=turn_accel
+        )
+        if pitch_accel_up:
+            upgrades["pitch_acceleration"] = pitch_accel_up
+        yaw_accel, yaw_accel_up = _extract_stat(
+            data, "yaw_acceleration", default=turn_accel
+        )
+        if yaw_accel_up:
+            upgrades["yaw_acceleration"] = yaw_accel_up
+        roll_accel, roll_accel_up = _extract_stat(
+            data, "roll_acceleration", default=turn_accel
+        )
+        if roll_accel_up:
+            upgrades["roll_acceleration"] = roll_accel_up
+
+        inertial_comp, inertial_comp_up = _extract_stat(
+            data, "inertial_compensation", "inertia_comp", default=0.8
+        )
+        if inertial_comp_up:
+            upgrades["inertial_compensation"] = inertial_comp_up
+
+        boost_cost, boost_cost_up = _extract_stat(
+            data, "boost_cost", "boost_drain", default=18.0
+        )
+        if boost_cost_up:
+            upgrades["boost_cost"] = boost_cost_up
+        power_points, power_points_up = _extract_stat(
+            data, "power_points", "power_cap", default=150.0
+        )
+        if power_points_up:
+            upgrades["power_points"] = power_points_up
+        power_recovery, power_recovery_up = _extract_stat(
+            data, "power_recovery_per_sec", "power_regen", default=45.0
+        )
+        if power_recovery_up:
+            upgrades["power_recovery_per_sec"] = power_recovery_up
+        firewall_rating, firewall_up = _extract_stat(
+            data, "firewall_rating", "firewall", default=120.0
+        )
+        if firewall_up:
+            upgrades["firewall_rating"] = firewall_up
+        emitter_rating, emitter_up = _extract_stat(
+            data, "emitter_rating", "emitter", default=120.0
+        )
+        if emitter_up:
+            upgrades["emitter_rating"] = emitter_up
+
+        dradis_max, dradis_max_up = _extract_stat(
+            data, "dradis_range_max", "dradis_range", default=3000.0
+        )
+        if dradis_max_up:
+            upgrades["dradis_range_max"] = dradis_max_up
+        dradis_base, dradis_base_up = _extract_stat(
+            data, "dradis_range_base", default=dradis_max
+        )
+        if dradis_base_up:
+            upgrades["dradis_range_base"] = dradis_base_up
+
+        visual_range, visual_up = _extract_stat(data, "visual_range", default=800.0)
+        if visual_up:
+            upgrades["visual_range"] = visual_up
+
+        ftl_range, ftl_range_up = _extract_stat(data, "ftl_range", default=10.0)
+        if ftl_range_up:
+            upgrades["ftl_range"] = ftl_range_up
+        ftl_charge, ftl_charge_up = _extract_stat(
+            data, "ftl_charge_time", "ftl_charge", default=15.0
+        )
+        if ftl_charge_up:
+            upgrades["ftl_charge_time"] = ftl_charge_up
+        ftl_cooldown, ftl_cooldown_up = _extract_stat(
+            data, "ftl_cooldown", "ftl_threat_charge", default=30.0
+        )
+        if ftl_cooldown_up:
+            upgrades["ftl_cooldown"] = ftl_cooldown_up
+        ftl_cost, ftl_cost_up = _extract_stat(
+            data, "ftl_cost", "ftl_cost_per_ly", default=25.0
+        )
+        if ftl_cost_up:
+            upgrades["ftl_cost"] = ftl_cost_up
+
+        transponder_cost, transponder_cost_up = _extract_stat(
+            data, "transponder_power_cost", default=0.0
+        )
+        if transponder_cost_up:
+            upgrades["transponder_power_cost"] = transponder_cost_up
+        durability_bonus, durability_bonus_up = _extract_stat(
+            data, "durability_bonus", default=0.0
+        )
+        if durability_bonus_up:
+            upgrades["durability_bonus"] = durability_bonus_up
+        max_radiation, max_radiation_up = _extract_stat(
+            data, "max_radiation_level", default=0.0
+        )
+        if max_radiation_up:
+            upgrades["max_radiation_level"] = max_radiation_up
+        radioactive_decay, radioactive_decay_up = _extract_stat(
+            data, "radioactive_decay", default=0.0
+        )
+        if radioactive_decay_up:
+            upgrades["radioactive_decay"] = radioactive_decay_up
+        radioresistance, radioresistance_up = _extract_stat(
+            data, "radioresistance", default=0.0
+        )
+        if radioresistance_up:
+            upgrades["radioresistance"] = radioresistance_up
+
+        stats = cls(
+            hull_points=hull_points,
+            hull_recovery_per_sec=hull_regen,
+            durability=durability,
+            armor_value=armor_value,
+            critical_defense=crit_defense,
             avoidance=avoidance,
             avoidance_rating=avoidance_rating,
-            avoidance_fading=_lookup(data, "avoidance_fading", default=0.75),
+            avoidance_fading=avoidance_fading,
             speed=speed,
             boost_speed=boost_speed,
             acceleration=acceleration,
@@ -137,33 +378,27 @@ class ShipStats:
             pitch_acceleration=pitch_accel,
             yaw_acceleration=yaw_accel,
             roll_acceleration=roll_accel,
-            inertial_compensation=_lookup(
-                data, "inertial_compensation", "inertia_comp", default=0.8
-            ),
-            boost_cost=_lookup(data, "boost_cost", "boost_drain", default=18.0),
-            power_points=_lookup(data, "power_points", "power_cap", default=150.0),
-            power_recovery_per_sec=_lookup(
-                data, "power_recovery_per_sec", "power_regen", default=45.0
-            ),
-            firewall_rating=_lookup(data, "firewall_rating", "firewall", default=120.0),
-            emitter_rating=_lookup(data, "emitter_rating", "emitter", default=120.0),
+            inertial_compensation=inertial_comp,
+            boost_cost=boost_cost,
+            power_points=power_points,
+            power_recovery_per_sec=power_recovery,
+            firewall_rating=firewall_rating,
+            emitter_rating=emitter_rating,
             dradis_range_base=dradis_base,
             dradis_range_max=dradis_max,
-            visual_range=_lookup(data, "visual_range", default=800.0),
-            ftl_range=_lookup(data, "ftl_range", default=10.0),
-            ftl_charge_time=_lookup(data, "ftl_charge_time", "ftl_charge", default=15.0),
-            ftl_cooldown=_lookup(
-                data, "ftl_cooldown", "ftl_threat_charge", default=30.0
-            ),
-            ftl_cost=_lookup(data, "ftl_cost", "ftl_cost_per_ly", default=25.0),
-            transponder_power_cost=_lookup(
-                data, "transponder_power_cost", default=0.0
-            ),
-            durability_bonus=_lookup(data, "durability_bonus", default=0.0),
-            max_radiation_level=_lookup(data, "max_radiation_level", default=0.0),
-            radioactive_decay=_lookup(data, "radioactive_decay", default=0.0),
-            radioresistance=_lookup(data, "radioresistance", default=0.0),
+            visual_range=visual_range,
+            ftl_range=ftl_range,
+            ftl_charge_time=ftl_charge,
+            ftl_cooldown=ftl_cooldown,
+            ftl_cost=ftl_cost,
+            transponder_power_cost=transponder_cost,
+            durability_bonus=durability_bonus,
+            max_radiation_level=max_radiation,
+            radioactive_decay=radioactive_decay,
+            radioresistance=radioresistance,
         )
+        stats.upgrades = upgrades
+        return stats
 
     @property
     def cruise_speed(self) -> float:
@@ -179,22 +414,55 @@ class ShipSlotLayout:
     engine: int
     computer: int
     utility: int
+    upgrades: Dict[str, UpgradeValue] = field(default_factory=dict)
+    weapon_upgrades: Dict[str, UpgradeValue] = field(default_factory=dict)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, int]) -> "ShipSlotLayout":
+    def from_dict(cls, data: Dict[str, Any]) -> "ShipSlotLayout":
+        upgrades: Dict[str, UpgradeValue] = {}
+        weapon_upgrades: Dict[str, UpgradeValue] = {}
+
+        def parse_slot(value: Any, default: int = 0) -> Tuple[int, Optional[UpgradeValue]]:
+            base, upgrade = _coerce_upgrade(value, default)
+            return int(base), upgrade
+
         weapon_families: Dict[str, int] = {}
-        if "weapons" in data and isinstance(data["weapons"], dict):
-            weapon_families.update({str(key): int(value) for key, value in data["weapons"].items()})
+        weapons_data = data.get("weapons")
+        if isinstance(weapons_data, dict):
+            for key, value in weapons_data.items():
+                count, upgrade = parse_slot(value, 0)
+                weapon_families[str(key)] = count
+                if upgrade:
+                    weapon_upgrades[str(key)] = upgrade
         else:
             for key in ("cannon", "launcher", "gun", "guns", "defensive"):
                 if key in data:
-                    weapon_families[str(key)] = int(data[key])
+                    count, upgrade = parse_slot(data[key], 0)
+                    weapon_families[str(key)] = count
+                    if upgrade:
+                        weapon_upgrades[str(key)] = upgrade
+
+        hull_count, hull_upgrade = parse_slot(data.get("hull", 0), 0)
+        if hull_upgrade:
+            upgrades["hull"] = hull_upgrade
+        engine_count, engine_upgrade = parse_slot(data.get("engine", 0), 0)
+        if engine_upgrade:
+            upgrades["engine"] = engine_upgrade
+        computer_count, computer_upgrade = parse_slot(data.get("computer", 0), 0)
+        if computer_upgrade:
+            upgrades["computer"] = computer_upgrade
+        utility_count, utility_upgrade = parse_slot(data.get("utility", 0), 0)
+        if utility_upgrade:
+            upgrades["utility"] = utility_upgrade
+
         return cls(
             weapon_families=weapon_families,
-            hull=int(data.get("hull", 0)),
-            engine=int(data.get("engine", 0)),
-            computer=int(data.get("computer", 0)),
-            utility=int(data.get("utility", 0)),
+            hull=hull_count,
+            engine=engine_count,
+            computer=computer_count,
+            utility=utility_count,
+            upgrades=upgrades,
+            weapon_upgrades=weapon_upgrades,
         )
 
     def weapon_capacity(self, slot_type: str) -> int:
@@ -217,4 +485,4 @@ class ShipSlotLayout:
         return self.weapon_capacity("defensive")
 
 
-__all__ = ["ShipStats", "ShipSlotLayout"]
+__all__ = ["ShipStats", "ShipSlotLayout", "UpgradeValue"]
