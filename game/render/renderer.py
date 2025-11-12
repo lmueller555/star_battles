@@ -670,47 +670,97 @@ def _build_raven_wireframe() -> list[tuple[Vector3, Vector3]]:
 def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
     segments: list[tuple[Vector3, Vector3]] = []
 
-    prow = Vector3(0.0, 1.6, 4.0)
-    bridge = Vector3(0.0, 2.4, 1.6)
-    stern = Vector3(0.0, -1.0, -4.2)
+    prow = Vector3(0.0, 1.8, 3.8)
+    canopy = Vector3(0.0, 2.6, 1.6)
+    spine = Vector3(0.0, 2.2, -0.6)
+    stern = Vector3(0.0, 0.8, -4.0)
+    keel = Vector3(0.0, -2.0, -0.8)
+    ventral_prow = Vector3(0.0, -1.8, 2.4)
 
-    ring_points = [
-        Vector3(-3.4, 0.6, 1.0),
-        Vector3(-3.8, 0.6, -0.8),
-        Vector3(-2.0, 0.4, -3.2),
+    hull_profile_port = [
+        Vector3(-2.4, 1.2, 3.0),
+        Vector3(-3.2, 1.0, 1.8),
+        Vector3(-3.4, 0.9, 0.4),
+        Vector3(-3.0, 0.8, -1.4),
+        Vector3(-2.2, 0.8, -2.8),
+        Vector3(-1.4, 0.9, -3.8),
     ]
-
-    for point in ring_points:
+    hull_loop = hull_profile_port + [
+        _mirror_vector(point) for point in reversed(hull_profile_port)
+    ]
+    _loop_segments(segments, hull_loop)
+    for point in hull_profile_port:
         mirrored = _mirror_vector(point)
         segments.append((point, mirrored))
         segments.append((point, prow))
         segments.append((mirrored, prow))
+        segments.append((point, canopy))
+        segments.append((mirrored, canopy))
         segments.append((point, stern))
         segments.append((mirrored, stern))
-        segments.append((point, bridge))
-        segments.append((mirrored, bridge))
 
-    dorsal_ring = [
-        Vector3(-1.6, 2.4, -0.4),
-        Vector3(0.0, 2.6, -1.2),
-        Vector3(1.6, 2.4, -0.4),
-        Vector3(0.0, 2.2, 0.6),
+    neck_struts = [
+        Vector3(-1.3, 1.4, 2.4),
+        Vector3(-1.2, 1.3, 1.0),
+        Vector3(-1.0, 1.2, -0.6),
     ]
-    _loop_segments(segments, dorsal_ring)
-    for point in dorsal_ring:
-        segments.append((point, bridge))
+    for point in neck_struts:
+        mirrored = _mirror_vector(point)
+        segments.append((point, mirrored))
+        segments.append((point, canopy))
+        segments.append((mirrored, canopy))
+        segments.append((point, spine))
+        segments.append((mirrored, spine))
+
+    dorsal_plate = [
+        Vector3(-1.4, 2.9, 2.2),
+        Vector3(-1.8, 3.0, 0.8),
+        Vector3(-1.0, 2.8, -0.8),
+        Vector3(0.0, 2.6, -2.2),
+        Vector3(1.0, 2.8, -0.8),
+        Vector3(1.8, 3.0, 0.8),
+        Vector3(1.4, 2.9, 2.2),
+        Vector3(0.0, 2.5, 3.0),
+    ]
+    _loop_segments(segments, dorsal_plate)
+    for point in dorsal_plate:
+        segments.append((point, canopy))
+        segments.append((point, spine))
 
     ventral_keel = [
-        Vector3(-1.2, -1.6, 2.2),
-        Vector3(0.0, -1.8, 0.0),
-        Vector3(1.2, -1.6, 2.2),
+        Vector3(-1.6, -1.6, 2.2),
+        Vector3(-1.4, -1.9, 0.6),
+        Vector3(-1.0, -1.8, -1.4),
+        Vector3(-0.6, -1.6, -3.0),
+        Vector3(0.6, -1.6, -3.0),
+        Vector3(1.0, -1.8, -1.4),
+        Vector3(1.4, -1.9, 0.6),
+        Vector3(1.6, -1.6, 2.2),
     ]
     _loop_segments(segments, ventral_keel)
     for point in ventral_keel:
+        segments.append((point, keel))
+        segments.append((point, stern))
+        segments.append((point, ventral_prow))
+
+    thruster_band_port = [
+        Vector3(-1.8, 0.6, -3.4),
+        Vector3(-1.4, 0.6, -4.2),
+        Vector3(-0.8, 0.6, -4.2),
+    ]
+    thruster_band = thruster_band_port + [
+        _mirror_vector(point) for point in reversed(thruster_band_port)
+    ]
+    _loop_segments(segments, thruster_band)
+    for point in thruster_band:
         segments.append((point, stern))
 
-    segments.append((prow, bridge))
-    segments.append((bridge, stern))
+    segments.append((prow, canopy))
+    segments.append((canopy, spine))
+    segments.append((spine, stern))
+    segments.append((keel, stern))
+    segments.append((keel, ventral_prow))
+    segments.append((ventral_prow, prow))
 
     return segments
 
