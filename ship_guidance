@@ -116,9 +116,7 @@ Traits & role notes: …
 Open items / TBD: …
 
 STRIKE CLASS
-Strike — Viper (panel label: “Viper Mk II”) — Role: Interceptor
-
-(If this section is intended to be “Viper Mk VII,” confirm—these numbers are taken verbatim from your Viper panel.)
+Strike — Viper (panel label: “Viper Mk VII”) — Role: Interceptor
 
 Identity
 
@@ -226,83 +224,119 @@ Confirm currency for purchase (icon) and whether FTL Cost is per-jump or per-LY 
 
 If your Mk VII uses different values than this panel, paste its pane and we’ll split Viper Mk II vs Viper Mk VII as separate entries.
 
-Strike — Raptor FR (Fast Recon)
+Strike — Raptor FR (Role: Command; “Fleet Reconnaissance”)
 
 Identity
 
-Class/Role: Strike · (role label not shown; Recon/Multi-Role TBD)
+Class / Role: Strike · Command
 
 Level Requirement: 1
 
+Role Bonus: −75 Transponder Power Cost when used by this vehicle (Command bonus).
+
+Counterpart / Upgrade To: TBD
+
 Economy
 
-Purchase Cost: 45,000 (confirm currency)
+Purchase Cost: 45,000 (icon present—confirm currency)
 
-Operating: Boost Cost 0.6 Tyl/s, FTL Cost 1.5 (panel label uses a number; confirm per-jump vs per-LY)
+Operating: Boost Cost 0.6 Tyl/s, FTL Cost 30 Tyl (panel shows a flat value; note if your rules convert to per-LY elsewhere)
 
-Equipment Slots
+Upgrade Cost (→ Advanced): TBD
 
-Weapons / Hull / Engine / Computer: TBD (share its slot pane and we’ll fill base and (+Δ) if any)
+Equipment Slots (weight class: Light)
 
-Gun / Launcher / Defensive / Special: TBD
+Weapons: 3
+
+Hull: 1
+
+Engine: 4
+
+Computer: 5
+
+Gun / Launcher / Defensive / Special: 0 / 0 / 0 / 0
 
 Hull / Survivability
 
-Hull Points: 650 · Hull Recovery: 5 /s · Durability: TBD
+Hull Points: 650
 
-Armor Value: 5 · Critical Defense: 100
+Hull Recovery: 5 /s
+
+Durability: 10,000
+
+Armor Value: 5
+
+Critical Defense: 100
 
 Engine / Mobility
 
-Speed: 52.5 m/s · Boost Speed: 77.5 m/s · Boost Cost: 0.6 Tyl/s
+Speed: 52.5 m/s
 
-Acceleration: 10 m/s² · Boost Acceleration: 4 m/s²
+Boost Speed: 77.5 m/s
+
+Boost Cost: 0.6 Tyl/s
+
+Acceleration: 10 m/s²
+
+Boost Acceleration: 4 m/s² (from earlier full stat panel; not shown in this slot pane—retain if you track it)
+
+Turning Speed: 47.5 deg/s
+
+Turning Acceleration: 47.5 deg/s²
 
 Inertial Compensation: 100 m/s
 
-Avoidance: 500 · Avoidance Fading: 0.75
+Avoidance: 500
 
-Pitch/Yaw/Roll Speed: 47.5 / 47.5 / 130.625 deg/s
-
-Pitch/Yaw/Roll Accel: 47.5 / 47.5 / 598.5 deg/s²
+Avoidance Fading: 0.75
 
 Strafe Speed / Accel: 0 / 0
 
 FTL
 
-Range: 135 LY · Charge Time: 12.5 s · Cooldown: 30 s · Cost: 1.5
+Range: 6.75 LY
 
-Transponder Power Cost: −75
+Charge Time: 12.5 s
+
+Cooldown: 30 s
+
+Cost: 30 Tyl
+
+Transponder Power Cost: −75 (stacking with the role note above)
 
 Energy & Sensors / EW
 
-Power Points: 200 · Power Recovery: 6 /s
+Power Points: 200
 
-Firewall / Emitter: 200 / 200
+Power Recovery: 6 /s
 
-DRADIS Base/Max: 1,500 m / 4,000 m
+Firewall Rating: 200
+
+Emitter Rating: 200
+
+DRADIS Range: 4,000 m
 
 Visual Range: 600 m
 
 Environmental
 
-Max Radiation: 130 · Radioactive Decay: 0.8 · Radioresistance: 0
+Max Radiation: 130 · Radioactive Decay: 0.8 · Radioresistance: 0 (values from your earlier Raptor full stat panel; include if you’re tracking environment now)
 
 Pre-installed systems
 
-TBD
+TBD (none shown in the pane)
 
 Traits & role notes
 
-Recon-leaning Strike with larger sensors and bigger energy pool than Viper.
+Strike-class Command platform: large Computer slot budget (5) for EW/support; stronger sensors and energy pool than typical Strikes.
 
 Open items / TBD
 
-Provide the Raptor FR slot pane (to record base and (+Δ) values).
+Confirm purchase currency icon.
 
-Confirm purchase currency and FTL cost semantics.
+Clarify whether FTL Cost is flat per jump (as shown) or per-LY in your rule set.
 
-Durability value.
+If an Advanced Raptor FR exists in your data, provide its pane so we can add upgrade deltas (+Δ) for any blue stats/slots.
 
 ESCORT CLASS
 
