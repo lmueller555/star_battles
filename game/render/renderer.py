@@ -1633,26 +1633,30 @@ def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
         Vector3(-4.0, 3.4, 11.6),
         Vector3(-3.4, 3.2, 10.6),
     ]
-    nose_outline_starboard = [_mirror_vector(point) for point in nose_outline_port]
-
-    for outline in (nose_outline_port, nose_outline_starboard):
-        _loop_segments(segments, outline, close=False)
-        for point in outline:
-            segments.append((point, forward_spine))
-            segments.append((point, ventral_prow))
+    nose_outline = (
+        nose_outline_port
+        + [Vector3(0.0, 4.2, 12.4)]
+        + [_mirror_vector(point) for point in reversed(nose_outline_port)]
+    )
+    _loop_segments(segments, nose_outline)
+    for point in nose_outline:
+        segments.append((point, forward_spine))
+        segments.append((point, ventral_prow))
 
     nose_outline_lower_port = [
         Vector3(-3.2, 0.6, 12.0),
         Vector3(-4.0, 0.4, 11.4),
         Vector3(-3.4, 0.2, 10.6),
     ]
-    nose_outline_lower_starboard = [_mirror_vector(point) for point in nose_outline_lower_port]
-
-    for outline in (nose_outline_lower_port, nose_outline_lower_starboard):
-        _loop_segments(segments, outline, close=False)
-        for point in outline:
-            segments.append((point, ventral_forward_spine))
-            segments.append((point, ventral_prow))
+    nose_outline_lower = (
+        nose_outline_lower_port
+        + [Vector3(0.0, 1.0, 12.2)]
+        + [_mirror_vector(point) for point in reversed(nose_outline_lower_port)]
+    )
+    _loop_segments(segments, nose_outline_lower)
+    for point in nose_outline_lower:
+        segments.append((point, ventral_forward_spine))
+        segments.append((point, ventral_prow))
 
     return segments
 
