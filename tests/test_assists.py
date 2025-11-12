@@ -80,7 +80,7 @@ def test_auto_throttle_holds_target_speed() -> None:
     ship.control.roll_input = 0.0
     ship.kinematics.velocity = Vector3()
     update_ship_flight(ship, 0.1)
-    forward_speed = ship.kinematics.velocity.dot(ship.kinematics.forward())
+    forward_speed = ship.kinematics.velocity.dot(ship.kinematics.basis.forward)
     assert forward_speed > 0.0
 
     ship.control.throttle = 1.0
@@ -89,7 +89,7 @@ def test_auto_throttle_holds_target_speed() -> None:
 
     ship.control.throttle = 0.0
     update_ship_flight(ship, 0.1)
-    held_speed = ship.kinematics.velocity.dot(ship.kinematics.forward())
+    held_speed = ship.kinematics.velocity.dot(ship.kinematics.basis.forward)
     assert held_speed > forward_speed
 
 

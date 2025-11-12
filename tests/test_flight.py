@@ -68,7 +68,7 @@ def _advance(ship: Ship, dt: float, steps: int) -> None:
 
 
 def _forward_speed(ship: Ship) -> float:
-    forward = ship.kinematics.forward()
+    forward = ship.kinematics.basis.forward
     return ship.kinematics.velocity.dot(forward)
 
 

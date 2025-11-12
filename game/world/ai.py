@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import math
-from typing import Dict, List, Optional, TYPE_CHECKING
+from typing import Dict, List, Optional, Sequence, TYPE_CHECKING
 
 from pygame.math import Vector3
 
@@ -27,6 +27,10 @@ _SENTRY_RADII: dict[str, float] = {
     "capital": 2500.0,
 }
 
+_NEAR_DISTANCE = 2000.0
+_MID_DISTANCE = 6000.0
+_FAR_SENTINEL_DISTANCE = 6000.0
+
 class ShipAI:
     """Base AI controller that manages throttle and weapon firing."""
 
@@ -44,6 +48,12 @@ class ShipAI:
         self._disengage_timer: float = 0.0
         self._disengage_chance: float = 1.0
         self._notice_chances: Dict[int, float] = {}
+        self._phase_seed: int = id(ship) & 0xFFFF
+        self._tick_interval: int = 1
+        self._tick_phase: int = 0
+        self._last_bucket: str = "near"
+        self._pending_post_update: bool = False
+        self._last_update_frame: int = -1
 
     # ------------------------------------------------------------------
     # Public hooks
@@ -139,13 +149,68 @@ class ShipAI:
         self.ship.control.roll_input = 0.0
         self.ship.control.look_delta = Vector3()
 
+    def _distance_to_points(self, points: Sequence[Vector3]) -> float:
+        if not points:
+            return 0.0
+        position = self.ship.kinematics.position
+        return min(position.distance_to(point) for point in points)
+
+    def classify_bucket(self, reference_points: Sequence[Vector3]) -> tuple[str, float]:
+        distance = self._distance_to_points(reference_points)
+        bucket = "near"
+        if distance > _MID_DISTANCE:
+            bucket = "far"
+        elif distance > _NEAR_DISTANCE:
+            bucket = "mid"
+        if self._sentry_radius > 0.0 and distance > max(self._sentry_radius * 1.5, _FAR_SENTINEL_DISTANCE):
+            bucket = "sentry"
+        if self.target and self.target.is_alive():
+            target_distance = self.ship.kinematics.position.distance_to(self.target.kinematics.position)
+            if target_distance <= _NEAR_DISTANCE:
+                bucket = "near"
+            elif target_distance <= _MID_DISTANCE and bucket == "far":
+                bucket = "mid"
+        return bucket, distance
+
+    def _interval_for_bucket(self, bucket: str) -> int:
+        if bucket == "near":
+            return 1
+        if bucket == "mid":
+            return 4
+        if bucket == "sentry":
+            return 24
+        return 12
+
+    def should_update(self, frame: int, bucket: str) -> bool:
+        interval = self._interval_for_bucket(bucket)
+        bucket_changed = bucket != self._last_bucket or interval != self._tick_interval
+        if bucket_changed:
+            self._tick_interval = interval
+            self._tick_phase = self._phase_seed % max(1, interval)
+            self._last_bucket = bucket
+            return True
+        if interval <= 1:
+            return True
+        return (frame + self._tick_phase) % interval == 0
+
+    def mark_updated(self, frame: int) -> None:
+        self._pending_post_update = True
+        self._last_update_frame = frame
+
+    def consume_post_update(self) -> bool:
+        if not self._pending_post_update:
+            return False
+        self._pending_post_update = False
+        return True
+
     def _set_look_direction(self, direction: Vector3, strength: float = 1.0) -> None:
         if direction.length_squared() == 0:
             return
         desired = direction.normalize()
-        forward = self.ship.kinematics.forward()
-        right = self.ship.kinematics.right()
-        up = self.ship.kinematics.up()
+        basis = self.ship.kinematics.basis
+        forward = basis.forward
+        right = basis.right
+        up = basis.up
         local_x = desired.dot(right)
         local_y = desired.dot(up)
         look = Vector3(-local_y, local_x, 0.0) * strength
