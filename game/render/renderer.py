@@ -1063,15 +1063,18 @@ def _build_maul_wireframe() -> list[tuple[Vector3, Vector3]]:
 def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
     segments: list[tuple[Vector3, Vector3]] = []
 
-    prow = Vector3(0.0, 6.0, 9.5)
-    bridge = Vector3(0.0, 8.0, 2.4)
-    stern = Vector3(0.0, -4.0, -9.0)
+    prow = Vector3(0.0, 5.8, 9.8)
+    bridge = Vector3(0.0, 7.6, 3.2)
+    tower = Vector3(0.0, 8.8, -1.5)
+    stern = Vector3(0.0, -3.4, -9.0)
+    engine_core = Vector3(0.0, -2.2, -7.2)
 
     port_hull = [
-        Vector3(-6.5, 2.5, 6.4),
-        Vector3(-7.2, 2.2, 2.0),
-        Vector3(-5.6, 2.0, -4.5),
-        Vector3(-4.2, 1.6, -8.2),
+        Vector3(-5.6, 2.6, 7.6),
+        Vector3(-6.6, 2.2, 4.2),
+        Vector3(-6.8, 2.0, 0.6),
+        Vector3(-6.2, 1.6, -3.8),
+        Vector3(-4.8, 1.2, -8.6),
     ]
 
     for point in port_hull:
@@ -1083,29 +1086,83 @@ def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
         segments.append((mirrored, stern))
         segments.append((point, bridge))
         segments.append((mirrored, bridge))
+        segments.append((point, engine_core))
+        segments.append((mirrored, engine_core))
 
-    dorsal_spine = [
-        Vector3(-2.0, 9.0, -1.0),
-        Vector3(0.0, 9.4, -3.0),
-        Vector3(2.0, 9.0, -1.0),
-        Vector3(0.0, 8.6, 1.8),
+    forward_buttress = [
+        Vector3(-3.2, 3.6, 8.4),
+        Vector3(-4.0, 3.4, 6.0),
+        Vector3(-3.6, 3.0, 4.0),
     ]
-    _loop_segments(segments, dorsal_spine)
-    for point in dorsal_spine:
+    _loop_segments(segments, forward_buttress)
+    for point in forward_buttress:
+        mirrored = _mirror_vector(point)
+        segments.append((point, prow))
+        segments.append((mirrored, prow))
+        segments.append((point, bridge))
+        segments.append((mirrored, bridge))
+
+    dorsal_command = [
+        Vector3(-1.6, 8.6, 5.2),
+        Vector3(0.0, 9.6, 2.6),
+        Vector3(1.6, 8.6, 5.2),
+        Vector3(0.0, 8.2, 7.2),
+    ]
+    _loop_segments(segments, dorsal_command)
+    for point in dorsal_command:
         segments.append((point, bridge))
 
-    keel = [
-        Vector3(-3.0, -5.5, 4.0),
-        Vector3(0.0, -6.0, 0.0),
-        Vector3(3.0, -5.5, 4.0),
-        Vector3(0.0, -4.8, 6.8),
+    tower_ridge = [
+        Vector3(-1.4, 9.2, 0.2),
+        Vector3(0.0, 9.8, -2.4),
+        Vector3(1.4, 9.2, 0.2),
+        Vector3(0.0, 8.8, 1.6),
     ]
-    _loop_segments(segments, keel)
-    for point in keel:
+    _loop_segments(segments, tower_ridge)
+    for point in tower_ridge:
+        segments.append((point, tower))
+
+    ventral_spine = [
+        Vector3(-2.4, -4.8, 3.6),
+        Vector3(0.0, -5.4, 1.2),
+        Vector3(2.4, -4.8, 3.6),
+        Vector3(0.0, -4.0, 5.6),
+    ]
+    _loop_segments(segments, ventral_spine)
+    for point in ventral_spine:
+        segments.append((point, engine_core))
+
+    engine_nacelle = [
+        Vector3(-5.0, 0.8, -5.4),
+        Vector3(-6.4, 0.2, -7.4),
+        Vector3(-5.6, -0.4, -8.8),
+        Vector3(-4.2, 0.0, -7.6),
+    ]
+    _loop_segments(segments, engine_nacelle)
+    for point in engine_nacelle:
+        mirrored = _mirror_vector(point)
+        segments.append((point, mirrored))
+        segments.append((point, engine_core))
+        segments.append((mirrored, engine_core))
         segments.append((point, stern))
+        segments.append((mirrored, stern))
+
+    exhaust_ring = [
+        Vector3(-3.6, -0.6, -9.0),
+        Vector3(-4.4, -0.6, -9.4),
+        Vector3(-3.8, -0.2, -9.8),
+    ]
+    _loop_segments(segments, exhaust_ring)
+    for point in exhaust_ring:
+        mirrored = _mirror_vector(point)
+        segments.append((point, mirrored))
+        segments.append((point, stern))
+        segments.append((mirrored, stern))
 
     segments.append((prow, bridge))
-    segments.append((bridge, stern))
+    segments.append((bridge, tower))
+    segments.append((tower, engine_core))
+    segments.append((engine_core, stern))
 
     return segments
 
