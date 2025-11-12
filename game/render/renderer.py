@@ -26,38 +26,6 @@ ENEMY_COLOR = (255, 80, 100)
 PROJECTILE_COLOR = (255, 200, 80)
 MISSILE_COLOR = (255, 140, 60)
 
-# Model scale adjustments applied to the generic Escort and Line silhouettes.
-# These values are derived from the desired hull proportions where Line ships are
-# roughly half the overall size of Outposts and Escorts are a quarter of those
-# Line ships.  The per-axis scale preserves the existing lengthwise detail while
-# compressing the lateral and vertical spans to the intended class ratios.
-ESCORT_MODEL_SCALE = Vector3(0.825646, 0.370228, 0.902174)
-LINE_MODEL_SCALE = Vector3(0.949703, 0.507857, 1.009119)
-
-
-def _apply_scale(vector: Vector3, scale: Vector3) -> Vector3:
-    """Return a new vector scaled per-axis by ``scale``."""
-
-    return Vector3(vector.x * scale.x, vector.y * scale.y, vector.z * scale.z)
-
-
-def _scale_segments(
-    segments: list[tuple[Vector3, Vector3]],
-    scale: Vector3,
-) -> list[tuple[Vector3, Vector3]]:
-    """Apply a non-uniform scale to a list of wireframe segments."""
-
-    if (
-        math.isclose(scale.x, 1.0, rel_tol=1e-6, abs_tol=1e-6)
-        and math.isclose(scale.y, 1.0, rel_tol=1e-6, abs_tol=1e-6)
-        and math.isclose(scale.z, 1.0, rel_tol=1e-6, abs_tol=1e-6)
-    ):
-        return list(segments)
-    scaled: list[tuple[Vector3, Vector3]] = []
-    for start, end in segments:
-        scaled.append((_apply_scale(start, scale), _apply_scale(end, scale)))
-    return scaled
-
 # Engine layout presets by ship size. These are expressed using the same
 # lightweight local-space units as the wireframe definitions and roughly align
 # with common tail geometries for each hull class.
@@ -67,18 +35,18 @@ ENGINE_LAYOUTS: dict[str, list[Vector3]] = {
         Vector3(0.65, -0.12, -2.1),
     ],
     "Escort": [
-        _apply_scale(Vector3(-28.0, -6.0, -58.0), ESCORT_MODEL_SCALE),
-        _apply_scale(Vector3(28.0, -6.0, -58.0), ESCORT_MODEL_SCALE),
-        _apply_scale(Vector3(-20.0, 4.0, -46.0), ESCORT_MODEL_SCALE),
-        _apply_scale(Vector3(20.0, 4.0, -46.0), ESCORT_MODEL_SCALE),
+        Vector3(-28.0, -6.0, -58.0),
+        Vector3(28.0, -6.0, -58.0),
+        Vector3(-20.0, 4.0, -46.0),
+        Vector3(20.0, 4.0, -46.0),
     ],
     "Line": [
-        _apply_scale(Vector3(-92.0, -18.0, -238.0), LINE_MODEL_SCALE),
-        _apply_scale(Vector3(92.0, -18.0, -238.0), LINE_MODEL_SCALE),
-        _apply_scale(Vector3(-92.0, 18.0, -238.0), LINE_MODEL_SCALE),
-        _apply_scale(Vector3(92.0, 18.0, -238.0), LINE_MODEL_SCALE),
-        _apply_scale(Vector3(-52.0, -10.0, -212.0), LINE_MODEL_SCALE),
-        _apply_scale(Vector3(52.0, -10.0, -212.0), LINE_MODEL_SCALE),
+        Vector3(-92.0, -18.0, -238.0),
+        Vector3(92.0, -18.0, -238.0),
+        Vector3(-92.0, 18.0, -238.0),
+        Vector3(92.0, 18.0, -238.0),
+        Vector3(-52.0, -10.0, -212.0),
+        Vector3(52.0, -10.0, -212.0),
     ],
     "Outpost": [],
 }
@@ -576,7 +544,7 @@ def _build_line_wireframe() -> list[tuple[Vector3, Vector3]]:
             hull_anchor = hull_sections[0][hull_anchor_index % ring_sides]
             segments.append((center, hull_anchor))
 
-    return _scale_segments(segments, LINE_MODEL_SCALE)
+    return segments
 
 
 def _build_escort_wireframe() -> list[tuple[Vector3, Vector3]]:
@@ -679,7 +647,7 @@ def _build_escort_wireframe() -> list[tuple[Vector3, Vector3]]:
     _loop_segments(segments, dorsal_fins)
     segments.append((dorsal_fins[1], dorsal_line[len(dorsal_line) // 2]))
 
-    return _scale_segments(segments, ESCORT_MODEL_SCALE)
+    return segments
 
 
 def _build_viper_mk_ii_wireframe() -> list[tuple[Vector3, Vector3]]:
