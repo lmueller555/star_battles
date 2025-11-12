@@ -996,8 +996,8 @@ def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
         center_z=3.1,
         half_width_x=3.05,
         half_depth_z=1.25,
-        vertical_rake=0.22,
-        vertical_crown=0.28,
+        vertical_rake=0.0,
+        vertical_crown=0.0,
     )
     _loop_segments(segments, prow_upper_loop)
 
@@ -1007,8 +1007,8 @@ def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
         center_z=3.0,
         half_width_x=2.85,
         half_depth_z=1.15,
-        vertical_rake=0.18,
-        vertical_crown=-0.12,
+        vertical_rake=0.0,
+        vertical_crown=0.0,
     )
     _loop_segments(segments, prow_lower_loop)
 
@@ -1018,8 +1018,8 @@ def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
         center_z=2.2,
         half_width_x=2.25,
         half_depth_z=0.9,
-        vertical_rake=0.18,
-        vertical_crown=0.22,
+        vertical_rake=0.0,
+        vertical_crown=0.0,
     )
     _loop_segments(segments, neck_upper_loop)
 
@@ -1029,8 +1029,8 @@ def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
         center_z=2.1,
         half_width_x=2.05,
         half_depth_z=0.85,
-        vertical_rake=0.16,
-        vertical_crown=-0.1,
+        vertical_rake=0.0,
+        vertical_crown=0.0,
     )
     _loop_segments(segments, neck_lower_loop)
 
@@ -1098,11 +1098,6 @@ def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
     ventral_spine = [prow_chin, ventral_neck, Vector3(0.0, -0.2, 1.2), ventral_mid, stern_keel]
     for start, end in zip(ventral_spine, ventral_spine[1:]):
         segments.append((start, end))
-
-    for loop in (neck_upper_loop, mid_upper_loop):
-        midpoint = Vector3(0.0, loop[0].y, loop[0].z)
-        segments.append((midpoint, Vector3(loop[1].x, loop[1].y, loop[1].z)))
-        segments.append((midpoint, Vector3(-loop[1].x, loop[1].y, loop[1].z)))
 
     module_ridges = [
         Vector3(-1.25, 1.5, 0.9),
