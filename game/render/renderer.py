@@ -1228,223 +1228,186 @@ def _build_maul_wireframe() -> list[tuple[Vector3, Vector3]]:
     return segments
 
 
+
 def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
     segments: list[tuple[Vector3, Vector3]] = []
 
-    prow = Vector3(0.0, 5.6, 11.2)
-    neck = Vector3(0.0, 6.4, 8.6)
-    bridge = Vector3(0.0, 7.6, 5.6)
-    tower = Vector3(0.0, 8.4, 2.2)
-    reactor = Vector3(0.0, 6.2, -1.8)
-    engine_spine = Vector3(0.0, 4.6, -5.2)
-    stern = Vector3(0.0, 2.4, -10.4)
+    prow = Vector3(0.0, 4.6, 12.4)
+    forward_spine = Vector3(0.0, 4.8, 9.8)
+    mid_spine = Vector3(0.0, 5.0, 6.4)
+    brace_spine = Vector3(0.0, 4.4, 3.0)
+    reactor = Vector3(0.0, 3.8, -2.2)
+    engine_core = Vector3(0.0, 3.4, -5.6)
+    engine_tail = Vector3(0.0, 3.2, -8.8)
+    stern = Vector3(0.0, 2.8, -12.0)
 
     port_outer_hull = [
-        Vector3(-1.1, 4.8, 11.2),
-        Vector3(-2.0, 4.6, 10.6),
-        Vector3(-3.0, 4.2, 9.6),
-        Vector3(-4.2, 3.8, 8.2),
-        Vector3(-4.8, 3.4, 6.8),
-        Vector3(-5.2, 3.0, 5.0),
-        Vector3(-5.4, 2.6, 3.2),
-        Vector3(-5.4, 2.4, 1.2),
-        Vector3(-5.2, 2.0, -1.4),
-        Vector3(-5.0, 1.8, -3.6),
-        Vector3(-4.6, 1.8, -6.0),
-        Vector3(-3.8, 1.8, -8.2),
-        Vector3(-2.8, 2.0, -10.0),
+        Vector3(-5.2, 3.4, 12.4),
+        Vector3(-5.6, 3.2, 11.0),
+        Vector3(-6.1, 3.0, 9.2),
+        Vector3(-6.5, 2.8, 7.2),
+        Vector3(-6.9, 2.4, 5.0),
+        Vector3(-7.0, 2.2, 3.0),
+        Vector3(-6.8, 2.0, 1.0),
+        Vector3(-6.5, 1.8, -1.2),
+        Vector3(-6.2, 1.7, -3.6),
+        Vector3(-5.9, 1.8, -6.0),
+        Vector3(-5.6, 2.0, -8.6),
+        Vector3(-5.3, 2.2, -11.2),
     ]
     port_inner_hull = [
-        Vector3(-0.6, 5.2, 10.8),
-        Vector3(-1.4, 5.0, 9.8),
-        Vector3(-2.2, 4.8, 8.8),
-        Vector3(-2.8, 4.6, 7.6),
-        Vector3(-3.2, 4.2, 6.2),
-        Vector3(-3.6, 3.8, 4.6),
-        Vector3(-3.6, 3.4, 2.8),
-        Vector3(-3.4, 3.0, 1.2),
-        Vector3(-3.4, 2.8, -0.8),
-        Vector3(-3.2, 2.6, -2.8),
-        Vector3(-2.8, 2.4, -4.8),
-        Vector3(-2.4, 2.4, -6.8),
-        Vector3(-1.8, 2.6, -8.6),
+        Vector3(-2.6, 3.6, 12.0),
+        Vector3(-2.9, 3.4, 10.6),
+        Vector3(-3.2, 3.2, 9.0),
+        Vector3(-3.4, 3.0, 7.4),
+        Vector3(-3.5, 2.8, 5.6),
+        Vector3(-3.4, 2.6, 3.8),
+        Vector3(-3.3, 2.4, 2.0),
+        Vector3(-3.1, 2.2, 0.0),
+        Vector3(-3.0, 2.0, -2.2),
+        Vector3(-2.9, 2.0, -4.6),
+        Vector3(-2.8, 2.2, -7.2),
+        Vector3(-2.8, 2.4, -9.8),
     ]
 
     _loop_segments(segments, port_outer_hull, close=False)
     _loop_segments(segments, port_inner_hull, close=False)
 
-    anchors = [
+    mirrored_outer_hull = [_mirror_vector(point) for point in port_outer_hull]
+    mirrored_inner_hull = [_mirror_vector(point) for point in port_inner_hull]
+    _loop_segments(segments, mirrored_outer_hull, close=False)
+    _loop_segments(segments, mirrored_inner_hull, close=False)
+
+    hull_anchor_points = [
         prow,
         prow,
-        neck,
-        neck,
-        bridge,
-        bridge,
-        tower,
-        tower,
+        forward_spine,
+        forward_spine,
+        mid_spine,
+        mid_spine,
+        brace_spine,
+        brace_spine,
         reactor,
         reactor,
-        engine_spine,
-        engine_spine,
-        stern,
+        engine_core,
+        engine_tail,
     ]
 
-    for index, (outer, inner) in enumerate(zip(port_outer_hull, port_inner_hull)):
-        mirrored_outer = _mirror_vector(outer)
-        mirrored_inner = _mirror_vector(inner)
+    for index in range(len(port_outer_hull)):
+        outer = port_outer_hull[index]
+        inner = port_inner_hull[index]
+        mirrored_outer = mirrored_outer_hull[index]
+        mirrored_inner = mirrored_inner_hull[index]
 
         segments.append((outer, inner))
         segments.append((mirrored_outer, mirrored_inner))
+        segments.append((inner, mirrored_inner))
 
-        if index in {0, 3, 6, 9, 12}:
-            segments.append((outer, mirrored_outer))
-        else:
-            segments.append((inner, mirrored_inner))
-
-        anchor = anchors[index]
+        anchor = hull_anchor_points[index]
         segments.append((inner, anchor))
         segments.append((mirrored_inner, anchor))
 
-        if index >= len(port_outer_hull) - 3:
+        if index >= len(port_outer_hull) - 2:
             segments.append((outer, stern))
             segments.append((mirrored_outer, stern))
 
     central_spine = [
-        Vector3(0.0, 6.0, 11.0),
-        Vector3(0.0, 6.8, 9.0),
-        Vector3(0.0, 7.4, 6.6),
-        Vector3(0.0, 7.8, 3.4),
-        Vector3(0.0, 7.2, 0.6),
-        Vector3(0.0, 6.4, -2.4),
-        Vector3(0.0, 5.0, -5.4),
+        prow,
+        forward_spine,
+        mid_spine,
+        brace_spine,
+        reactor,
+        engine_core,
+        engine_tail,
+        stern,
     ]
     _loop_segments(segments, central_spine, close=False)
-    segments.append((central_spine[0], prow))
-    segments.append((central_spine[1], neck))
-    segments.append((central_spine[2], bridge))
-    segments.append((central_spine[3], tower))
-    segments.append((central_spine[5], reactor))
-    segments.append((central_spine[-1], engine_spine))
-    segments.append((central_spine[-1], stern))
 
-    spine_links = {
-        1: central_spine[1],
-        2: central_spine[2],
-        3: central_spine[2],
-        4: central_spine[3],
-        5: central_spine[3],
-        7: central_spine[4],
-        8: central_spine[4],
-        9: central_spine[5],
-        10: central_spine[5],
-    }
-    for index, inner in enumerate(port_inner_hull):
-        if index not in spine_links:
-            continue
-        spine_point = spine_links[index]
-        segments.append((inner, spine_point))
-        segments.append((_mirror_vector(inner), spine_point))
-
-    forward_canopy_port = [
-        Vector3(-1.6, 5.4, 9.6),
-        Vector3(-2.4, 5.0, 8.6),
-        Vector3(-1.6, 4.8, 7.4),
+    cross_braces = [
+        (6.4, 3.2, 2.6),
+        (1.2, 2.8, 2.2),
     ]
-    forward_canopy = (
-        forward_canopy_port
-        + [Vector3(0.0, 5.6, 10.4)]
-        + [_mirror_vector(point) for point in reversed(forward_canopy_port)]
-    )
-    _loop_segments(segments, forward_canopy)
-    for point in forward_canopy:
-        segments.append((point, neck))
+    for z_position, upper_y, lower_y in cross_braces:
+        port_upper = Vector3(-3.2, upper_y, z_position)
+        starboard_upper = _mirror_vector(port_upper)
+        port_lower = Vector3(-3.0, lower_y, z_position - 0.4)
+        starboard_lower = _mirror_vector(port_lower)
 
-    command_platform_port = [
-        Vector3(-2.0, 7.8, 5.8),
-        Vector3(-1.4, 8.4, 4.2),
-        Vector3(-1.0, 8.2, 3.2),
-    ]
-    command_platform = (
-        command_platform_port
-        + [Vector3(0.0, 7.8, 6.8)]
-        + [_mirror_vector(point) for point in reversed(command_platform_port)]
-    )
-    _loop_segments(segments, command_platform)
-    for point in command_platform:
-        segments.append((point, bridge))
+        brace_loop = [
+            port_upper,
+            starboard_upper,
+            starboard_lower,
+            port_lower,
+        ]
+        _loop_segments(segments, brace_loop)
+        segments.append((port_upper, port_inner_hull[3]))
+        segments.append((starboard_upper, mirrored_inner_hull[3]))
+        segments.append((port_lower, port_inner_hull[6]))
+        segments.append((starboard_lower, mirrored_inner_hull[6]))
 
-    tower_fin_port = [
-        Vector3(-1.4, 8.8, 2.6),
-        Vector3(-1.0, 9.2, 0.6),
+    vane_pairs = [
+        (Vector3(-6.6, 1.8, -0.8), Vector3(-8.2, 1.6, -1.4)),
+        (Vector3(-6.8, 1.7, -2.2), Vector3(-8.4, 1.5, -3.0)),
+        (Vector3(-6.9, 1.6, -3.6), Vector3(-8.5, 1.4, -4.6)),
+        (Vector3(-6.7, 1.6, -5.2), Vector3(-8.1, 1.4, -6.6)),
     ]
-    tower_fin = (
-        tower_fin_port
-        + [Vector3(0.0, 8.6, 3.4)]
-        + [_mirror_vector(point) for point in reversed(tower_fin_port)]
-    )
-    _loop_segments(segments, tower_fin)
-    for point in tower_fin:
-        segments.append((point, tower))
+    for base, tip in vane_pairs:
+        segments.append((base, tip))
+        mirrored_base = _mirror_vector(base)
+        mirrored_tip = _mirror_vector(tip)
+        segments.append((mirrored_base, mirrored_tip))
 
-    engineering_struts_port = [
-        Vector3(-3.6, 3.2, 0.4),
-        Vector3(-3.8, 2.8, -1.6),
-        Vector3(-3.4, 2.6, -3.6),
-    ]
-    engineering_struts = (
-        engineering_struts_port
-        + [_mirror_vector(point) for point in reversed(engineering_struts_port)]
-    )
-    _loop_segments(segments, engineering_struts)
-    for point in engineering_struts:
-        segments.append((point, reactor))
+    engine_rings_z = [-6.0, -7.2, -8.6]
+    for ring_z in engine_rings_z:
+        ring = [
+            Vector3(-1.4, 3.4, ring_z),
+            Vector3(-0.8, 3.8, ring_z),
+            Vector3(0.0, 4.0, ring_z),
+            Vector3(0.8, 3.8, ring_z),
+            Vector3(1.4, 3.4, ring_z),
+            Vector3(0.0, 3.0, ring_z),
+        ]
+        _loop_segments(segments, ring)
+        for point in ring:
+            anchor = engine_core if ring_z > -7.0 else engine_tail
+            segments.append((point, anchor))
 
-    engine_pod_port = [
-        Vector3(-4.6, 1.8, -5.4),
-        Vector3(-5.6, 1.6, -6.8),
-        Vector3(-5.2, 1.4, -8.6),
-        Vector3(-4.0, 1.4, -9.2),
-        Vector3(-3.4, 1.6, -7.6),
-        Vector3(-3.8, 1.8, -6.2),
+    aft_block_port = [
+        Vector3(-4.6, 2.2, -5.8),
+        Vector3(-5.2, 2.0, -7.4),
+        Vector3(-4.8, 2.2, -9.4),
+        Vector3(-4.0, 2.4, -7.6),
     ]
-    engine_pod = (
-        engine_pod_port
-        + [_mirror_vector(point) for point in reversed(engine_pod_port)]
-    )
-    _loop_segments(segments, engine_pod)
-    for point in engine_pod:
-        segments.append((point, engine_spine))
+    aft_block = aft_block_port + [_mirror_vector(point) for point in reversed(aft_block_port)]
+    _loop_segments(segments, aft_block)
+    for point in aft_block:
+        segments.append((point, engine_core))
+
+    exhaust_band = [
+        Vector3(-2.2, 2.6, -11.0),
+        Vector3(-1.2, 2.4, -11.6),
+        Vector3(0.0, 2.2, -11.8),
+        Vector3(1.2, 2.4, -11.6),
+        Vector3(2.2, 2.6, -11.0),
+        Vector3(0.0, 3.0, -10.8),
+    ]
+    _loop_segments(segments, exhaust_band)
+    for point in exhaust_band:
         segments.append((point, stern))
 
-    exhaust_collar_port = [
-        Vector3(-2.8, 0.8, -10.2),
-        Vector3(-3.6, 0.6, -10.8),
-        Vector3(-2.4, 0.4, -11.2),
+    nose_outline_port = [
+        Vector3(-3.2, 3.6, 12.2),
+        Vector3(-4.0, 3.4, 11.6),
+        Vector3(-3.4, 3.2, 10.6),
     ]
-    exhaust_collar = (
-        exhaust_collar_port
-        + [_mirror_vector(point) for point in reversed(exhaust_collar_port)]
+    nose_outline = (
+        nose_outline_port
+        + [Vector3(0.0, 4.2, 12.4)]
+        + [_mirror_vector(point) for point in reversed(nose_outline_port)]
     )
-    _loop_segments(segments, exhaust_collar)
-    for point in exhaust_collar:
-        segments.append((point, stern))
-
-    keel_profile = [
-        Vector3(-1.6, 3.6, 2.8),
-        Vector3(0.0, 3.0, 1.2),
-        Vector3(1.6, 3.6, 2.8),
-        Vector3(0.0, 4.0, 4.2),
-    ]
-    _loop_segments(segments, keel_profile)
-    for point in keel_profile:
-        segments.append((point, reactor))
-
-    segments.append((prow, neck))
-    segments.append((neck, bridge))
-    segments.append((bridge, tower))
-    segments.append((tower, reactor))
-    segments.append((reactor, engine_spine))
-    segments.append((engine_spine, stern))
+    _loop_segments(segments, nose_outline)
+    for point in nose_outline:
+        segments.append((point, forward_spine))
 
     return segments
 
