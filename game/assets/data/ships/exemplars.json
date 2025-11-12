@@ -1206,10 +1206,10 @@
     "name": "Vanir Command",
     "role": "Command",
     "size": "Line",
-    "level_requirement": 18,
+    "level_requirement": 1,
     "faction": "Colonial Fleet",
-    "counterpart": "Cylon Siege Cruiser",
-    "upgrade_to": null,
+    "counterpart": "Hel",
+    "upgrade_to": "advanced_vanir",
     "stats": {
       "hull_points": 3500,
       "hull_recovery_per_sec": 19.4,
@@ -1337,12 +1337,7 @@
     ],
     "economy": {
       "purchase": {
-        "tylium": 23200,
-        "merits": 260
-      },
-      "upgrade": {
-        "tylium": 28800,
-        "level": 22
+        "tylium": 2000000
       },
       "operating": {
         "boost": 5.4,
@@ -1370,12 +1365,13 @@
       }
     },
     "role_bonuses": [
-      "Command node reduces fleet transponder costs by 15%."
+      "Command bonus reduces transponder power usage by 150."
     ],
     "traits": [
-      "Twin-hull design anchors firing lines and accepts missile-boat loadouts."
+      "Heavy command line ship with expansive energy and computer budgets for EW/support builds.",
+      "Plays as a mobile anchor: slow handling but durable with long-range sensors; excels when screened by Escorts and Strikes."
     ],
-    "notes": "Heavy command line ship that serves as a mobile operations hub."
+    "notes": "Mobile operations hub built to field missile and energy-support loadouts while remaining tough on the line."
   },
   {
     "id": "brimir_carrier",
