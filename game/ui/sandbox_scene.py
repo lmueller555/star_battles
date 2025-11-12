@@ -91,6 +91,19 @@ class SandboxScene(Scene):
         self._mouse_freelook_active: bool = False
         self._mouse_freelook_dragging: bool = False
 
+    def _equip_ship(self, ship: Ship) -> None:
+        if not self.content:
+            return
+        if (
+            self.player
+            and ship is not self.player
+            and ship.frame.size.lower() == "strike"
+            and self.player.frame.size.lower() == "strike"
+        ):
+            ship.copy_loadout_from(self.player)
+        else:
+            ship.apply_default_loadout(self.content)
+
     def on_enter(self, **kwargs) -> None:
         self.content = kwargs["content"]
         self.input = kwargs["input"]
@@ -137,7 +150,7 @@ class SandboxScene(Scene):
                         break
                     frame = self.content.ships.get(primary_enemy_spawn[1])
                     ship = Ship(frame, team=primary_enemy_spawn[0])
-                    ship.apply_default_loadout(self.content)
+                    self._equip_ship(ship)
                     ship.kinematics.position = Vector3(primary_enemy_spawn[2]) * SECTOR_SCALE + offset
                     ship.kinematics.velocity = Vector3(primary_enemy_spawn[3])
                     ai = create_ai_for_ship(ship)
@@ -164,7 +177,7 @@ class SandboxScene(Scene):
                         ship = Ship(frame, team=team)
                         ship.kinematics.position = Vector3(position) * SECTOR_SCALE + offset
                         ship.kinematics.velocity = Vector3(velocity)
-                        ship.apply_default_loadout(self.content)
+                        self._equip_ship(ship)
                         ai = create_ai_for_ship(ship)
                         self.world.add_ship(ship, ai=ai)
 
@@ -178,7 +191,7 @@ class SandboxScene(Scene):
                     outpost = Ship(frame, team=team)
                     outpost.kinematics.position = position
                     outpost.kinematics.velocity = Vector3(0.0, 0.0, 0.0)
-                    outpost.apply_default_loadout(self.content)
+                    self._equip_ship(outpost)
                     self.world.add_ship(outpost)
 
                 if self.player:

@@ -426,6 +426,40 @@ class Ship:
             except KeyError:
                 continue
 
+    def copy_loadout_from(self, source: "Ship") -> None:
+        """Mirror the modules and weapons installed on another ship."""
+
+        if source is self:
+            return
+
+        # Reset any existing equipment before copying.
+        self.modules_by_slot.clear()
+        self.module_levels.clear()
+        self._module_stat_cache.clear()
+        self._recompute_stats()
+        for mount in self.mounts:
+            mount.weapon_id = None
+            mount.level = 1
+
+        # Copy installed modules, preserving their upgrade levels.
+        for slot_type, modules in source.modules_by_slot.items():
+            levels = source.module_levels.get(slot_type, [])
+            for index, module in enumerate(modules):
+                level = levels[index] if index < len(levels) else 1
+                self.equip_module(module, level=level)
+
+        # Mirror weapon assignments by hardpoint identifier.
+        source_mounts = {mount.hardpoint.id: mount for mount in source.mounts}
+        for mount in self.mounts:
+            source_mount = source_mounts.get(mount.hardpoint.id)
+            if not source_mount or not source_mount.weapon_id:
+                continue
+            try:
+                self.assign_weapon(mount.hardpoint.id, source_mount.weapon_id)
+            except KeyError:
+                continue
+            mount.level = source_mount.level
+
     def module_stat_total(self, key: str) -> float:
         return self._module_stat_cache.get(key, 0.0)
 
