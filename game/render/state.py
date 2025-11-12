@@ -63,6 +63,7 @@ class ProjectedVertexCache:
     world_revision: int = -1
     vertices: list[tuple[float, float]] = field(default_factory=list)
     visibility: list[bool] = field(default_factory=list)
+    world_vertices: list[Vector3] = field(default_factory=list)
 
     def update(
         self,
@@ -70,11 +71,13 @@ class ProjectedVertexCache:
         world_revision: int,
         vertices: Sequence[tuple[float, float]],
         visibility: Sequence[bool],
+        world_vertices: Sequence[Vector3],
     ) -> None:
         self.camera_revision = camera_revision
         self.world_revision = world_revision
         self.vertices = list(vertices)
         self.visibility = list(visibility)
+        self.world_vertices = [Vector3(vector) for vector in world_vertices]
 
 
 @dataclass
