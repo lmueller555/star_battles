@@ -338,6 +338,177 @@ Clarify whether FTL Cost is flat per jump (as shown) or per-LY in your rule set.
 
 If an Advanced Raptor FR exists in your data, provide its pane so we can add upgrade deltas (+Δ) for any blue stats/slots.
 
+Strike — Viper Mk III (Role: Multi-Role)
+Identity
+
+
+Class / Role: Strike · Multi-Role
+
+
+Level Requirement: 1
+
+
+Counterpart / Upgrade To: TBD
+
+
+Economy
+
+
+Purchase Cost: 23,000 (confirm currency from icon)
+
+
+Operating: Boost Cost 0.5 Tyl/s, FTL Cost 30 Tyl
+
+
+Upgrade Cost (→ Advanced): TBD
+
+
+Equipment Slots (weight: Light)
+
+
+Weapons: 3
+
+
+Hull: 3
+
+
+Engine: 3
+
+
+Computer: 2
+
+
+Gun / Launcher / Defensive / Special: 0 / 0 / 0 / 0
+
+
+Hull / Survivability
+
+
+Hull Points: 515
+
+
+Hull Recovery: 3.5 /s
+
+
+Durability: 4,500
+
+
+Armor Value: 5
+
+
+Critical Defense: 80
+
+
+Engine / Mobility
+
+
+Speed: 55 m/s
+
+
+Boost Speed: 100 m/s
+
+
+Boost Cost: 0.5 Tyl/s
+
+
+Acceleration: 14 m/s²
+
+
+Boost Acceleration: 4.5 m/s²
+
+
+Inertial Compensation: 100 m/s
+
+
+Avoidance: 510
+
+
+Avoidance Fading: 0.75
+
+
+Pitch/Yaw Speed: 51 / 51 deg/s
+
+
+Pitch/Yaw Acceleration: 55 / 55 deg/s²
+
+
+Roll Speed: 180 deg/s
+
+
+Roll Acceleration: 748 deg/s²
+
+
+Strafe Speed / Accel: 0 / 0
+
+
+FTL
+
+
+Range: 4.5 LY
+
+
+Charge Time: 15 s
+
+
+Cooldown: 35 s
+
+
+Cost: 30 Tyl
+
+
+Energy & Sensors / EW
+
+
+Power Points: 100
+
+
+Power Recovery: 5.2 /s
+
+
+Firewall Rating: 100
+
+
+Emitter Rating: 100
+
+
+DRADIS Base / Max: 1,000 m / 2,000 m
+
+
+Visual Range: 200 m
+
+
+Environmental
+
+
+Max Radiation Level: 80
+
+
+Radioactive Decay: 0.5
+
+
+Radioresistance: 0
+
+
+Pre-installed systems
+
+
+TBD (none shown on the pane)
+
+
+Traits & role notes
+
+
+Balanced multi-role Strike with even slot spread (3/3/3/2); sits between the high-energy Recon (Raptor FR) and the faster Interceptor-style Vipers.
+
+
+Open items / TBD
+
+
+Confirm currency type for purchase.
+
+
+Provide Advanced Viper Mk III pane (if it exists) so we can add any blue upgrade deltas (+Δ) for fields that improve on upgrade.
+
 ESCORT CLASS
 
 (Add per-ship sections here — e.g., Scythe, Glaive (Command), Maul …)
