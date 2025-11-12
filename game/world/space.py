@@ -27,7 +27,6 @@ from game.engine.telemetry import (
 )
 from game.math.ballistics import compute_lead
 from game.ships.flight import update_ship_flight
-from game.ships.outpost_data import OUTPOST_COLLISION_HULLS
 from game.ships.ship import Ship, WeaponMount
 from game.world.sector import SectorMap
 from game.world.station import DockingStation, StationDatabase
@@ -831,87 +830,6 @@ class SpaceWorld:
     def _collision_mass(self, ship: Ship) -> float:
         return COLLISION_MASS.get(ship.frame.size, 1.5)
 
-    def _resolve_outpost_collision(
-        self,
-        ship_a: Ship,
-        ship_b: Ship,
-        radius_a: float,
-        radius_b: float,
-    ) -> bool:
-        if ship_a.frame.size != "Outpost" and ship_b.frame.size != "Outpost":
-            return False
-        if ship_a.frame.size == "Outpost" and ship_b.frame.size == "Outpost":
-            return False
-
-        if ship_a.frame.size == "Outpost":
-            outpost = ship_a
-            other = ship_b
-            other_radius = radius_b
-        else:
-            outpost = ship_b
-            other = ship_a
-            other_radius = radius_a
-
-        basis = outpost.kinematics.basis
-        rel = other.kinematics.position - outpost.kinematics.position
-        local = Vector3(
-            rel.dot(basis.right),
-            rel.dot(basis.up),
-            rel.dot(basis.forward),
-        )
-
-        handled = False
-        for hull in OUTPOST_COLLISION_HULLS:
-            sx = max(1e-3, hull.radii.x + other_radius)
-            sy = max(1e-3, hull.radii.y + other_radius)
-            sz = max(1e-3, hull.radii.z + other_radius)
-            delta = Vector3(
-                local.x - hull.center.x,
-                local.y - hull.center.y,
-                local.z - hull.center.z,
-            )
-            scaled = Vector3(delta.x / sx, delta.y / sy, delta.z / sz)
-            distance = scaled.length()
-            if distance >= 1.0:
-                continue
-            if distance <= 1e-6:
-                continue
-            surface_scaled = scaled / distance
-            surface_local = Vector3(
-                surface_scaled.x * sx,
-                surface_scaled.y * sy,
-                surface_scaled.z * sz,
-            ) + hull.center
-            push_local = surface_local - local
-            normal_local = surface_local - hull.center
-            if normal_local.length_squared() <= 1e-9:
-                continue
-            normal_local = normal_local.normalize()
-            normal_world = (
-                basis.right * normal_local.x
-                + basis.up * normal_local.y
-                + basis.forward * normal_local.z
-            )
-            if normal_world.length_squared() <= 1e-9:
-                continue
-            normal_world = normal_world.normalize()
-            push_world = (
-                basis.right * push_local.x
-                + basis.up * push_local.y
-                + basis.forward * push_local.z
-            )
-            other.kinematics.position += push_world + normal_world * 2.0
-            closing_speed = other.kinematics.velocity.dot(normal_world)
-            if closing_speed < 0.0:
-                adjustment = -(1.0 + COLLISION_RESTITUTION) * closing_speed
-                other.kinematics.velocity += normal_world * adjustment
-            recoil_strength = min(0.6, push_world.length() / 25.0)
-            other.collision_recoil = max(other.collision_recoil, recoil_strength)
-            handled = True
-            break
-
-        return handled
-
     def _resolve_collisions(self, logger: ChannelLogger | None, dt: float) -> None:
         active_ships = [ship for ship in self.ships if ship.is_alive()]
         count = len(active_ships)
@@ -977,13 +895,6 @@ class SpaceWorld:
                             else:
                                 normal = offset / distance
                             penetration = min_distance - distance
-                            if self._resolve_outpost_collision(
-                                ship_a,
-                                ship_b,
-                                radius_a,
-                                radius_b,
-                            ):
-                                continue
                             correction = normal * (penetration * 0.5)
                             ship_a.kinematics.position -= correction
                             ship_b.kinematics.position += correction
