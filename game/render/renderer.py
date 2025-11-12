@@ -339,6 +339,8 @@ def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
     def _nearest_hull_ring(z_value: float) -> list[Vector3]:
         return min(hull_sections, key=lambda entry: abs(entry[0] - z_value))[1]
 
+    arm_caps: dict[int, dict[str, list[Vector3] | Vector3]] = {sign: {} for sign in (-1, 1)}
+
     for sign in (-1, 1):
         previous_arm_ring: list[Vector3] | None = None
         for section_index in range(docking_arm_sections):
@@ -359,10 +361,31 @@ def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
                     )
                 )
             _loop_segments(segments, arm_ring)
+            if section_index == 0:
+                arm_caps[sign]["base_ring"] = arm_ring
+                arm_caps[sign]["base_center"] = center
+            if section_index == docking_arm_sections - 1:
+                arm_caps[sign]["tip_ring"] = arm_ring
+                arm_caps[sign]["tip_center"] = center
             if previous_arm_ring is not None:
                 for current, previous in zip(arm_ring, previous_arm_ring):
                     segments.append((current, previous))
             previous_arm_ring = arm_ring
+
+    cone_height = docking_arm_radius * 0.18
+    for sign in (-1, 1):
+        tip_ring = arm_caps[sign].get("tip_ring")
+        tip_center = arm_caps[sign].get("tip_center")
+        if tip_ring is not None and isinstance(tip_center, Vector3):
+            forward_tip = Vector3(tip_center.x, tip_center.y, tip_center.z + cone_height)
+            for point in tip_ring[::2]:
+                segments.append((point, forward_tip))
+        base_ring = arm_caps[sign].get("base_ring")
+        base_center = arm_caps[sign].get("base_center")
+        if base_ring is not None and isinstance(base_center, Vector3):
+            aft_tip = Vector3(base_center.x, base_center.y, base_center.z - cone_height)
+            for point in base_ring[::2]:
+                segments.append((point, aft_tip))
 
     hull_attachment_indices = {1: 2, -1: 6}
     connector_positions = [
