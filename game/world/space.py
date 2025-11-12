@@ -28,7 +28,6 @@ from game.engine.telemetry import (
 from game.math.ballistics import compute_lead
 from game.ships.flight import update_ship_flight
 from game.ships.ship import Ship, WeaponMount
-from game.ships.outpost_hull import outpost_collision_response
 from game.world.sector import SectorMap
 from game.world.station import DockingStation, StationDatabase
 from game.world.mining import (
@@ -886,55 +885,16 @@ class SpaceWorld:
                             offset = pos_b - pos_a
                             min_distance = radius_a + radius_b
                             distance_sq = offset.length_squared()
-                            outpost_collision = False
-                            if ship_a.frame.size == "Outpost" and ship_b.frame.size != "Outpost":
-                                response = outpost_collision_response(
-                                    ship_a.kinematics.position,
-                                    ship_a.kinematics.basis.right,
-                                    ship_a.kinematics.basis.up,
-                                    ship_a.kinematics.basis.forward,
-                                    ship_b.kinematics.position,
-                                    radius_b,
-                                )
-                                if response is not None:
-                                    normal, penetration = response
-                                    outpost_collision = True
-                                else:
-                                    self._collision_telemetry.record_culled(1)
-                                    continue
-                            elif ship_b.frame.size == "Outpost" and ship_a.frame.size != "Outpost":
-                                response = outpost_collision_response(
-                                    ship_b.kinematics.position,
-                                    ship_b.kinematics.basis.right,
-                                    ship_b.kinematics.basis.up,
-                                    ship_b.kinematics.basis.forward,
-                                    ship_a.kinematics.position,
-                                    radius_a,
-                                )
-                                if response is not None:
-                                    normal, penetration = response
-                                    normal = -normal
-                                    outpost_collision = True
-                                else:
-                                    self._collision_telemetry.record_culled(1)
-                                    continue
-                            else:
-                                if distance_sq >= min_distance * min_distance:
-                                    self._collision_telemetry.record_culled(1)
-                                    continue
-                                normal = Vector3(0.0, 0.0, 1.0)
-                                penetration = 0.0
-                            self._collision_telemetry.record_tested(1)
-                            distance = math.sqrt(max(0.0, distance_sq))
-                            if not outpost_collision:
-                                if distance <= 1e-3:
-                                    normal = Vector3(0.0, 0.0, 1.0)
-                                else:
-                                    normal = offset / max(distance, 1e-3)
-                                penetration = min_distance - distance
-                            if penetration <= 0.0:
+                            if distance_sq >= min_distance * min_distance:
                                 self._collision_telemetry.record_culled(1)
                                 continue
+                            self._collision_telemetry.record_tested(1)
+                            distance = math.sqrt(max(0.0, distance_sq))
+                            if distance <= 1e-3:
+                                normal = Vector3(0.0, 0.0, 1.0)
+                            else:
+                                normal = offset / distance
+                            penetration = min_distance - distance
                             correction = normal * (penetration * 0.5)
                             ship_a.kinematics.position -= correction
                             ship_b.kinematics.position += correction
