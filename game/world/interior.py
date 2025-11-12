@@ -1,7 +1,6 @@
 """Interior instance definitions for docking scenes."""
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, Optional, Sequence, Tuple
@@ -331,32 +330,38 @@ class InteriorDefinition:
 
 
 class InteriorDatabase:
-    """Loads interior definitions from asset JSON files."""
+    """Registry of hard-coded interior definitions."""
 
     def __init__(self) -> None:
         self._interiors: Dict[str, InteriorDefinition] = {}
+        self._builtins_loaded = False
 
-    def load_directory(self, directory: Path) -> None:
-        if not directory.exists():
+    def _load_builtins(self) -> None:
+        if self._builtins_loaded:
             return
-        for path in directory.glob("*_interior_*.json"):
-            definition = self._load_file(path)
-            if definition:
-                self._interiors[definition.name] = definition
+        from game.world.outpost_layouts import build_outpost_interior_v1
 
-    def _load_file(self, path: Path) -> InteriorDefinition | None:
-        try:
-            data = json.loads(path.read_text())
-        except (OSError, json.JSONDecodeError):
-            return None
-        if isinstance(data, dict):
-            return InteriorDefinition.from_dict(data)
-        return None
+        definition = build_outpost_interior_v1()
+        self._interiors[definition.name] = definition
+        self._builtins_loaded = True
+
+    def load_directory(self, directory: Path | None) -> None:
+        """Retained for API compatibility; loads bundled interiors."""
+
+        _ = directory  # Parameter retained to preserve call sites.
+        self._load_builtins()
+
+    def register(self, definition: InteriorDefinition) -> None:
+        """Manually register an interior definition."""
+
+        self._interiors[definition.name] = definition
 
     def get(self, name: str) -> InteriorDefinition:
+        self._load_builtins()
         return self._interiors[name]
 
     def names(self) -> Iterable[str]:
+        self._load_builtins()
         return self._interiors.keys()
 
 
