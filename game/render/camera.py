@@ -112,11 +112,12 @@ class ChaseCamera:
         self.recoil = 0.0
         self.recoil_decay = 6.0
         self.freelook_angles = Vector3(0.0, 0.0, 0.0)
-        self.freelook_sensitivity = 0.12
-        self.freelook_max_yaw = 28.0
-        self.freelook_max_pitch = 18.0
-        self.freelook_return = 80.0
-        self.freelook_snap_delay = 2.0
+        # Allow broader, more responsive freelook control before the camera recenters.
+        self.freelook_sensitivity = 0.18
+        self.freelook_max_yaw = 56.0
+        self.freelook_max_pitch = 32.0
+        self.freelook_return = 36.0
+        self.freelook_snap_delay = 3.0
         self.look_ahead_distance = 0.0
         self.look_ahead_direction = Vector3(0.0, 0.0, 1.0)
         self.look_ahead_response = 4.0
