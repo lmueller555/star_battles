@@ -244,6 +244,116 @@ Confirm purchase currency (cubits vs tylium) for the 100,000 figure.
 
 If you want a single authoritative baseline for Boost Speed (90 vs 110), choose 90 m/s as base and treat +20 m/s as the Advanced delta per the blue panel.
 
+Strike — Viper Mk VII (Role: Multi-Role)
+
+Identity
+
+Class / Role: Strike · Multi-Role
+
+Level Requirement: 1
+
+Counterpart / Upgrade To: Cylon War Raider / Advanced Viper Mk VII
+
+Economy
+
+Purchase Cost: 45,000 (currency icon on pane)
+
+Operating: Boost Cost 0.75 Tyl/s · FTL Cost 30 Tyl
+
+Upgrade Cost (→ Advanced): TBD
+
+Equipment Slots (weight: Light)
+
+Weapons: 4
+
+Hull: 3
+
+Engine: 3
+
+Computer: 3
+
+Gun / Launcher / Defensive / Special: 0 / 0 / 0 / 0
+
+Hull / Survivability
+
+Hull Points: 585
+
+Hull Recovery: 4.5 /s
+
+Durability: 9,000
+
+Armor Value: 5
+
+Critical Defense: 80
+
+Engine / Mobility
+
+Speed: 55 m/s
+
+Boost Speed: 85 m/s
+
+Boost Cost: 0.75 Tyl/s
+
+Acceleration: 12 m/s²
+
+Boost Acceleration: 4 m/s²
+
+Inertial Compensation: 100 m/s
+
+Avoidance: 510
+
+Avoidance Fading: 0.75
+
+Pitch/Yaw Speed: 50 / 50 deg/s
+
+Pitch/Yaw Acceleration: 55 / 55 deg/s²
+
+Roll Speed / Acceleration: 200 deg/s / 748 deg/s²
+
+Strafe Speed / Accel: 0 / 0
+
+FTL
+
+Range: 4.5 LY
+
+Charge Time: 15 s
+
+Cooldown: 35 s
+
+Cost: 30 Tyl
+
+Energy & Sensors / EW
+
+Power Points: 150
+
+Power Recovery: 5 /s
+
+Firewall Rating: 100
+
+Emitter Rating: 100
+
+DRADIS Base / Max: 1,000 m / 2,000 m
+
+Visual Range: 200 m
+
+Environmental
+
+Max Radiation Level: 100
+
+Radioactive Decay: 0.6
+
+Radioresistance: 0
+
+Pre-installed systems
+
+2 × MEC-A6 “Fang” Light Autocannon (per your earlier Viper Mk VII note)
+
+Traits & role notes
+
+Balanced multi-role strike: flexible slot spread, good handling and sensors for its tier; can be built for PD/missile denial, skirmishing, or general fleet work.
+
+Advanced Mk VII (when you add it) should keep the 4/3/3/3 slot balance while modestly improving “blue” stats and energy for sustain.
+
 Strike — Raptor FR (Role: Command; “Fleet Reconnaissance”)
 
 Identity
