@@ -926,47 +926,128 @@ def _build_raven_wireframe() -> list[tuple[Vector3, Vector3]]:
 def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
     segments: list[tuple[Vector3, Vector3]] = []
 
-    prow = Vector3(0.0, 1.6, 4.0)
-    bridge = Vector3(0.0, 2.4, 1.6)
-    stern = Vector3(0.0, -1.0, -4.2)
+    prow_tip = Vector3(0.0, 2.0, 4.2)
+    prow_lower = Vector3(0.0, 0.7, 3.8)
+    neck_top = Vector3(0.0, 2.3, 2.4)
+    neck_spine = Vector3(0.0, 1.7, 0.8)
+    dorsal_spine = Vector3(0.0, 1.6, -1.4)
+    stern_keel = Vector3(0.0, -0.6, -4.2)
+    stern_cap = Vector3(0.0, 0.4, -4.2)
 
-    ring_points = [
-        Vector3(-3.4, 0.6, 1.0),
-        Vector3(-3.8, 0.6, -0.8),
-        Vector3(-2.0, 0.4, -3.2),
+    nose_loop = [
+        Vector3(0.0, 2.0, 4.2),
+        Vector3(1.8, 1.8, 3.6),
+        Vector3(2.3, 1.4, 2.6),
+        Vector3(1.4, 1.2, 1.8),
+        Vector3(0.0, 1.3, 1.4),
+        Vector3(-1.4, 1.2, 1.8),
+        Vector3(-2.3, 1.4, 2.6),
+        Vector3(-1.8, 1.8, 3.6),
     ]
+    _loop_segments(segments, nose_loop)
 
-    for point in ring_points:
+    nose_lower_loop = [
+        Vector3(0.0, 0.7, 3.8),
+        Vector3(1.5, 0.5, 3.0),
+        Vector3(1.9, 0.3, 2.2),
+        Vector3(1.1, 0.2, 1.6),
+        Vector3(0.0, 0.1, 1.2),
+        Vector3(-1.1, 0.2, 1.6),
+        Vector3(-1.9, 0.3, 2.2),
+        Vector3(-1.5, 0.5, 3.0),
+    ]
+    _loop_segments(segments, nose_lower_loop)
+
+    for upper, lower in zip(nose_loop, nose_lower_loop):
+        segments.append((upper, lower))
+
+    hull_loop = [
+        Vector3(0.0, 1.9, 1.2),
+        Vector3(2.4, 1.6, 0.6),
+        Vector3(3.0, 1.3, -0.6),
+        Vector3(2.2, 1.1, -1.8),
+        Vector3(0.0, 1.0, -2.4),
+        Vector3(-2.2, 1.1, -1.8),
+        Vector3(-3.0, 1.3, -0.6),
+        Vector3(-2.4, 1.6, 0.6),
+    ]
+    _loop_segments(segments, hull_loop)
+
+    hull_lower_loop = [
+        Vector3(0.0, 0.3, 1.0),
+        Vector3(2.1, 0.2, 0.4),
+        Vector3(2.8, -0.1, -0.8),
+        Vector3(2.0, -0.3, -2.0),
+        Vector3(0.0, -0.4, -2.6),
+        Vector3(-2.0, -0.3, -2.0),
+        Vector3(-2.8, -0.1, -0.8),
+        Vector3(-2.1, 0.2, 0.4),
+    ]
+    _loop_segments(segments, hull_lower_loop)
+
+    for upper, lower in zip(hull_loop, hull_lower_loop):
+        segments.append((upper, lower))
+
+    for upper, next_ring in zip(nose_loop, hull_loop):
+        segments.append((upper, next_ring))
+    for lower, next_ring in zip(nose_lower_loop, hull_lower_loop):
+        segments.append((lower, next_ring))
+
+    engine_top_loop = [
+        Vector3(0.0, 1.0, -2.2),
+        Vector3(2.6, 0.9, -2.4),
+        Vector3(3.2, 0.8, -3.2),
+        Vector3(2.4, 0.7, -4.0),
+        Vector3(0.0, 0.8, -4.2),
+        Vector3(-2.4, 0.7, -4.0),
+        Vector3(-3.2, 0.8, -3.2),
+        Vector3(-2.6, 0.9, -2.4),
+    ]
+    _loop_segments(segments, engine_top_loop)
+
+    engine_bottom_loop = [
+        Vector3(0.0, -0.8, -2.4),
+        Vector3(2.4, -0.7, -2.6),
+        Vector3(3.0, -0.6, -3.4),
+        Vector3(2.2, -0.5, -4.1),
+        Vector3(0.0, -0.5, -4.2),
+        Vector3(-2.2, -0.5, -4.1),
+        Vector3(-3.0, -0.6, -3.4),
+        Vector3(-2.4, -0.7, -2.6),
+    ]
+    _loop_segments(segments, engine_bottom_loop)
+
+    for upper, lower in zip(engine_top_loop, engine_bottom_loop):
+        segments.append((upper, lower))
+
+    for upper, next_ring in zip(hull_loop, engine_top_loop):
+        segments.append((upper, next_ring))
+    for lower, next_ring in zip(hull_lower_loop, engine_bottom_loop):
+        segments.append((lower, next_ring))
+
+    dorsal_spine_points = [prow_tip, neck_top, neck_spine, dorsal_spine, stern_cap]
+    for start, end in zip(dorsal_spine_points, dorsal_spine_points[1:]):
+        segments.append((start, end))
+
+    ventral_spine_points = [prow_lower, Vector3(0.0, -0.4, 1.8), Vector3(0.0, -0.8, -0.6), stern_keel]
+    for start, end in zip(ventral_spine_points, ventral_spine_points[1:]):
+        segments.append((start, end))
+
+    side_buttresses = [
+        Vector3(-2.2, 1.5, 1.4),
+        Vector3(-2.8, 1.2, -0.2),
+        Vector3(-2.6, 0.6, -2.6),
+    ]
+    for i, point in enumerate(side_buttresses):
         mirrored = _mirror_vector(point)
         segments.append((point, mirrored))
-        segments.append((point, prow))
-        segments.append((mirrored, prow))
-        segments.append((point, stern))
-        segments.append((mirrored, stern))
-        segments.append((point, bridge))
-        segments.append((mirrored, bridge))
+        segments.append((point, hull_lower_loop[i + 1]))
+        segments.append((mirrored, hull_lower_loop[-(i + 2)]))
+        segments.append((point, hull_loop[i + 1]))
+        segments.append((mirrored, hull_loop[-(i + 2)]))
 
-    dorsal_ring = [
-        Vector3(-1.6, 2.4, -0.4),
-        Vector3(0.0, 2.6, -1.2),
-        Vector3(1.6, 2.4, -0.4),
-        Vector3(0.0, 2.2, 0.6),
-    ]
-    _loop_segments(segments, dorsal_ring)
-    for point in dorsal_ring:
-        segments.append((point, bridge))
-
-    ventral_keel = [
-        Vector3(-1.2, -1.6, 2.2),
-        Vector3(0.0, -1.8, 0.0),
-        Vector3(1.2, -1.6, 2.2),
-    ]
-    _loop_segments(segments, ventral_keel)
-    for point in ventral_keel:
-        segments.append((point, stern))
-
-    segments.append((prow, bridge))
-    segments.append((bridge, stern))
+    segments.append((prow_tip, prow_lower))
+    segments.append((stern_cap, stern_keel))
 
     return segments
 
