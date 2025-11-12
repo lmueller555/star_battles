@@ -18,6 +18,47 @@ if TYPE_CHECKING:
 
 
 @dataclass
+class ShipBasis:
+    forward: Vector3 = field(default_factory=lambda: Vector3(0.0, 0.0, 1.0))
+    right: Vector3 = field(default_factory=lambda: Vector3(1.0, 0.0, 0.0))
+    up: Vector3 = field(default_factory=lambda: Vector3(0.0, 1.0, 0.0))
+    revision: int = -1
+
+
+@dataclass
+class BasisTelemetry:
+    frame: int = -1
+    hits: int = 0
+    misses: int = 0
+
+
+_basis_metrics = BasisTelemetry()
+
+
+def begin_basis_frame(frame_index: int) -> None:
+    """Reset basis cache metrics for the provided simulation frame."""
+
+    _basis_metrics.frame = frame_index
+    _basis_metrics.hits = 0
+    _basis_metrics.misses = 0
+
+
+def _record_basis_cache_hit(hit: bool) -> None:
+    if hit:
+        _basis_metrics.hits += 1
+    else:
+        _basis_metrics.misses += 1
+
+
+def basis_metrics_snapshot() -> BasisTelemetry:
+    return BasisTelemetry(
+        frame=_basis_metrics.frame,
+        hits=_basis_metrics.hits,
+        misses=_basis_metrics.misses,
+    )
+
+
+@dataclass
 class ShipResources:
     tylium: float = 0.0
     titanium: float = 0.0
@@ -53,8 +94,14 @@ class ShipKinematics:
     velocity: Vector3
     rotation: Vector3
     angular_velocity: Vector3
+    basis: ShipBasis = field(default_factory=ShipBasis, init=False, repr=False)
+    _basis_rotation: Vector3 = field(default_factory=Vector3, init=False, repr=False)
+    _frame_revision: int = field(default=0, init=False, repr=False)
 
-    def _basis_vectors(self) -> tuple[Vector3, Vector3, Vector3]:
+    def begin_frame(self, frame_index: int) -> None:
+        self._frame_revision = frame_index
+
+    def _compute_basis(self) -> tuple[Vector3, Vector3, Vector3]:
         from math import cos, sin, radians
 
         pitch, yaw, roll = map(radians, (self.rotation.x, self.rotation.y, self.rotation.z))
@@ -79,17 +126,34 @@ class ShipKinematics:
 
         return forward.normalize(), right.normalize(), up.normalize()
 
+    def _ensure_basis(self) -> ShipBasis:
+        cache = self.basis
+        frame_index = self._frame_revision
+        rotation = self.rotation
+        rotation_changed = (
+            abs(rotation.x - self._basis_rotation.x) > 1e-6
+            or abs(rotation.y - self._basis_rotation.y) > 1e-6
+            or abs(rotation.z - self._basis_rotation.z) > 1e-6
+        )
+        needs_update = cache.revision != frame_index or rotation_changed
+        if needs_update:
+            forward, right, up = self._compute_basis()
+            cache.forward = forward
+            cache.right = right
+            cache.up = up
+            cache.revision = frame_index
+            self._basis_rotation = Vector3(rotation)
+        _record_basis_cache_hit(not needs_update)
+        return cache
+
     def forward(self) -> Vector3:
-        forward, _, _ = self._basis_vectors()
-        return forward
+        return self._ensure_basis().forward
 
     def right(self) -> Vector3:
-        _, right, _ = self._basis_vectors()
-        return right
+        return self._ensure_basis().right
 
     def up(self) -> Vector3:
-        _, _, up = self._basis_vectors()
-        return up
+        return self._ensure_basis().up
 
 
 @dataclass
@@ -481,7 +545,7 @@ class Ship:
         """Lock throttle to the current forward speed ratio."""
 
         if hold_current_speed:
-            forward = self.kinematics.forward()
+            forward = self.kinematics.basis.forward
             current_speed = max(0.0, self.kinematics.velocity.dot(forward))
             max_speed = max(1.0, self.stats.max_speed * max(0.0, min(1.0, self.flank_speed_ratio)))
             self.auto_throttle_ratio = max(0.0, min(1.0, current_speed / max_speed))
@@ -521,4 +585,8 @@ __all__ = [
     "ShipKinematics",
     "WeaponMount",
     "ShipResources",
+    "ShipBasis",
+    "BasisTelemetry",
+    "begin_basis_frame",
+    "basis_metrics_snapshot",
 ]
