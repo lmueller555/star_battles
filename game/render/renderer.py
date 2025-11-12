@@ -179,9 +179,11 @@ def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
     segments: list[tuple[Vector3, Vector3]] = []
 
     hull_profile: list[tuple[float, float, float]] = [
-        (-520.0, 90.0, 55.0),
-        (-440.0, 140.0, 70.0),
-        (-360.0, 180.0, 90.0),
+        (-640.0, 150.0, 96.0),
+        (-580.0, 146.0, 92.0),
+        (-520.0, 140.0, 88.0),
+        (-440.0, 148.0, 82.0),
+        (-360.0, 184.0, 94.0),
         (-240.0, 220.0, 110.0),
         (-120.0, 240.0, 125.0),
         (0.0, 250.0, 140.0),
@@ -228,30 +230,99 @@ def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
     # avoiding the dorsal and ventral "railings" and other protruding detail
     # elements that previously extended from the silhouette.
 
-    engine_clusters: list[list[Vector3]] = []
     tail_z = hull_profile[0][0]
-    engine_offset_x = hull_profile[0][1] + 120.0
-    for sign in (-1.0, 1.0):
-        for vertical in (-1.0, 1.0):
-            center = Vector3(sign * engine_offset_x, vertical * 90.0, tail_z - 40.0)
-            ring = [
-                Vector3(
-                    center.x + math.cos(angle) * 70.0,
-                    center.y + math.sin(angle) * 70.0,
-                    center.z,
+    tail_half_width = hull_profile[0][1]
+    tail_half_height = hull_profile[0][2]
+    housing_front_z = tail_z + 24.0
+    housing_back_z = tail_z - 62.0
+    housing_half_width = tail_half_width + 32.0
+    housing_half_height = tail_half_height + 36.0
+
+    top_front_left = Vector3(-housing_half_width, housing_half_height, housing_front_z)
+    top_back_left = Vector3(-housing_half_width + 28.0, housing_half_height + 12.0, housing_back_z)
+    top_back_right = Vector3(housing_half_width - 28.0, housing_half_height + 12.0, housing_back_z)
+    top_front_right = Vector3(housing_half_width, housing_half_height, housing_front_z)
+    bottom_front_left = Vector3(-housing_half_width, -housing_half_height, housing_front_z)
+    bottom_back_left = Vector3(-housing_half_width + 28.0, -housing_half_height - 12.0, housing_back_z)
+    bottom_back_right = Vector3(housing_half_width - 28.0, -housing_half_height - 12.0, housing_back_z)
+    bottom_front_right = Vector3(housing_half_width, -housing_half_height, housing_front_z)
+
+    top_frame = [top_front_left, top_back_left, top_back_right, top_front_right]
+    bottom_frame = [
+        bottom_front_left,
+        bottom_back_left,
+        bottom_back_right,
+        bottom_front_right,
+    ]
+    _loop_segments(segments, top_frame)
+    _loop_segments(segments, bottom_frame)
+
+    side_frames = [
+        [top_front_left, top_back_left, bottom_back_left, bottom_front_left],
+        [top_front_right, top_back_right, bottom_back_right, bottom_front_right],
+    ]
+    for frame in side_frames:
+        _loop_segments(segments, frame)
+
+    for top_point, bottom_point in zip(top_frame, bottom_frame):
+        segments.append((top_point, bottom_point))
+
+    housing_mount_targets: dict[tuple[int, int], Vector3] = {
+        (-1, 1): top_front_left,
+        (-1, -1): bottom_front_left,
+        (1, 1): top_front_right,
+        (1, -1): bottom_front_right,
+    }
+
+    engine_offset_x = tail_half_width - 28.0
+    engine_offset_y = tail_half_height - 24.0
+    engine_radius_x = 38.0
+    engine_radius_y = 30.0
+    engine_depth = 26.0
+    nozzle_inset = 6.0
+    for sign in (-1, 1):
+        for vertical in (-1, 1):
+            center = Vector3(
+                sign * engine_offset_x,
+                vertical * engine_offset_y,
+                housing_back_z + engine_depth,
+            )
+            ring: list[Vector3] = []
+            nozzle_ring: list[Vector3] = []
+            for step in range(12):
+                angle = step * (2.0 * math.pi / 12)
+                ring.append(
+                    Vector3(
+                        center.x + math.cos(angle) * engine_radius_x,
+                        center.y + math.sin(angle) * engine_radius_y,
+                        center.z,
+                    )
                 )
-                for angle in [step * (2.0 * math.pi / 12) for step in range(12)]
-            ]
-            engine_clusters.append(ring)
+                nozzle_ring.append(
+                    Vector3(
+                        center.x + math.cos(angle) * engine_radius_x * 0.68,
+                        center.y + math.sin(angle) * engine_radius_y * 0.68,
+                        housing_back_z + nozzle_inset,
+                    )
+                )
             _loop_segments(segments, ring)
-            thruster_end = Vector3(center.x, center.y, center.z - 70.0)
-            for point in ring[::2]:
+            _loop_segments(segments, nozzle_ring)
+
+            thruster_end = Vector3(center.x, center.y, housing_back_z + nozzle_inset)
+            for point in ring[::3]:
                 segments.append((point, thruster_end))
+            for ring_point, nozzle_point in zip(ring[::2], nozzle_ring[::2]):
+                segments.append((ring_point, nozzle_point))
+
+            mount = housing_mount_targets[(sign, vertical)]
+            segments.append((center, mount))
+            for point in ring[::4]:
+                segments.append((point, mount))
+
             anchor_index = ring_sides // 6 if sign > 0 else (ring_sides * 5) // 6
             anchor_index += 0 if vertical > 0 else ring_sides // 2
-            hull_anchor = hull_sections[0][anchor_index % ring_sides]
-            for point in ring[::4]:
-                segments.append((point, hull_anchor))
+            hull_anchor = hull_sections[1][anchor_index % ring_sides]
+            segments.append((mount, hull_anchor))
 
     plating_lines = []
     for fraction in (0.15, 0.35, 0.65, 0.85):
