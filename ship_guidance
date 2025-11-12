@@ -699,7 +699,121 @@ Provide Advanced Glaive pane (if available) to record upgrade deltas (+Δ) for b
 
 LINE CLASS
 
-(Add per-ship sections here — e.g., Gungnir, Vanir (Command), Aesir, Jotunn …)
+Line — Vanir (Role: Command)
+
+Identity
+
+Class / Role: Line · Command
+
+Level Requirement: 1
+
+Role Bonus: −150 Transponder Power Cost (Command bonus).
+
+Counterpart / Upgrade To: Hel / Advanced Vanir (if you’re tracking counterparts/upgrades)
+
+Economy
+
+Purchase Cost: 2,000,000 Tylium
+
+Operating: Boost Cost 5.4 Tyl/s · FTL Cost 250 Tyl (UI panel value; top-sheet also shows “FTL Cost 12.5” which is the same value expressed in a scaled per-LY readout—keep your rules consistent and choose one display)
+
+Upgrade Cost (→ Advanced): TBD
+
+Equipment Slots (weight: Heavy)
+
+Weapons: 6
+
+Hull: 2
+
+Engine: 2
+
+Computer: 4 (Command signature: more computer capacity than non-Command Lines)
+
+Gun / Launcher / Defensive / Special: 0 / 0 / 0 / 0
+
+Hull / Survivability
+
+Hull Points: 3,500
+
+Hull Recovery: 19.4 /s
+
+Durability: 35,000
+
+Armor Value: 40
+
+Critical Defense: 100
+
+Durability Bonus: 0.4 (as listed on the sheet; treat as a damage-to-durability scaling factor if you model long-term wear)
+
+Engine / Mobility
+
+Speed: 27.5 m/s
+
+Boost Speed: 42.5 m/s
+
+Boost Cost: 5.4 Tyl/s
+
+Acceleration: 2 m/s²
+
+Boost Acceleration: 1.5 m/s²
+
+Inertial Compensation: 50 m/s
+
+Avoidance: 50
+
+Pitch/Yaw/Roll Speed: 9 / 9 / 9 deg/s
+
+Pitch/Yaw/Roll Acceleration: 9 / 9 / 9 deg/s²
+
+Strafe Speed / Accel: 0 / 0
+
+FTL
+
+Range: 11 LY
+
+Charge Time: 25 s
+
+Cooldown: 30 s
+
+Cost: 250 Tyl (see note above)
+
+Transponder Power Cost: −150 (mirrors role bonus for clarity)
+
+Energy & Sensors / EW
+
+Power Points: 650
+
+Power Recovery: 28 /s
+
+Firewall Rating: 200
+
+Emitter Rating: 200
+
+DRADIS Base / Max: 1,500 m / 4,000 m
+
+Visual Range: 1,000 m
+
+Environmental
+
+Max Radiation Level: 220
+
+Radioactive Decay: 1.4
+
+Radioresistance: 0
+
+Pre-installed systems
+
+TBD (none shown on the panes you provided)
+
+Traits & role notes
+
+Heavy Command line ship with a large energy pool and strong computer capacity for EW/support builds.
+
+Plays as a mobile anchor: slow handling but durable with solid long-range sensors; excels when screened by Escorts/Strikes and when fielded as a missile/energy-support platform.
+
+Open items / TBD
+
+If you have an Advanced Vanir pane, share it so we can add upgrade deltas (+Δ) for blue stats and any extra slots.
 
 CAPITAL CLASS
 
