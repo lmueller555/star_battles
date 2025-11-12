@@ -113,7 +113,9 @@ def _is_strike_ship(ship: "Ship | None") -> bool:
 
 
 def _strike_damage_adjustment(damage: float) -> float:
-    return min(8.0, max(1.0, damage))
+    """Ensure strike weapon damage stays positive without capping output."""
+
+    return max(1.0, damage)
 
 
 class SpaceWorld:
