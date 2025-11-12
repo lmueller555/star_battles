@@ -27,7 +27,6 @@ from game.engine.telemetry import (
 )
 from game.math.ballistics import compute_lead
 from game.ships.flight import update_ship_flight
-from game.ships.outpost_skin import OUTPOST_SKIN
 from game.ships.ship import Ship, WeaponMount
 from game.world.sector import SectorMap
 from game.world.station import DockingStation, StationDatabase
@@ -831,46 +830,6 @@ class SpaceWorld:
     def _collision_mass(self, ship: Ship) -> float:
         return COLLISION_MASS.get(ship.frame.size, 1.5)
 
-    @staticmethod
-    def _is_outpost(ship: Ship) -> bool:
-        frame = ship.frame
-        descriptor = f"{getattr(frame, 'size', '')} {getattr(frame, 'role', '')} {getattr(frame, 'id', '')}".lower()
-        return "outpost" in descriptor
-
-    @staticmethod
-    def _ship_basis(ship: Ship) -> tuple[Vector3, Vector3, Vector3]:
-        basis = ship.kinematics.basis
-        return basis.right, basis.up, basis.forward
-
-    def _outpost_collision_response(
-        self,
-        outpost: Ship,
-        other: Ship,
-        other_radius: float,
-        *,
-        invert_normal: bool,
-    ) -> tuple[Vector3, float] | None:
-        right, up, forward = self._ship_basis(outpost)
-        offset = other.kinematics.position - outpost.kinematics.position
-        local_point = Vector3(offset.dot(right), offset.dot(up), offset.dot(forward))
-        signed_distance, normal_local = OUTPOST_SKIN.collision.signed_distance(local_point)
-        if signed_distance >= other_radius:
-            return None
-        normal_world = right * normal_local.x + up * normal_local.y + forward * normal_local.z
-        if normal_world.length_squared() <= 1e-6:
-            if offset.length_squared() > 1e-6:
-                normal_world = offset.normalize()
-            else:
-                normal_world = Vector3(0.0, 0.0, 1.0)
-        else:
-            normal_world = normal_world.normalize()
-        if invert_normal:
-            normal_world = -normal_world
-        penetration = other_radius - signed_distance
-        if penetration <= 0.0:
-            return None
-        return normal_world, penetration
-
     def _resolve_collisions(self, logger: ChannelLogger | None, dt: float) -> None:
         active_ships = [ship for ship in self.ships if ship.is_alive()]
         count = len(active_ships)
@@ -930,38 +889,12 @@ class SpaceWorld:
                                 self._collision_telemetry.record_culled(1)
                                 continue
                             self._collision_telemetry.record_tested(1)
-                            is_outpost_a = self._is_outpost(ship_a)
-                            is_outpost_b = self._is_outpost(ship_b)
-                            outpost_collision = False
-                            if is_outpost_a ^ is_outpost_b:
-                                if is_outpost_a:
-                                    response = self._outpost_collision_response(
-                                        ship_a,
-                                        ship_b,
-                                        radius_b,
-                                        invert_normal=False,
-                                    )
-                                else:
-                                    response = self._outpost_collision_response(
-                                        ship_b,
-                                        ship_a,
-                                        radius_a,
-                                        invert_normal=True,
-                                    )
-                                if response is None:
-                                    self._collision_telemetry.record_culled(1)
-                                    continue
-                                normal, penetration = response
-                                outpost_collision = True
+                            distance = math.sqrt(max(0.0, distance_sq))
+                            if distance <= 1e-3:
+                                normal = Vector3(0.0, 0.0, 1.0)
                             else:
-                                distance = math.sqrt(max(0.0, distance_sq))
-                                if distance <= 1e-3:
-                                    normal = Vector3(0.0, 0.0, 1.0)
-                                else:
-                                    normal = offset / distance
-                                penetration = min_distance - distance
-                                if penetration <= 0.0:
-                                    continue
+                                normal = offset / distance
+                            penetration = min_distance - distance
                             correction = normal * (penetration * 0.5)
                             ship_a.kinematics.position -= correction
                             ship_b.kinematics.position += correction
@@ -976,10 +909,7 @@ class SpaceWorld:
                             impact_speed = max(0.0, -closing_speed)
                             if impact_speed <= 0.0 and penetration <= 0.01:
                                 continue
-                            if outpost_collision:
-                                damage_base = 0.0
-                            else:
-                                damage_base = impact_speed * (mass_a + mass_b) * 0.5 * COLLISION_DAMAGE_SCALE
+                            damage_base = impact_speed * (mass_a + mass_b) * 0.5 * COLLISION_DAMAGE_SCALE
                             if damage_base > 0.0:
                                 total_mass = mass_a + mass_b
                                 self._apply_collision_damage(ship_a, damage_base * (mass_b / total_mass))
