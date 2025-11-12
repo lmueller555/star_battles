@@ -877,47 +877,120 @@ def _build_raven_wireframe() -> list[tuple[Vector3, Vector3]]:
 def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
     segments: list[tuple[Vector3, Vector3]] = []
 
-    prow = Vector3(0.0, 1.6, 4.0)
-    bridge = Vector3(0.0, 2.4, 1.6)
-    stern = Vector3(0.0, -1.0, -4.2)
+    prow_tip = Vector3(0.0, 1.7, 4.6)
+    prow_back = Vector3(0.0, 2.2, 1.4)
+    prow_keel = Vector3(0.0, 0.6, 4.2)
 
-    ring_points = [
-        Vector3(-3.4, 0.6, 1.0),
-        Vector3(-3.8, 0.6, -0.8),
-        Vector3(-2.0, 0.4, -3.2),
+    dorsal_spine = [
+        Vector3(0.0, 2.5, 1.2),
+        Vector3(0.0, 2.3, 0.0),
+        Vector3(0.0, 2.1, -1.6),
+        Vector3(0.0, 1.8, -3.2),
+        Vector3(0.0, 1.6, -4.6),
+    ]
+    _loop_segments(segments, dorsal_spine, close=False)
+
+    prow_outline = [
+        prow_tip,
+        Vector3(-2.3, 1.7, 3.4),
+        Vector3(-1.6, 1.9, 2.6),
+        Vector3(-0.8, 2.1, 1.8),
+        prow_back,
+        Vector3(0.8, 2.1, 1.8),
+        Vector3(1.6, 1.9, 2.6),
+        Vector3(2.3, 1.7, 3.4),
+    ]
+    _loop_segments(segments, prow_outline)
+
+    prow_lower = [
+        prow_keel,
+        Vector3(-1.6, 0.3, 3.2),
+        Vector3(-1.1, 0.1, 2.2),
+        Vector3(0.0, -0.1, 1.6),
+        Vector3(1.1, 0.1, 2.2),
+        Vector3(1.6, 0.3, 3.2),
+    ]
+    _loop_segments(segments, prow_lower)
+
+    for top, bottom in [
+        (Vector3(-2.3, 1.7, 3.4), Vector3(-1.6, 0.3, 3.2)),
+        (Vector3(-1.6, 1.9, 2.6), Vector3(-1.1, 0.1, 2.2)),
+        (Vector3(-0.8, 2.1, 1.8), Vector3(0.0, -0.1, 1.6)),
+    ]:
+        mirrored_top = _mirror_vector(top)
+        mirrored_bottom = _mirror_vector(bottom)
+        segments.append((top, bottom))
+        segments.append((mirrored_top, mirrored_bottom))
+
+    port_ridge = [
+        Vector3(-2.4, 1.5, 2.4),
+        Vector3(-2.6, 1.4, 0.8),
+        Vector3(-2.8, 1.2, -0.6),
+        Vector3(-2.5, 1.0, -2.2),
+        Vector3(-1.9, 0.9, -3.6),
+        Vector3(-1.3, 0.8, -4.6),
     ]
 
-    for point in ring_points:
+    for index, point in enumerate(port_ridge):
         mirrored = _mirror_vector(point)
         segments.append((point, mirrored))
-        segments.append((point, prow))
-        segments.append((mirrored, prow))
-        segments.append((point, stern))
-        segments.append((mirrored, stern))
-        segments.append((point, bridge))
-        segments.append((mirrored, bridge))
-
-    dorsal_ring = [
-        Vector3(-1.6, 2.4, -0.4),
-        Vector3(0.0, 2.6, -1.2),
-        Vector3(1.6, 2.4, -0.4),
-        Vector3(0.0, 2.2, 0.6),
-    ]
-    _loop_segments(segments, dorsal_ring)
-    for point in dorsal_ring:
-        segments.append((point, bridge))
+        if index > 0:
+            prev_point = port_ridge[index - 1]
+            segments.append((point, prev_point))
+            segments.append((mirrored, _mirror_vector(prev_point)))
+        segments.append((point, dorsal_spine[min(index + 1, len(dorsal_spine) - 1)]))
+        segments.append((mirrored, dorsal_spine[min(index + 1, len(dorsal_spine) - 1)]))
 
     ventral_keel = [
-        Vector3(-1.2, -1.6, 2.2),
-        Vector3(0.0, -1.8, 0.0),
-        Vector3(1.2, -1.6, 2.2),
+        Vector3(0.0, -0.5, 2.6),
+        Vector3(0.0, -1.0, 0.6),
+        Vector3(0.0, -1.2, -1.2),
+        Vector3(0.0, -0.9, -3.0),
+        Vector3(0.0, -0.6, -4.6),
     ]
-    _loop_segments(segments, ventral_keel)
-    for point in ventral_keel:
-        segments.append((point, stern))
+    _loop_segments(segments, ventral_keel, close=False)
+    segments.append((prow_keel, ventral_keel[0]))
+    for ridge_point, keel_point in zip(port_ridge, ventral_keel[1:]):
+        mirrored = _mirror_vector(ridge_point)
+        segments.append((ridge_point, keel_point))
+        segments.append((mirrored, keel_point))
 
-    segments.append((prow, bridge))
-    segments.append((bridge, stern))
+    for ridge_point in port_ridge[-2:]:
+        mirrored = _mirror_vector(ridge_point)
+        segments.append((ridge_point, ventral_keel[-1]))
+        segments.append((mirrored, ventral_keel[-1]))
+
+    engine_cowl_top = [
+        Vector3(-1.4, 1.0, -4.2),
+        Vector3(-0.8, 1.1, -5.0),
+        Vector3(0.0, 1.0, -5.2),
+        Vector3(0.8, 1.1, -5.0),
+        Vector3(1.4, 1.0, -4.2),
+        Vector3(0.0, 1.0, -4.0),
+    ]
+    _loop_segments(segments, engine_cowl_top)
+
+    engine_cowl_bottom = [
+        Vector3(-1.4, -0.2, -4.2),
+        Vector3(-0.8, -0.3, -5.0),
+        Vector3(0.0, -0.4, -5.2),
+        Vector3(0.8, -0.3, -5.0),
+        Vector3(1.4, -0.2, -4.2),
+        Vector3(0.0, -0.1, -3.8),
+    ]
+    _loop_segments(segments, engine_cowl_bottom)
+
+    for top, bottom in zip(engine_cowl_top, engine_cowl_bottom):
+        segments.append((top, bottom))
+
+    stern_cap = Vector3(0.0, 0.4, -5.4)
+    segments.append((engine_cowl_top[2], stern_cap))
+    segments.append((engine_cowl_bottom[2], stern_cap))
+
+    segments.append((prow_tip, prow_back))
+    segments.append((prow_back, dorsal_spine[1]))
+    segments.append((ventral_keel[-1], engine_cowl_bottom[0]))
+    segments.append((ventral_keel[-1], engine_cowl_bottom[4]))
 
     return segments
 
