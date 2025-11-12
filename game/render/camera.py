@@ -1,8 +1,9 @@
 """Camera utilities."""
 from __future__ import annotations
 
+from dataclasses import dataclass
 from math import radians, tan
-from typing import Optional
+from typing import Optional, Tuple
 
 from pygame.math import Vector3
 
@@ -62,6 +63,38 @@ def _ship_follow_distance(ship: Ship) -> float:
     return max(12.0, _ship_length(ship) * 2.0 + 12.0)
 
 
+@dataclass
+class CameraFrameData:
+    """Cached orientation and projection values for a rendered frame."""
+
+    revision: int
+    screen_size: tuple[int, int]
+    position: Vector3
+    forward: Vector3
+    right: Vector3
+    up: Vector3
+    aspect: float
+    tan_half_fov: float
+    fov_factor: float
+    near: float
+    far: float
+
+    def project_point(self, point: Vector3) -> tuple[Vector3, bool]:
+        """Project a world-space point into screen space using cached values."""
+
+        rel = point - self.position
+        depth = rel.dot(self.forward)
+        if depth <= self.near:
+            return Vector3(), False
+        x = rel.dot(self.right)
+        y = rel.dot(self.up)
+        ndc_x = (x * self.fov_factor / self.aspect) / depth
+        ndc_y = (y * self.fov_factor) / depth
+        screen_x = (ndc_x * 0.5 + 0.5) * self.screen_size[0]
+        screen_y = (-ndc_y * 0.5 + 0.5) * self.screen_size[1]
+        return Vector3(screen_x, screen_y, depth), True
+
+
 class ChaseCamera:
     """Third-person chase camera with freelook, look-ahead, and lock framing."""
 
@@ -100,6 +133,16 @@ class ChaseCamera:
         self._lock_direction = Vector3(0.0, 0.0, 1.0)
         self._lock_distance = 0.0
         self._freelook_idle_time = 0.0
+        self.near_plane = 0.5
+        self.far_plane = 24000.0
+        self.revision = 0
+        self._last_revision_state: Tuple[Vector3, Vector3, Vector3, float] = (
+            Vector3(self.position),
+            Vector3(self.forward),
+            Vector3(self.up),
+            float(self.fov),
+        )
+        self._frame_cache: CameraFrameData | None = None
 
     def update(
         self,
@@ -254,8 +297,63 @@ class ChaseCamera:
             self.position -= self.forward * self.recoil
             self.recoil = max(0.0, self.recoil - self.recoil_decay * dt)
 
+        self._mark_revision_dirty()
+
     def apply_recoil(self, strength: float) -> None:
         self.recoil += strength
+
+    def _mark_revision_dirty(self) -> None:
+        """Increment the camera revision if the pose or FOV has changed."""
+
+        last_position, last_forward, last_up, last_fov = self._last_revision_state
+        changed = (
+            (self.position - last_position).length_squared() > 1e-6
+            or (self.forward - last_forward).length_squared() > 1e-6
+            or (self.up - last_up).length_squared() > 1e-6
+            or abs(self.fov - last_fov) > 1e-3
+        )
+        if changed:
+            self.revision += 1
+            self._last_revision_state = (
+                Vector3(self.position),
+                Vector3(self.forward),
+                Vector3(self.up),
+                float(self.fov),
+            )
+
+    def prepare_frame(self, screen_size: tuple[int, int]) -> CameraFrameData:
+        """Return per-frame projection constants, reusing cached values when possible."""
+
+        width, height = screen_size
+        if height <= 0:
+            height = 1
+        aspect = width / height if height > 0 else self.aspect
+        self.aspect = aspect
+        tan_half_fov = tan(radians(self.fov) / 2.0)
+        if tan_half_fov <= 0.0:
+            tan_half_fov = tan(radians(max(1e-3, self.fov)) / 2.0)
+        fov_factor = 1.0 / tan_half_fov
+        if (
+            self._frame_cache
+            and self._frame_cache.revision == self.revision
+            and self._frame_cache.screen_size == screen_size
+        ):
+            return self._frame_cache
+        frame = CameraFrameData(
+            revision=self.revision,
+            screen_size=screen_size,
+            position=Vector3(self.position),
+            forward=Vector3(self.forward).normalize(),
+            right=Vector3(self.right).normalize(),
+            up=Vector3(self.up).normalize(),
+            aspect=aspect,
+            tan_half_fov=tan_half_fov,
+            fov_factor=fov_factor,
+            near=self.near_plane,
+            far=self.far_plane,
+        )
+        self._frame_cache = frame
+        return frame
 
     def project(self, point: Vector3, screen_size: tuple[int, int]) -> tuple[Vector3, bool]:
         rel = point - self.position
@@ -272,4 +370,4 @@ class ChaseCamera:
         return Vector3(screen_x, screen_y, depth), True
 
 
-__all__ = ["ChaseCamera"]
+__all__ = ["CameraFrameData", "ChaseCamera"]

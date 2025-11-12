@@ -11,6 +11,8 @@ from pygame.math import Vector3
 if TYPE_CHECKING:  # pragma: no cover - only used for typing
     from game.ships.ship import Ship
 
+from game.render.state import RenderSpatialState
+
 
 BROWN = (130, 132, 138)
 SCAN_GLOW = (255, 240, 200)
@@ -31,6 +33,32 @@ INVENTORY_RESOURCE_OVERRIDES: Dict[str, str] = {"tyllium": "tylium"}
 
 
 @dataclass
+class AsteroidAccent:
+    angle: float
+    distance: float
+    horizontal_scale: float
+    vertical_scale: float
+    highlight: bool
+
+
+@dataclass
+class AsteroidCrater:
+    angle: float
+    distance: float
+    radius_scale: float
+
+
+@dataclass
+class AsteroidRenderProfile:
+    point_angles: List[float]
+    point_offsets: List[float]
+    horizontal_scale: List[float]
+    vertical_scale: List[float]
+    accents: List[AsteroidAccent]
+    craters: List[AsteroidCrater]
+
+
+@dataclass
 class Asteroid:
     """Single asteroid instance within a sector."""
 
@@ -44,6 +72,8 @@ class Asteroid:
     scanning: bool = False
     _scan_effect_timer: float = field(default=0.0, repr=False)
     _size: float = field(init=False, repr=False)
+    render_state: RenderSpatialState = field(default_factory=RenderSpatialState, init=False, repr=False)
+    _render_profile: AsteroidRenderProfile | None = field(default=None, init=False, repr=False)
 
     MIN_SIZE = 10.0
     MAX_SIZE = 100.0
@@ -54,6 +84,7 @@ class Asteroid:
 
     def __post_init__(self) -> None:
         self._size = self._size_for_health(self.health)
+        self.render_state.ensure_current(self.position)
 
     @classmethod
     def _size_for_health(cls, health: float) -> float:
@@ -118,6 +149,55 @@ class Asteroid:
     def update(self, dt: float) -> None:
         if self._scan_effect_timer > 0.0:
             self._scan_effect_timer = max(0.0, self._scan_effect_timer - dt)
+
+    def render_profile(self) -> AsteroidRenderProfile:
+        if self._render_profile is None:
+            rng = random.Random(hash(self.id))
+            point_count = rng.randint(8, 14)
+            jaggedness = 0.45
+            distortion = 0.75
+            angles: List[float] = []
+            offsets: List[float] = []
+            horizontal_scale: List[float] = []
+            vertical_scale: List[float] = []
+            angle_step = (2.0 * math.pi) / point_count if point_count else 0.0
+            for index in range(point_count):
+                angle = index * angle_step
+                angles.append(angle)
+                offsets.append(1.0 - jaggedness + rng.random() * jaggedness * 2.0)
+                horizontal_scale.append(distortion + rng.random() * (1.0 - distortion))
+                vertical_scale.append(distortion + rng.random() * (1.0 - distortion))
+            accents: List[AsteroidAccent] = []
+            accent_count = rng.randint(3, 6)
+            for _ in range(accent_count):
+                accents.append(
+                    AsteroidAccent(
+                        angle=rng.uniform(0.0, 2.0 * math.pi),
+                        distance=rng.uniform(0.1, 0.8),
+                        horizontal_scale=rng.uniform(0.6, 1.0),
+                        vertical_scale=rng.uniform(0.6, 1.0),
+                        highlight=rng.random() > 0.5,
+                    )
+                )
+            craters: List[AsteroidCrater] = []
+            crater_count = rng.randint(2, 4)
+            for _ in range(crater_count):
+                craters.append(
+                    AsteroidCrater(
+                        angle=rng.uniform(0.0, 2.0 * math.pi),
+                        distance=rng.uniform(0.15, 0.65),
+                        radius_scale=rng.uniform(0.04, 0.12),
+                    )
+                )
+            self._render_profile = AsteroidRenderProfile(
+                point_angles=angles,
+                point_offsets=offsets,
+                horizontal_scale=horizontal_scale,
+                vertical_scale=vertical_scale,
+                accents=accents,
+                craters=craters,
+            )
+        return self._render_profile
 
     def take_damage(self, amount: float) -> float:
         """Apply damage to the asteroid and return the effective amount."""
