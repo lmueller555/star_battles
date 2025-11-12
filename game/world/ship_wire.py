@@ -25,8 +25,23 @@ class ShipWireEmbed:
         self.clearance = clearance
         self.result: ShipWireEmbedResult | None = None
 
-    def embed(self, segments: Iterable[Sequence[Sequence[float]]]) -> ShipWireEmbedResult | None:
-        """Scale and centre the wireframe inside the hangar bounds."""
+    def embed(
+        self,
+        segments: Iterable[Sequence[Sequence[float]]],
+        *,
+        frame_size: str | None = None,
+    ) -> ShipWireEmbedResult | None:
+        """Scale and centre the wireframe inside the hangar bounds.
+
+        Parameters
+        ----------
+        segments:
+            Iterable of line segments describing the ship wireframe.
+        frame_size:
+            Optional classification of the ship frame (e.g. ``"Strike"`` or
+            ``"Escort"``).  Used to apply bespoke scaling adjustments when
+            embedding the ship inside the hangar interior.
+        """
 
         # Flatten segments and compute the bounding box.
         points: list[Vector3] = []
@@ -80,6 +95,14 @@ class ShipWireEmbed:
             hangar_half.z / max(extent.z * 0.5, 1e-4),
         )
         scale = max(0.01, scale)
+
+        if frame_size:
+            normalized = frame_size.lower()
+            if normalized == "escort":
+                scale *= 0.5
+            elif normalized == "strike":
+                scale *= 0.25
+
 
         # Centre in hangar at origin and elevate so pads sit at Z=0.2.
         centre = (min_corner + max_corner) * 0.5
