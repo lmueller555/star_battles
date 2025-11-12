@@ -703,6 +703,112 @@ Confirm currency for purchase cost.
 
 Provide Advanced Rhino pane if available to record upgrade deltas (+Δ) for any blue stats/slots.
 
+Strike — Raven Mk VI-R (Role: Force Recon)
+
+Identity
+
+Class / Role: Strike · Force Recon
+
+Level Requirement: 1
+
+Counterpart / Upgrade To: (TBD) / Advanced Raven Mk VI-R
+
+Lore/Intent: Low-signature recon variant optimized for scouting, DRADIS reach, and very cheap long-range FTL.
+
+Economy
+
+Purchase Cost: 35,000 (as shown on pane; currency icon on card)
+
+Operating: Boost Cost 0.5 Tyl/s · FTL Cost 1 Tyl (per card; unusually low by design for recon)
+
+Upgrade Cost (→ Advanced): TBD
+
+Equipment Slots (weight: Light)
+
+Weapons (guns): 2 (panel lists “Gun 2 Light”; “Weapon 0 Light.” Treat guns as the Raven’s weapon family.)
+
+Hull: 2
+
+Engine: 2
+
+Computer: 1
+
+Launcher / Defensive / Special: 0 / 0 / 0
+
+Hull / Survivability
+
+Hull Points: 350
+
+Hull Recovery: 3 /s
+
+Durability: 3,500
+
+Armor Value: 0
+
+Critical Defense: 60
+
+Engine / Mobility
+
+Speed: 70 m/s
+
+Boost Speed: 90 m/s
+
+Boost Cost: 0.5 Tyl/s
+
+Acceleration / Boost Accel: 13 m/s² / 1.25 m/s²
+
+Inertial Compensation: 175 m/s
+
+Avoidance / Fading: 520 / 0.75
+
+Pitch Speed / Accel: 52 deg/s / 75 deg/s²
+
+Yaw Speed / Accel: 50 deg/s / 90 deg/s²
+
+Roll Speed / Accel: 90 deg/s / 750 deg/s²
+
+Strafe Speed / Accel: 0 / 80
+
+FTL
+
+Range: 10.5 LY
+
+Charge Time: 15 s
+
+Cooldown: 35 s
+
+Cost: 1 Tyl (recon-optimized)
+
+Energy & Sensors / EW
+
+Power Points / Recovery: 120 / 3 /s
+
+Firewall / Emitter Rating: 100 / 100
+
+DRADIS Base / Max: 1,000 m / 2,250 m
+
+Visual Range: 225 m
+
+Environmental
+
+Max Radiation Level: 70
+
+Radioactive Decay: 0.4
+
+Radioresistance: 0
+
+Pre-installed systems
+
+(None listed on your panes.)
+
+Traits & role notes
+
+Recon specialist: widest FTL reach and rock-bottom FTL cost among strikes; enhanced DRADIS vs peers; light armament and no armor—survival comes from speed, handling, and avoidance.
+
+Weapon family note: this frame uses Gun slots (2 Light) instead of the generic “Weapon” pool seen on other strikes—treat these as its primary weapon mounts in loadout logic.
+
+Advanced Raven Mk VI-R (when added): increase “blue-eligible” stats in line with your upgrade rules (energy, sensors, mobility) while preserving the recon identity (keep FTL efficiency advantage).
+
 ESCORT CLASS
 
 Escort — Glaive (Role: Command)
