@@ -1341,6 +1341,8 @@ def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
         engine_tail,
     ]
 
+    rear_support_start = 8
+
     for index in range(len(port_outer_hull)):
         outer = port_outer_hull[index]
         inner = port_inner_hull[index]
@@ -1349,36 +1351,34 @@ def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
 
         segments.append((outer, inner))
         segments.append((mirrored_outer, mirrored_inner))
-        segments.append((inner, mirrored_inner))
 
-        anchor = hull_anchor_points[index]
-        segments.append((inner, anchor))
-        segments.append((mirrored_inner, anchor))
+        if index >= rear_support_start:
+            segments.append((inner, mirrored_inner))
+
+            anchor = hull_anchor_points[index]
+            segments.append((inner, anchor))
+            segments.append((mirrored_inner, anchor))
 
         if index >= len(port_outer_hull) - 2:
             segments.append((outer, stern))
             segments.append((mirrored_outer, stern))
 
-    central_spine = [
-        prow,
-        forward_spine,
-        mid_spine,
-        brace_spine,
+    rear_spine = [
         reactor,
         engine_core,
         engine_tail,
         stern,
     ]
-    _loop_segments(segments, central_spine, close=False)
+    _loop_segments(segments, rear_spine, close=False)
 
-    cross_braces = [
-        (6.4, 3.2, 2.6),
-        (1.2, 2.8, 2.2),
+    rear_cross_braces = [
+        (-3.4, 2.4, 2.0, 8, 9),
+        (-5.6, 2.3, 2.1, 9, 10),
     ]
-    for z_position, upper_y, lower_y in cross_braces:
-        port_upper = Vector3(-3.2, upper_y, z_position)
+    for z_position, upper_y, lower_y, upper_index, lower_index in rear_cross_braces:
+        port_upper = Vector3(port_inner_hull[upper_index].x, upper_y, z_position)
         starboard_upper = _mirror_vector(port_upper)
-        port_lower = Vector3(-3.0, lower_y, z_position - 0.4)
+        port_lower = Vector3(port_inner_hull[lower_index].x, lower_y, z_position - 0.4)
         starboard_lower = _mirror_vector(port_lower)
 
         brace_loop = [
@@ -1388,10 +1388,10 @@ def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
             port_lower,
         ]
         _loop_segments(segments, brace_loop)
-        segments.append((port_upper, port_inner_hull[3]))
-        segments.append((starboard_upper, mirrored_inner_hull[3]))
-        segments.append((port_lower, port_inner_hull[6]))
-        segments.append((starboard_lower, mirrored_inner_hull[6]))
+        segments.append((port_upper, port_inner_hull[upper_index]))
+        segments.append((starboard_upper, mirrored_inner_hull[upper_index]))
+        segments.append((port_lower, port_inner_hull[lower_index]))
+        segments.append((starboard_lower, mirrored_inner_hull[lower_index]))
 
     vane_pairs = [
         (Vector3(-6.6, 1.8, -0.8), Vector3(-8.2, 1.6, -1.4)),
