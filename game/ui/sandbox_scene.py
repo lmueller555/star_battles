@@ -702,6 +702,7 @@ class SandboxScene(Scene):
             overlay_object = target
         target_overlay = self._build_target_overlay(overlay_object)
 
+        telemetry = self.world.telemetry_snapshot()
         if self.dradis and not self.hangar_open:
             self.hud.draw(
                 self.camera,
@@ -717,6 +718,7 @@ class SandboxScene(Scene):
                 ship_button_hovered=self._ship_button_hovered,
                 target_overlay=target_overlay,
                 weapon_slots=self._weapon_slot_hud_states(),
+                telemetry=telemetry,
             )
         if self.map_open and self.map_view:
             status = self.jump_feedback if self.jump_feedback_timer > 0.0 else None
@@ -1076,7 +1078,7 @@ class SandboxScene(Scene):
             return False
         if to_target.length_squared() <= 0.0:
             return True
-        forward = self.player.kinematics.forward()
+        forward = self.player.kinematics.basis.forward
         try:
             direction = to_target.normalize()
         except ValueError:

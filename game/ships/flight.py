@@ -59,9 +59,10 @@ def update_ship_flight(ship: Ship, dt: float, logger=None) -> None:
     if not thrusters_active:
         ctrl.boost = False
 
-    forward = kin.forward()
-    right = kin.right()
-    up = forward.cross(right)
+    basis = kin.basis
+    forward = basis.forward
+    right = basis.right
+    up = basis.up
 
     current_speed = kin.velocity.dot(forward)
     manual_input = ctrl.throttle

@@ -153,9 +153,10 @@ class ChaseCamera:
         target: Optional[Ship] = None,
         lock_mode: bool = False,
     ) -> None:
-        ship_forward = ship.kinematics.forward()
-        ship_right = ship.kinematics.right()
-        ship_up = ship_forward.cross(ship_right).normalize()
+        basis = ship.kinematics.basis
+        ship_forward = basis.forward
+        ship_right = basis.right
+        ship_up = basis.up
 
         if freelook_active:
             yaw_delta = freelook_delta[0] * self.freelook_sensitivity
