@@ -32,8 +32,8 @@ def effective_thruster_speed(stats: ShipStats) -> float:
 
     boost_speed = getattr(stats, "boost_speed", 0.0)
     if boost_speed <= 0.0:
-        boost_speed = stats.max_speed * THRUSTER_SPEED_MULTIPLIER
-    boost_speed = max(boost_speed, stats.max_speed)
+        boost_speed = stats.speed * THRUSTER_SPEED_MULTIPLIER
+    boost_speed = max(boost_speed, stats.speed)
     return boost_speed
 
 
@@ -43,7 +43,7 @@ def update_ship_flight(ship: Ship, dt: float, logger=None) -> None:
     ctrl = ship.control
 
     # Regenerate ship power for other systems.
-    ship.power = min(stats.power_cap, ship.power + stats.power_regen * dt)
+    ship.power = min(stats.power_points, ship.power + stats.power_recovery_per_sec * dt)
 
     # Thruster engagement and tylium drain.
     thrusters_requested = bool(ctrl.boost)
@@ -75,12 +75,12 @@ def update_ship_flight(ship: Ship, dt: float, logger=None) -> None:
         ship.disable_auto_throttle()
 
     flank_ratio = max(0.0, min(1.0, ship.flank_speed_ratio))
-    flank_speed = stats.max_speed * flank_ratio
+    flank_speed = stats.speed * flank_ratio
     current_max_speed = flank_speed
     accel_value = stats.acceleration
     if thrusters_active:
         current_max_speed = effective_thruster_speed(stats)
-        cruise_reference = max(1.0, stats.max_speed)
+        cruise_reference = max(1.0, stats.speed)
         accel_multiplier = current_max_speed / cruise_reference if cruise_reference > 0.0 else THRUSTER_SPEED_MULTIPLIER
         accel_value *= max(1.0, accel_multiplier)
     target_speed = current_max_speed * throttle_ratio
@@ -96,8 +96,8 @@ def update_ship_flight(ship: Ship, dt: float, logger=None) -> None:
 
     # Strafe control.
     desired_strafe = Vector3(
-        ctrl.strafe.x * stats.strafe_cap,
-        ctrl.strafe.y * stats.strafe_cap,
+        ctrl.strafe.x * stats.strafe_speed,
+        ctrl.strafe.y * stats.strafe_speed,
         0.0,
     )
     current_strafe = Vector3(
@@ -106,14 +106,14 @@ def update_ship_flight(ship: Ship, dt: float, logger=None) -> None:
         0.0,
     )
     strafe_delta = desired_strafe - current_strafe
-    kin.velocity += right * strafe_delta.x * min(1.0, stats.strafe_accel * dt)
-    kin.velocity += up * strafe_delta.y * min(1.0, stats.strafe_accel * dt)
+    kin.velocity += right * strafe_delta.x * min(1.0, stats.strafe_acceleration * dt)
+    kin.velocity += up * strafe_delta.y * min(1.0, stats.strafe_acceleration * dt)
     kin.velocity -= (right * current_strafe.x + up * current_strafe.y) * min(1.0, STRAFE_DAMPING * dt)
 
     # Inertia compensation to align velocity with forward vector.
     vel_parallel = forward * kin.velocity.dot(forward)
     residual = kin.velocity - vel_parallel
-    kin.velocity -= residual * min(1.0, stats.inertia_comp * dt)
+    kin.velocity -= residual * min(1.0, stats.inertial_compensation * dt)
 
     # Passive drag to keep speeds in check.
     kin.velocity -= kin.velocity * min(1.0, PASSIVE_DRAG * dt)
@@ -122,13 +122,19 @@ def update_ship_flight(ship: Ship, dt: float, logger=None) -> None:
     kin.position += kin.velocity * dt
 
     # Orientation updates from mouse deltas.
-    desired_yaw_rate = ctrl.look_delta.x * LOOK_SENSITIVITY * stats.turn_rate
-    desired_pitch_rate = -ctrl.look_delta.y * LOOK_SENSITIVITY * stats.turn_rate
-    desired_roll_rate = ctrl.roll_input * stats.turn_rate * 0.5
+    desired_yaw_rate = ctrl.look_delta.x * LOOK_SENSITIVITY * stats.yaw_speed
+    desired_pitch_rate = -ctrl.look_delta.y * LOOK_SENSITIVITY * stats.pitch_speed
+    desired_roll_rate = ctrl.roll_input * stats.roll_speed * 0.5
 
-    kin.angular_velocity.x = _approach(kin.angular_velocity.x, desired_pitch_rate, stats.turn_accel * dt)
-    kin.angular_velocity.y = _approach(kin.angular_velocity.y, desired_yaw_rate, stats.turn_accel * dt)
-    kin.angular_velocity.z = _approach(kin.angular_velocity.z, desired_roll_rate, stats.turn_accel * dt)
+    kin.angular_velocity.x = _approach(
+        kin.angular_velocity.x, desired_pitch_rate, stats.pitch_acceleration * dt
+    )
+    kin.angular_velocity.y = _approach(
+        kin.angular_velocity.y, desired_yaw_rate, stats.yaw_acceleration * dt
+    )
+    kin.angular_velocity.z = _approach(
+        kin.angular_velocity.z, desired_roll_rate, stats.roll_acceleration * dt
+    )
 
     kin.rotation.x = max(-85.0, min(85.0, kin.rotation.x + kin.angular_velocity.x * dt))
     kin.rotation.y = (kin.rotation.y + kin.angular_velocity.y * dt) % 360.0
@@ -139,14 +145,18 @@ def update_ship_flight(ship: Ship, dt: float, logger=None) -> None:
         correction = max(-AUTO_LEVEL_RATE * dt, min(AUTO_LEVEL_RATE * dt, -roll))
         roll += correction
         kin.rotation.z = (roll + 360.0) % 360.0
-        kin.angular_velocity.z = _approach(kin.angular_velocity.z, 0.0, stats.turn_accel * dt)
+        kin.angular_velocity.z = _approach(
+            kin.angular_velocity.z, 0.0, stats.roll_acceleration * dt
+        )
 
     ship.thrusters_active = thrusters_active
     ship.tick_cooldowns(dt)
     if ship.hull_regen_cooldown > 0.0:
         ship.hull_regen_cooldown = max(0.0, ship.hull_regen_cooldown - dt)
     else:
-        ship.hull = min(ship.stats.hull_hp, ship.hull + ship.stats.hull_regen * dt)
+        ship.hull = min(
+            ship.stats.hull_points, ship.hull + ship.stats.hull_recovery_per_sec * dt
+        )
     ship.boost_meter = ship.resources.tylium
 
 

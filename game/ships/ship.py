@@ -165,9 +165,9 @@ class Ship:
             tuning_kits=50.0,
         )
         self.tylium_capacity = self.resources.tylium
-        self.power = self.stats.power_cap
+        self.power = self.stats.power_points
         self.boost_meter = self.tylium_capacity
-        self.hull = self.stats.hull_hp
+        self.hull = self.stats.hull_points
         self.durability = self.stats.durability
         self.hull_regen_cooldown = 0.0
         self.mounts: List[WeaponMount] = [WeaponMount(hp) for hp in self.frame.hardpoints]
@@ -229,17 +229,17 @@ class Ship:
             ratio = max(0.0, min(1.0, ratio))
             return new_max * ratio
 
-        self.hull = preserve_ratio(self.hull, previous.hull_hp, stats.hull_hp)
+        self.hull = preserve_ratio(self.hull, previous.hull_points, stats.hull_points)
         self.durability = preserve_ratio(self.durability, previous.durability, stats.durability)
-        self.power = preserve_ratio(self.power, previous.power_cap, stats.power_cap)
+        self.power = preserve_ratio(self.power, previous.power_points, stats.power_points)
 
     def is_alive(self) -> bool:
         return self.hull > 0
 
     def reset(self) -> None:
-        self.power = self.stats.power_cap
+        self.power = self.stats.power_points
         self.boost_meter = self.tylium_capacity
-        self.hull = self.stats.hull_hp
+        self.hull = self.stats.hull_points
         self.durability = self.stats.durability
         self.kinematics.velocity = Vector3()
         self.kinematics.angular_velocity = Vector3()
