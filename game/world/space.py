@@ -39,15 +39,11 @@ from game.world.mining import (
 from game.ftl.utils import compute_ftl_charge, compute_ftl_cost
 from game.world.asteroids import Asteroid, AsteroidField, AsteroidFieldState
 
-_OUTPOST_COLLISION_RADIUS = 260.0
-_LINE_COLLISION_RADIUS = _OUTPOST_COLLISION_RADIUS * 0.5
-_ESCORT_COLLISION_RADIUS = _LINE_COLLISION_RADIUS * 0.25
-
 COLLISION_RADII = {
     "Strike": 9.0,
-    "Escort": _ESCORT_COLLISION_RADIUS,
-    "Line": _LINE_COLLISION_RADIUS,
-    "Outpost": _OUTPOST_COLLISION_RADIUS,
+    "Escort": 32.0,
+    "Line": 130.0,
+    "Outpost": 260.0,
 }
 
 COLLISION_CELL_SIZE = max(1.0, 2.0 * max(COLLISION_RADII.values()))
