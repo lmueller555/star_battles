@@ -9,6 +9,7 @@ from dataclasses import dataclass
 import pygame
 from pygame.math import Vector2
 
+from game.engine.telemetry import PerformanceSnapshot
 from game.math.ballistics import compute_lead
 from game.sensors.dradis import DradisSystem
 from game.ui.sector_map import map_display_rect
@@ -398,7 +399,14 @@ class HUD:
             size = 5 if contact.detected else 3
             pygame.draw.circle(self.surface, color, (int(projected.x), int(projected.y)), size, 1)
 
-    def draw_overlay(self, sim_dt: float, fps: float, player: Ship, target: Optional[Ship]) -> None:
+    def draw_overlay(
+        self,
+        sim_dt: float,
+        fps: float,
+        player: Ship,
+        target: Optional[Ship],
+        performance: PerformanceSnapshot | None = None,
+    ) -> None:
         if not self.overlay_enabled:
             return
         lines = [
@@ -410,6 +418,45 @@ class HUD:
             distance = player.kinematics.position.distance_to(target.kinematics.position)
             lines.append(f"Target dist: {format_distance(distance)}")
             lines.append(f"Lock: {player.lock_progress*100:.0f}%")
+        if performance and performance.basis:
+            basis = performance.basis
+            total_basis = basis.hits + basis.misses
+            if total_basis <= 0:
+                lines.append("Basis cache: no samples")
+            else:
+                hit_rate = performance.basis_hit_rate() * 100.0
+                lines.append(
+                    f"Basis cache: {basis.hits}/{total_basis} hits ({hit_rate:.1f}%) dup={basis.duplicates}"
+                )
+        if performance and performance.collisions:
+            collisions = performance.collisions
+            candidates = collisions.candidates
+            lines.append(
+                "Collisions: cand={} culled={} tested={} time={:.2f}ms".format(
+                    candidates,
+                    collisions.culled,
+                    collisions.tested,
+                    collisions.duration_ms,
+                )
+            )
+        if performance and performance.ai:
+            counts = performance.ai.counts
+            updates = performance.ai.updates
+
+            def _fmt(bucket: str) -> str:
+                total = counts.get(bucket, 0)
+                updated = updates.get(bucket, 0)
+                return f"{updated}/{total}"
+
+            lines.append(
+                "AI updates N/M/F/S: {} {} {} {}".format(
+                    _fmt("near"),
+                    _fmt("mid"),
+                    _fmt("far"),
+                    _fmt("sentry"),
+                )
+            )
+
         for i, line in enumerate(lines):
             text = self.font.render(line, True, (200, 220, 255))
             self.surface.blit(text, (20, 140 + i * 18))
@@ -423,6 +470,7 @@ class HUD:
         projectile_speed: float,
         sim_dt: float,
         fps: float,
+        performance: PerformanceSnapshot | None = None,
         docking_prompt: tuple[str, float, float] | None = None,
         mining_state: MiningHUDState | None = None,
         *,
@@ -441,7 +489,7 @@ class HUD:
         self.draw_dradis(dradis)
         self.draw_ship_info_button(player, ship_info_open, ship_button_hovered)
         self.draw_flank_speed_slider(player)
-        self.draw_overlay(sim_dt, fps, player, target)
+        self.draw_overlay(sim_dt, fps, player, target, performance)
         if docking_prompt:
             name, distance, radius = docking_prompt
             self.draw_docking_prompt(name, distance, radius)

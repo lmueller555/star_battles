@@ -711,6 +711,7 @@ class SandboxScene(Scene):
                 projectile_speed,
                 self.sim_dt,
                 self.fps,
+                performance=self.world.performance_snapshot(),
                 docking_prompt=docking_prompt if not self.hangar_open else None,
                 mining_state=self.mining_state,
                 ship_info_open=self.ship_info_open,
@@ -1076,7 +1077,7 @@ class SandboxScene(Scene):
             return False
         if to_target.length_squared() <= 0.0:
             return True
-        forward = self.player.kinematics.forward()
+        forward = self.player.kinematics.basis.forward
         try:
             direction = to_target.normalize()
         except ValueError:
