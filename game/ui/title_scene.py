@@ -16,7 +16,10 @@ class TitleScene(Scene):
 
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.KEYDOWN:
-            self.manager.activate("sandbox")
+            if event.key == pygame.K_q:
+                pygame.event.post(pygame.event.Event(pygame.QUIT))
+            else:
+                self.manager.activate("sandbox")
 
     def render(self, surface: pygame.Surface, alpha: float) -> None:
         surface.fill((0, 0, 0))
