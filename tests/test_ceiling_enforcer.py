@@ -1,15 +1,9 @@
-import json
-from pathlib import Path
-
 from game.world.interior import InteriorDefinition
+from game.world.outpost_layouts import build_outpost_interior_v1
 
 
 def _load_definition() -> InteriorDefinition:
-    path = Path("game/assets/data/outpost_interior_v1.json")
-    data = json.loads(path.read_text())
-    definition = InteriorDefinition.from_dict(data)
-    assert definition is not None
-    return definition
+    return build_outpost_interior_v1()
 
 
 def test_all_spaces_have_ceiling_planes_and_members() -> None:
