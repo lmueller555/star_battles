@@ -37,6 +37,36 @@ SHIP_FORMATION_OFFSETS = (
 )
 
 
+def _generate_ring_spawns(
+    team: str,
+    count: int,
+    *,
+    angle_offset: float = 0.0,
+    radius_scale: float = 0.65,
+) -> list[tuple[str, str, Vector3, Vector3]]:
+    """Generate dispersed Strike spawns arranged around the sector edge."""
+
+    if count <= 0:
+        return []
+
+    radius = AsteroidField.FIELD_RADIUS * radius_scale
+    radial_variation = AsteroidField.FIELD_RADIUS * 0.08
+    vertical_amplitude = 420.0
+    spawns: list[tuple[str, str, Vector3, Vector3]] = []
+    frame_id = "viper_mk_vii"
+    for index in range(count):
+        fraction = index / count
+        angle = angle_offset + fraction * (2.0 * math.pi)
+        radial = radius + math.sin(angle * 2.3) * radial_variation
+        x = math.cos(angle) * radial
+        z = math.sin(angle) * radial
+        y = math.sin(angle * 1.7) * vertical_amplitude
+        position = Vector3(x, y, z)
+        velocity = Vector3(0.0, 0.0, 0.0)
+        spawns.append((team, frame_id, position, velocity))
+    return spawns
+
+
 @dataclass
 class WeaponSlotState:
     index: int
@@ -167,6 +197,20 @@ class SandboxScene(Scene):
                         ship.apply_default_loadout(self.content)
                         ai = create_ai_for_ship(ship)
                         self.world.add_ship(ship, ai=ai)
+
+                dispersed_spawns: list[tuple[str, str, Vector3, Vector3]] = []
+                dispersed_spawns.extend(_generate_ring_spawns("player", 20))
+                dispersed_spawns.extend(
+                    _generate_ring_spawns("enemy", 20, angle_offset=math.pi / 20.0)
+                )
+                for team, frame_id, position, velocity in dispersed_spawns:
+                    frame = self.content.ships.get(frame_id)
+                    ship = Ship(frame, team=team)
+                    ship.kinematics.position = Vector3(position)
+                    ship.kinematics.velocity = Vector3(velocity)
+                    ship.apply_default_loadout(self.content)
+                    ai = create_ai_for_ship(ship)
+                    self.world.add_ship(ship, ai=ai)
 
                 edge_distance = max(0.0, AsteroidField.FIELD_RADIUS * 0.95 - 12000.0)
                 outpost_spawns: list[tuple[str, str, Vector3]] = [
