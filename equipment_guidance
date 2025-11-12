@@ -338,9 +338,518 @@ Accuracy tuned for heavy targets; not reliable versus Strike ships.
 
 Enforce ship class restriction in Store/Fitting UI.
 
+Weapons (Medium / Heavy Hardpoints – Line Only)
+
+MEC-L31(S) “Talon” — Heavy Cannon Battery (L1)
+
+Damage: 35 – 70 (upgrades)
+Armor Piercing: 35
+Range: 0 – 1700 m
+Optimal Range: 675 m (upgrades)
+Accuracy: 125
+Critical Offense: 100
+Reload: 4 s
+Power Cost: 25
+Firing Arc: 180°
+Cost: 20 000
+Durability: 17 500 / 17 500
+
+Effect:
+General-purpose heavy cannon battery for Line-class ships.
+Delivers substantial kinetic damage with long reach and a wide 180° firing arc.
+High power draw and slow reload limit sustained fire; excels against armored or large targets at medium-long range.
+
+Upgrade Model:
+Increase Damage and Optimal Range per level. All other fields remain fixed unless higher-level data indicate otherwise.
+
+Implementation Notes:
+
+Uses standard ballistic hit, armor, and crit formulas.
+
+Consumes full Power Cost instantly on fire; cannot re-queue until Reload completes.
+
+Accuracy 125 is balanced for large targets (Line/Capital); less effective against Strike-class ships.
+
+Apply standard range falloff using Optimal Range (peak DPS ≈ 675 m).
+
+Restricted to Line-class hardpoints — enforce requirement in Store and Fitting UI.
+
+Weapons (Medium / Heavy Hardpoints – Line Only)
+
+MEC-L34(S) “Cyclone” — Heavy Cannon Battery (L1)
+
+Damage: 35 – 70 (upgrades)
+Armor Piercing: 35
+Range: 0 – 1350 m
+Optimal Range: 550 m (upgrades)
+Accuracy: 125
+Critical Offense: 100
+Reload: 3.2 s
+Power Cost: 25
+Firing Arc: 180°
+Cost: 20 000
+Durability: 17 500 / 17 500
+
+Effect:
+Short-range, rapid-fire heavy cannon battery for Line-class ships.
+Trades reach for a faster firing cycle and improved sustained DPS over the Talon.
+Ideal for midline brawling and ship-of-the-line duels within 1 km; inefficient at long range due to steep falloff.
+
+Upgrade Model:
+Increase Damage and Optimal Range per level. Reload time and Power Cost remain constant unless higher-level data show changes.
+
+Implementation Notes:
+
+Shares the same ballistic and crit formulas as Talon and other heavy cannons.
+
+Accuracy 125 tuned for large targets; reduced efficiency versus smaller Strike or Escort ships.
+
+Apply standard range falloff using Optimal Range (peak DPS ≈ 550 m).
+
+Power Cost consumed instantly per shot; separate reload tracking per mount.
+
+Restricted to Line-class hardpoints — enforce eligibility in Store and Fitting UI.
+
+Weapons (Medium / Heavy Hardpoints – Line Only)
+
+MEC-L35(S) “Eagle” — Heavy Cannon Battery (L1)
+
+Damage: 35 – 70 (upgrades)
+Armor Piercing: 35
+Range: 0 – 2000 m
+Optimal Range: 800 m (upgrades)
+Accuracy: 125
+Critical Offense: 100
+Reload: 4.8 s
+Power Cost: 25
+Firing Arc: 180°
+Cost: 20 000
+Durability: 17 500 / 17 500
+
+Effect:
+Long-range heavy cannon battery for Line-class ships.
+Emphasizes superior engagement distance and precision over rate of fire.
+Delivers powerful kinetic volleys ideal for standoff engagements and suppressive fire.
+Excels when supporting fleet actions from beyond 1 km; slower cycle time reduces DPS up close.
+
+Upgrade Model:
+Increase Damage and Optimal Range per level. Reload, Power Cost, and Accuracy remain fixed unless higher-level data show variation.
+
+Implementation Notes:
+
+Uses standard ballistic, armor, and crit formula.
+
+Applies standard range falloff (peak performance ≈ 800 m, tapering to 2000 m max).
+
+Power Cost consumed instantly on fire; each mount reloads independently.
+
+Accuracy 125 balanced for larger targets — minimal benefit against small, agile craft.
+
+Restricted to Line-class hardpoints — enforce in Store and Fitting UI.
+
+Weapons (Medium / Heavy Hardpoints – Line Only)
+
+HD-H40(S) “Stormstrike” — Heavy Missile Battery (L1)
+
+Damage: 55 – 150 (upgrades)
+Armor Piercing: 35
+Range: 200 – 1800 m (upgrades)
+Turn Speed: 30 deg/s
+Speed: 80 m/s
+Critical Offense: 100
+Reload: 15 s
+Power Cost: 100
+Firing Arc: 180°
+Cost: 20 000
+Durability: 17 500 / 17 500
+
+Effect:
+General-purpose heavy missile battery for Line-class ships.
+Launches guided projectiles capable of tracking large or moderately agile targets.
+Offers high burst damage and long-range flexibility at the cost of slow reload and significant power draw.
+Ideal for opening salvos or sustained support fire from range.
+
+Upgrade Model:
+Increase Damage and Range per level. Reload time and Power Cost typically remain constant unless higher-level data show otherwise.
+
+Implementation Notes:
+
+Guided weapon type — uses missile flight model (speed 80 m/s, turn rate 30 deg/s).
+
+Apply standard hit, crit, and armor rules upon impact; subject to normal target Avoidance.
+
+Consumes Power Cost when missile is fired, not on impact.
+
+One reload timer per mount; cannot fire again until missile returns to ready state.
+
+Use 180° firing arc for lock-on cone; enforce ship-class eligibility (Line only).
+
+Weapons (Medium / Heavy Hardpoints – Line Only)
+
+MEC-L39F “Landslide” — Flak Battery (L1)
+
+Damage: 1 – 35 (upgrades)
+Armor Piercing: 15
+Range: 500 – 800 m (upgrades)
+Optimal Range: 800 m (upgrades)
+Accuracy: 300
+Critical Offense: 100
+Reload: 1 s
+Power Cost: 7
+Firing Arc: 180°
+Cost: 20 000
+Durability: 17 500 / 17 500
+
+Effect:
+Creates a defensive flak field for Line-class ships.
+Fires rapid, proximity-triggered shells that detonate near incoming missiles or small craft.
+Provides high suppressive DPS at short-to-mid range but limited effectiveness versus heavy armor.
+Best used for point defense and anti-strike screening.
+
+Upgrade Model:
+Increase Damage and Range per level. Reload and Power Cost remain constant unless higher-level data show otherwise.
+
+Implementation Notes:
+
+Uses proximity detonation model: each projectile explodes near target within 10–15 m, applying splash damage.
+
+Reduced Armor Piercing reflects anti-missile/light-craft specialization.
+
+Accuracy 300 enables wide-area saturation but reduces long-range hit consistency.
+
+Maintain independent reload timers for multiple mounts.
+
+Restricted to Line-class hardpoints — enforce in Store and Fitting UI.
+
+Consider optional visual effect: persistent flak bursts for area defense feedback.
+
+Weapons (Medium / Heavy Hardpoints – Line Only)
+
+MEC-L30P “Brushfire” — Point Defence Battery (L1)
+
+Damage: 1 – 5 (upgrades)
+Armor Piercing: 5
+Range: 0 – 540 m (upgrades)
+Optimal Range: 400 m (upgrades)
+Accuracy: 500
+Critical Offense: 100
+Reload: 0.5 s
+Power Cost: 3.5
+Firing Arc: 180°
+Cost: 20 000
+Durability: 17 500 / 17 500
+
+Effect:
+Automated close-range defensive battery for Line-class ships.
+Designed to intercept incoming missiles and strike craft at short range using rapid-fire, high-accuracy rounds.
+Excels at sustained defensive fire within 400–500 m; limited damage potential against heavy armor or distant targets.
+
+Upgrade Model:
+Increase Damage and Range per level. Reload and Power Cost remain fixed unless higher-level data indicate otherwise.
+
+Implementation Notes:
+
+Functions as automated CIWS (Close-In Weapon System) for missile and drone defense.
+
+Uses projectile-based hit checks; target prioritization should favor nearest incoming threats.
+
+Accuracy 500 allows reliable short-range interception but rapid damage falloff beyond optimal.
+
+Minimal Armor Piercing; primarily defensive.
+
+Restricted to Line-class hardpoints — enforce in Store and Fitting UI.
+
+Consider tying weapon state to AI auto-fire behavior when toggled active.
+
+Weapons (Medium / Heavy Hardpoints – Line Only)
+
+HD-H48(S) “Ballista” — Heavy Missile Battery (L1)
+
+Damage: 55 – 150 (upgrades)
+Armor Piercing: 35
+Range: 200 – 2000 m (upgrades)
+Turn Speed: 30 deg/s
+Speed: 80 m/s
+Critical Offense: 100
+Reload: 18 s
+Power Cost: 100
+Firing Arc: 180°
+Cost: 20 000
+Durability: 17 500 / 17 500
+
+Effect:
+Long-range heavy missile battery for Line-class ships.
+Provides extended engagement reach and high single-volley impact, optimized for distant bombardment.
+Ideal for capital engagement or defensive overwatch, but limited by lengthy reloads and heavy energy consumption.
+
+Upgrade Model:
+Increase Damage and Range per level. Reload and Power Cost remain fixed unless higher-level data show variation.
+
+Implementation Notes:
+
+Uses guided missile logic with 30°/s turn rate and 80 m/s flight speed.
+
+Subject to standard hit, crit, and armor formulas on impact.
+
+Power Cost consumed immediately upon missile launch.
+
+Long reload requires careful timing and coordination in sustained battles.
+
+Accuracy and tracking tuned for large, slow targets at long range.
+
+Restricted to Line-class hardpoints — enforce requirement in Store and Fitting UI.
+
+Works well when paired with Stormstrike batteries for mixed-range salvos.
+
 CAPITAL CLASS EQUIPMENT
 
-(Reserved for future additions — dreadnought-scale systems, heavy plasma, broadside batteries, etc.)
+Weapons (Heavy / Siege Hardpoints – Capital Only)
+
+HAG-MK16A “Gram” — 130mm Artillery Cannon (L1)
+
+Damage: 75 – 135 (upgrades)
+Armor Piercing: 35
+Range: 2300 – 4000 m (upgrades)
+Optimal Range: 2750 m (upgrades)
+Accuracy: 125
+Critical Offense: 100
+Reload: 8 s
+Power Cost: 64
+Firing Arc: 35°
+Cost: 500 000
+Durability: 20 000 / 20 000
+
+Effect:
+High-caliber artillery cannon for Capital-class vessels.
+Delivers devastating long-range firepower designed for siege and ship-of-the-line engagements.
+Extremely limited firing arc and long reload, balanced by immense per-shot impact and armor penetration.
+Incapable of reliably hitting Strike-class ships due to target size and slow traverse.
+
+Upgrade Model:
+Increase Damage and Optimal Range per level. Reload and Power Cost remain fixed unless higher-level data show changes.
+
+Implementation Notes:
+
+Uses standard ballistic and crit formulas; apply standard falloff from Optimal Range (peak DPS ≈ 2750 m).
+
+Designed for broadside or fixed forward mounts — do not allow 360° traversal.
+
+Each shot consumes full Power Cost at the moment of firing.
+
+Accuracy tuned for large, slow targets (Line or Capital classes).
+
+Minimum effective range (≈ 2300 m) prevents close-range use; enforce via targeting logic.
+
+Restricted to Capital-class hardpoints — enforce requirement in Store and Fitting UI.
+
+Consider adding screen-shake and concussive sound effects for cinematic impact.
+
+Weapons (Defensive / Support Hardpoints – Capital Only)
+
+PD-X30P “Wildfire” — 25mm Point Defense Battery (L1)
+
+Damage: 3 – 7 (upgrades)
+Armor Piercing: 5
+Range: 0 – 1200 m (upgrades)
+Optimal Range: 500 m (upgrades)
+Accuracy: 500
+Critical Offense: 100
+Reload: 0.5 s
+Power Cost: 3.5
+Firing Arc: 180°
+Cost: 300 000
+Durability: 25 000 / 25 000
+
+Effect:
+Automated close-in defensive weapon system for Capital-class ships.
+Provides rapid-response interception against incoming missiles, strike craft, and torpedoes.
+Extremely high rate of fire and accuracy make it ideal for layered point defense at close range.
+Poor performance against heavily armored or distant targets.
+
+Upgrade Model:
+Increase Damage and Range per level. Reload and Power Cost remain fixed unless higher-level data indicate changes.
+
+Implementation Notes:
+
+Functions as a CIWS (Close-In Weapon System) with automatic engagement capability.
+
+Should prioritize hostile missiles, drones, and small ships within 1 km.
+
+Uses projectile-based logic; apply hit rolls per shot with standard accuracy formula.
+
+Accuracy 500 ensures reliable tracking at short range.
+
+Low Armor Piercing prevents meaningful hull damage to Line or Capital ships.
+
+Restricted to Capital-class defensive hardpoints — enforce eligibility in Store and Fitting UI.
+
+Consider adding continuous tracer fire and tracking audio cues for visual clarity.
+
+Weapons (Defensive / Support Hardpoints – Capital Only)
+
+M-37A “Fusillade” — 6.3mm Spot Flak (L1)
+
+Damage: 20 – 30 (upgrades)
+Armor Piercing: 15
+Range: 1000 – 1400 m (upgrades)
+Optimal Range: 1200 m (upgrades)
+Accuracy: 300
+Critical Offense: 100
+Reload: 1 s
+Power Cost: 5
+Firing Arc: 45°
+Cost: 450 000
+Durability: 25 000 / 25 000
+
+Effect:
+Short-arc defensive flak cannon designed for Capital-class ships.
+Fires directed explosive shells that detonate near incoming threats within a narrow arc.
+Highly effective at intercepting missiles and small craft in a defined coverage zone.
+Combines concentrated damage bursts with limited field of fire — best used in coordinated flak grids.
+
+Upgrade Model:
+Increase Damage and Range per level. Reload and Power Cost remain fixed unless higher-level data indicate otherwise.
+
+Implementation Notes:
+
+Uses proximity detonation model with small explosive radius (≈10–20 m).
+
+Moderate Armor Piercing allows it to damage lightly armored ships but remains defensive in intent.
+
+Accuracy 300 reflects area saturation rather than precision targeting.
+
+Power Cost applied per volley; independent reloads per turret.
+
+Firing arc limited to 45° to simulate fixed, directional flak turrets — avoid auto-tracking beyond arc.
+
+Restricted to Capital-class defensive hardpoints — enforce requirement in Store and Fitting UI.
+
+Consider pairing with Wildfire CIWS systems for comprehensive defense layering.
+
+Weapons (Defensive / Support Hardpoints – Capital Only)
+
+M-39F “Avalanche” — 5 cm Flak Battery (L1)
+
+Damage: 10 – 28 (upgrades)
+Armor Piercing: 15
+Range: 900 – 1500 m (upgrades)
+Optimal Range: 1200 m (upgrades)
+Accuracy: 300
+Critical Offense: 100
+Reload: 1 s
+Power Cost: 7
+Firing Arc: 180°
+Cost: 350 000
+Durability: 20 000 / 20 000
+
+Effect:
+Medium-range defensive flak battery for Capital-class ships.
+Generates a broad defensive field using explosive airburst munitions, providing layered anti-missile and anti-strike coverage.
+Features a wider engagement arc than the Fusillade but with lower per-shot precision.
+Effective for intercepting multiple simultaneous threats within a hemisphere around the ship.
+
+Upgrade Model:
+Increase Damage and Range per level. Reload and Power Cost remain constant unless higher-level data indicate otherwise.
+
+Implementation Notes:
+
+Uses flak-type proximity detonation with moderate blast radius (≈15–25 m).
+
+Accuracy 300 represents area-saturation fire; not intended for precision targeting.
+
+180° arc allows broad coverage for defensive screens around vulnerable ship zones.
+
+Power Cost applied per volley; independent reload timers per turret.
+
+Works best in pairs or grids with spot flak for complete coverage.
+
+Restricted to Capital-class defensive hardpoints — enforce requirement in Store and Fitting UI.
+
+Consider visual flak bursts and impact shock effects for cinematic feedback.
+
+Weapons (Heavy / Siege Hardpoints – Capital Only)
+
+RAM-179A “Stormstrike” — Guided Missile Rack (L1)
+
+Damage: 250 – 250 (upgrades)
+Armor Piercing: 35
+Range: 0 – 1800 m (upgrades)
+Turn Speed: 45 deg/s
+Speed: 95 m/s
+Critical Offense: 100
+Reload: 20 s
+Power Cost: 80
+Firing Arc: 360°
+Cost: 280 000
+Durability: 25 000 / 25 000
+
+Effect:
+Medium-range guided missile launcher for Capital-class ships.
+Fires heavy ordnance capable of adjusting trajectory mid-flight to pursue large or moderately agile targets.
+Delivers high-impact explosive payloads with full 360° coverage, ideal for fleet defense or sustained bombardment.
+Its long reload cycle and high power draw make it most effective as an alpha-strike or finisher weapon.
+
+Upgrade Model:
+Increase Damage and Range per level. Reload and Power Cost remain constant unless higher-level data indicate otherwise.
+
+Implementation Notes:
+
+Guided missile logic with 45°/s turn rate and 95 m/s projectile speed.
+
+Each missile uses standard hit, crit, and armor calculations upon detonation.
+
+Applies Power Cost at missile launch.
+
+360° firing arc allows full-coverage targeting but should obey targeting lock rules (cannot fire through ship geometry).
+
+Designed for anti-capital and anti-line engagements — inefficient versus Strike-class ships.
+
+Restricted to Capital-class hardpoints — enforce requirement in Store and Fitting UI.
+
+Consider adding missile trail and exhaust visual effects for cinematic impact.
+
+Weapons (Heavy / Siege Hardpoints – Capital Only)
+
+RGM-48 “Ballista” — Long Range DRADIS Guided Missile (L1)
+
+Damage: 450 – 450 (upgrades)
+Armor Piercing: 35
+Range: 2250 – 4000 m (upgrades)
+Turn Speed: 30 deg/s
+Speed: 110 m/s
+Critical Offense: 100
+Reload: 30 s
+Power Cost: 120
+Firing Arc: 120°
+Cost: 450 000
+Durability: 15 000 / 15 000
+
+Effect:
+Long-range guided missile system for Capital-class ships.
+Launches DRADIS-guided ordnance capable of tracking large targets at extreme distances.
+Designed for standoff bombardment and anti-capital engagements, trading sustained DPS for devastating alpha-strike potential.
+Missiles cannot effectively engage small Strike-class vessels due to sensor resolution limits.
+
+Upgrade Model:
+Increase Damage and Range per level. Reload and Power Cost remain fixed unless higher-level data show differences.
+
+Implementation Notes:
+
+Guided missile logic using 30°/s turn rate and 110 m/s travel speed.
+
+Each missile performs independent hit, crit, and armor calculations on impact.
+
+Power Cost applied upon missile launch.
+
+Long reload (30 s) limits sustained fire; best suited for coordinated salvos.
+
+120° firing arc represents forward DRADIS lock zone — requires target acquisition before launch.
+
+Optimized for long-range sieges and fleet support fire; ineffective versus agile ships.
+
+Restricted to Capital-class hardpoints — enforce in Store and Fitting UI.
+
+Consider adding visible lock-on indicator and long-trail missile effects for cinematic clarity.
 
 General Store / Fitting Rules
 
