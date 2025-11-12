@@ -732,8 +732,12 @@ class OutpostInteriorScene(Scene):
     def _apply_ship_wireframe(self) -> None:
         if not self._interior_view or not self._ship_embedder or not self.player:
             return
-        frame_size = getattr(self.player.frame, "size", "Strike")
-        segments = WIREFRAMES.get(frame_size, WIREFRAMES["Strike"])
+        frame = getattr(self.player, "frame", None)
+        frame_id = getattr(frame, "id", None)
+        frame_size = getattr(frame, "size", "Strike")
+        segments = WIREFRAMES.get(frame_id) if frame_id else None
+        if segments is None:
+            segments = WIREFRAMES.get(frame_size, WIREFRAMES["Strike"])
         embed_input = [
             (
                 (segment[0].x, segment[0].y, segment[0].z),
