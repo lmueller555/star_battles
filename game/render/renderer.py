@@ -1055,31 +1055,83 @@ def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
     )
     _loop_segments(segments, neck_lower_loop)
 
-    mid_upper_loop = _compress_loop(
+    mid_forward_upper_loop = _compress_loop(
+        _stretched_oval_loop(
+            sides=oval_sides,
+            center_y=1.75,
+            center_z=1.15,
+            half_width_x=1.35,
+            half_depth_z=1.45,
+            vertical_rake=0.12,
+            vertical_crown=0.18,
+        )
+    )
+    _loop_segments(segments, mid_forward_upper_loop)
+
+    mid_forward_lower_loop = _compress_loop(
+        _stretched_oval_loop(
+            sides=oval_sides,
+            center_y=-0.1,
+            center_z=0.95,
+            half_width_x=1.35,
+            half_depth_z=1.35,
+            vertical_rake=0.2,
+            vertical_crown=-0.08,
+        )
+    )
+    _loop_segments(segments, mid_forward_lower_loop)
+
+    mid_central_upper_loop = _compress_loop(
         _stretched_oval_loop(
             sides=oval_sides,
             center_y=1.7,
-            center_z=0.4,
-            half_width_x=1.55,
-            half_depth_z=1.7,
+            center_z=0.35,
+            half_width_x=1.35,
+            half_depth_z=1.65,
             vertical_rake=0.15,
             vertical_crown=0.18,
         )
     )
-    _loop_segments(segments, mid_upper_loop)
+    _loop_segments(segments, mid_central_upper_loop)
 
-    mid_lower_loop = _compress_loop(
+    mid_central_lower_loop = _compress_loop(
         _stretched_oval_loop(
             sides=oval_sides,
             center_y=-0.25,
-            center_z=0.2,
+            center_z=0.15,
             half_width_x=1.35,
-            half_depth_z=1.6,
+            half_depth_z=1.55,
             vertical_rake=0.22,
             vertical_crown=-0.12,
         )
     )
-    _loop_segments(segments, mid_lower_loop)
+    _loop_segments(segments, mid_central_lower_loop)
+
+    mid_aft_upper_loop = _compress_loop(
+        _stretched_oval_loop(
+            sides=oval_sides,
+            center_y=1.55,
+            center_z=-0.85,
+            half_width_x=1.35,
+            half_depth_z=1.4,
+            vertical_rake=0.18,
+            vertical_crown=0.16,
+        )
+    )
+    _loop_segments(segments, mid_aft_upper_loop)
+
+    mid_aft_lower_loop = _compress_loop(
+        _stretched_oval_loop(
+            sides=oval_sides,
+            center_y=-0.35,
+            center_z=-1.05,
+            half_width_x=1.35,
+            half_depth_z=1.45,
+            vertical_rake=0.24,
+            vertical_crown=-0.1,
+        )
+    )
+    _loop_segments(segments, mid_aft_lower_loop)
 
     stern_upper_loop = _compress_loop(
         [
@@ -1109,8 +1161,22 @@ def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
     )
     _loop_segments(segments, stern_lower_loop)
 
-    upper_loops = [prow_upper_loop, neck_upper_loop, mid_upper_loop, stern_upper_loop]
-    lower_loops = [prow_lower_loop, neck_lower_loop, mid_lower_loop, stern_lower_loop]
+    upper_loops = [
+        prow_upper_loop,
+        neck_upper_loop,
+        mid_forward_upper_loop,
+        mid_central_upper_loop,
+        mid_aft_upper_loop,
+        stern_upper_loop,
+    ]
+    lower_loops = [
+        prow_lower_loop,
+        neck_lower_loop,
+        mid_forward_lower_loop,
+        mid_central_lower_loop,
+        mid_aft_lower_loop,
+        stern_lower_loop,
+    ]
 
     for upper_ring, lower_ring in zip(upper_loops, lower_loops):
         _connect_rings(segments, upper_ring, lower_ring)
@@ -1143,10 +1209,10 @@ def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
 
     module_ridges = _compress_loop(
         [
-            Vector3(-1.25, 1.5, 0.9),
+            Vector3(-1.35, 1.5, 0.9),
             Vector3(-1.35, 1.4, -0.1),
             Vector3(-1.35, 1.4, -1.2),
-            Vector3(-1.2, 1.5, -2.0),
+            Vector3(-1.35, 1.5, -2.0),
         ]
     )
     for point in module_ridges:
