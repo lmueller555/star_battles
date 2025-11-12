@@ -18,6 +18,7 @@ from game.engine.scene import SceneManager
 from game.ui.outpost_scene import OutpostInteriorScene
 from game.ui.sandbox_scene import SandboxScene
 from game.ui.title_scene import TitleScene
+from game.ui.ship_selection_scene import ShipSelectionScene
 
 
 SETTINGS_PATH = Path("settings.json")
@@ -62,6 +63,7 @@ def main() -> None:
 
     manager = SceneManager()
     manager.register("title", TitleScene)
+    manager.register("ship_selection", ShipSelectionScene)
     manager.register("sandbox", SandboxScene)
     manager.register("outpost_interior", OutpostInteriorScene)
     manager.set_context(content=content, input=input_mapper, logger=logger)

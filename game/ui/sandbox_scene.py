@@ -127,7 +127,13 @@ class SandboxScene(Scene):
                 self.content.mining,
                 self.logger,
             )
-            player_frame = self.content.ships.get("viper_mk_vii")
+            context = self.manager.context if getattr(self, "manager", None) and hasattr(self.manager, "context") else {}
+            selected_ship_id: str | None = kwargs.get("selected_ship_id") or context.get("selected_ship_id")
+            if selected_ship_id and selected_ship_id in self.content.ships.frames:
+                frame_id = selected_ship_id
+            else:
+                frame_id = "viper_mk_vii"
+            player_frame = self.content.ships.get(frame_id)
             self.player = Ship(player_frame, team="player")
             if self.content:
                 self.player.apply_default_loadout(self.content)

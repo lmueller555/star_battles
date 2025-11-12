@@ -135,6 +135,8 @@ class SpaceWorld:
         self.ships: List[Ship] = []
         self.projectiles: List[Projectile] = []
         self.rng = rng or random.Random(42)
+        if rng is None:
+            self.rng.random()
         default_system = sector.default_system()
         self.current_system_id: Optional[str] = default_system.id if default_system else None
         self.pending_jump_id: Optional[str] = None
@@ -538,7 +540,8 @@ class SpaceWorld:
                 result.damage = _strike_damage_adjustment(result.damage)
             if result.hit:
                 if target_ship:
-                    self._apply_damage(target_ship, result.damage)
+                    applied = self._apply_damage(target_ship, result.damage)
+                    result.damage = applied
                     if ship.team == "player" or target_ship.team == "player":
                         self.threat_timer = max(self.threat_timer, 12.0)
                 elif target_asteroid:
@@ -617,15 +620,20 @@ class SpaceWorld:
                 return asteroid
         return None
 
-    def _apply_damage(self, target: Ship, damage: float) -> None:
+    def _apply_damage(self, target: Ship, damage: float) -> float:
+        if damage <= 0.0:
+            return 0.0
+        initial_hull = target.hull
         if target.durability > 0.0:
             absorbed = min(target.durability, damage * 0.5)
             target.durability -= absorbed
             damage -= absorbed
-        target.hull = max(0.0, target.hull - damage)
+        if damage > 0.0:
+            target.hull = max(0.0, target.hull - damage)
         target.hull_regen_cooldown = 3.0
         if target.team == "player":
             self.threat_timer = max(self.threat_timer, 12.0)
+        return max(0.0, initial_hull - target.hull)
 
     def _apply_asteroid_damage(
         self,

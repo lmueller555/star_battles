@@ -19,7 +19,7 @@ class TitleScene(Scene):
             if event.key == pygame.K_q:
                 pygame.event.post(pygame.event.Event(pygame.QUIT))
             else:
-                self.manager.activate("sandbox")
+                self.manager.activate("ship_selection")
 
     def render(self, surface: pygame.Surface, alpha: float) -> None:
         surface.fill((0, 0, 0))
