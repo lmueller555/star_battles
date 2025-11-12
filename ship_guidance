@@ -116,43 +116,45 @@ Traits & role notes: …
 Open items / TBD: …
 
 STRIKE CLASS
-Strike — Viper (panel label: “Viper Mk VII”) — Role: Interceptor
+Strike — Viper Mk II (Role: Interceptor)
 
 Identity
 
-Class/Role: Strike · Interceptor
+Class / Role: Strike · Interceptor
 
 Level Requirement: 1
 
-Counterpart / Upgrade To: counterpart not provided · Advanced Viper (name TBD)
+Counterpart / Upgrade To: (TBD) / Advanced Viper Mk II
+
+Role Note: Interceptor frames carry more Engine slots; Advanced adds one more.
 
 Economy
 
-Purchase Cost: 100,000 (currency icon—confirm Cubits vs Tylium)
+Purchase Cost: 100,000 (confirm currency icon)
 
-Operating: Boost Cost 0.5 Tyl/s, FTL Cost 20 Tyl (panel uses a flat number; if this is per-LY elsewhere, note that for consistency)
+Operating: Boost Cost 0.5 Tyl/s · FTL Cost 20 Tyl
 
-Upgrade Cost (→ Advanced): TBD
+Upgrade Cost (→ Advanced): (TBD)
 
-Equipment Slots (all “Light” weight per panel)
+Equipment Slots (weight: Light)
 
-Weapons: 4 (+1) ⇒ 5
+Weapons: 4 (panel shows “4(+1) Light” → Advanced adds +1 to 5)
 
 Hull: 2
 
-Engine: 5 (+1) ⇒ 6
+Engine: 5 (panel shows “5(+1) Light” → Advanced adds +1 to 6)
 
 Computer: 2
 
-Gun: 0 · Launcher: 0 · Defensive Weapon: 0 · Special Weapon: 0
+Gun / Launcher / Defensive / Special: 0 / 0 / 0 / 0
 
 Hull / Survivability
 
-Hull Points: 585 (+135) ⇒ 720
+Hull Points: 450 (blue upgrade panel shows 585(+135); treat +135 as Advanced delta)
 
-Hull Recovery: 4.5 (+2) /s ⇒ 6.5 /s
+Hull Recovery: 2.5 /s (blue panel shows 4.5(+2.0) /s)
 
-Durability: 9,000 (+4,500) ⇒ 13,500
+Durability: 9,000 (blue panel shows 9,000(+4,500))
 
 Armor Value: 5
 
@@ -160,39 +162,45 @@ Critical Defense: 80
 
 Engine / Mobility
 
-Turning Speed: 55 (+3) deg/s ⇒ 58 deg/s
+Speed: 55 m/s (blue panel lists 60(+5) m/s)
 
-Turning Acceleration: 55 deg/s² (no blue delta shown)
-
-Inertial Compensation: 175 m/s
-
-Acceleration: 16.2 (+2.7) m/s² ⇒ 18.9 m/s²
-
-Speed: 60 (+5) m/s ⇒ 65 m/s
-
-Boost Speed: 110 (+3) m/s ⇒ 113 m/s
+Boost Speed: 90–110 m/s (your two Mk II panes show 90; the blue panel shows 110(+20). If you need a single canonical base, keep 90 m/s and apply +20 on Advanced)
 
 Boost Cost: 0.5 Tyl/s
+
+Acceleration: 13.5 m/s² (blue panel lists 16.2(+2.7) m/s²)
+
+Boost Acceleration: 1.5 m/s²
+
+Inertial Compensation: 175 m/s
 
 Avoidance: 510
 
 Avoidance Fading: 0.75
 
-(Pitch/Yaw/Roll breakdown not shown in this pane; use “Turning Speed” as the global cap for this section.)
+Pitch/Yaw Speed: 55 / 55 deg/s
+
+Pitch/Yaw Acceleration: 55 / 55 deg/s²
+
+Roll Speed: 182 deg/s
+
+Roll Acceleration: 748 deg/s²
+
+Strafe Speed / Accel: 0 / 0
 
 FTL
 
-FTL Range: 4.5 LY
+Range: 4.5 LY
 
-FTL Charge Time: 15 s
+Charge Time: 15 s
 
-FTL Cooldown: 15 s (from first image; second shows 15—consistent)
+Cooldown: 35 s
 
-FTL Cost: 20 Tyl
+Cost: 20 Tyl
 
 Energy & Sensors / EW
 
-Power Points: 150 (+50) ⇒ 200
+Power Points: 100 (blue panel shows 150(+50))
 
 Power Recovery: 5 /s
 
@@ -200,29 +208,41 @@ Firewall Rating: 100
 
 Emitter Rating: 100
 
-DRADIS Range: 2,000 m (panel shows single value; treat as Base/Max for now)
+DRADIS Base / Max: 1,000 m / 2,000 m
 
 Visual Range: 200 m
 
 Environmental
 
-(Not shown on this pane)
+Max Radiation Level: 80
+
+Radioactive Decay: 0.5
+
+Radioresistance: 0
 
 Pre-installed systems
 
-2× MEC-A6 “Fang” Light Autocannon (from earlier Viper notes; keep unless superseded by this UI)
+(TBD — none shown on your Mk II panes.)
 
 Traits & role notes
 
-Interceptor frame with extra Engine slots base and additional Engine slot on Advanced (per global role rules).
+Classic Interceptor strike: very high handling, strong avoidance, light armor; excels at pursuit, knife-fighting, and missile denial when properly equipped.
 
-Blue stats encode the Viper’s Advanced upgrade deltas (already aggregated above).
+Advanced Mk II raises several “blue” stats; apply the deltas you captured:
+
+Hull Points +135, Hull Regen +2.0/s, Durability +4,500
+
+Turning Speed +3 deg/s (from 55(+3) panel)
+
+Acceleration +2.7 m/s², Speed +5 m/s, Boost Speed +20 m/s
+
+Power +50
 
 Open items / TBD
 
-Confirm currency for purchase (icon) and whether FTL Cost is per-jump or per-LY for this frame.
+Confirm purchase currency (cubits vs tylium) for the 100,000 figure.
 
-If your Mk VII uses different values than this panel, paste its pane and we’ll split Viper Mk II vs Viper Mk VII as separate entries.
+If you want a single authoritative baseline for Boost Speed (90 vs 110), choose 90 m/s as base and treat +20 m/s as the Advanced delta per the blue panel.
 
 Strike — Raptor FR (Role: Command; “Fleet Reconnaissance”)
 
