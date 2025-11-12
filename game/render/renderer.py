@@ -994,7 +994,7 @@ def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
         sides=oval_sides,
         center_y=2.05,
         center_z=3.1,
-        half_width_x=2.745,
+        half_width_x=3.05,
         half_depth_z=1.25,
         vertical_rake=0.0,
         vertical_crown=0.0,
@@ -1005,7 +1005,7 @@ def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
         sides=oval_sides,
         center_y=0.6,
         center_z=3.0,
-        half_width_x=2.565,
+        half_width_x=2.85,
         half_depth_z=1.15,
         vertical_rake=0.0,
         vertical_crown=0.0,
@@ -1016,7 +1016,7 @@ def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
         sides=oval_sides,
         center_y=1.95,
         center_z=2.2,
-        half_width_x=2.025,
+        half_width_x=2.25,
         half_depth_z=0.9,
         vertical_rake=0.0,
         vertical_crown=0.0,
@@ -1027,7 +1027,7 @@ def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
         sides=oval_sides,
         center_y=0.4,
         center_z=2.1,
-        half_width_x=1.845,
+        half_width_x=2.05,
         half_depth_z=0.85,
         vertical_rake=0.0,
         vertical_crown=0.0,
@@ -1038,7 +1038,7 @@ def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
         sides=oval_sides,
         center_y=1.7,
         center_z=0.4,
-        half_width_x=1.395,
+        half_width_x=1.55,
         half_depth_z=1.7,
         vertical_rake=0.15,
         vertical_crown=0.18,
@@ -1049,7 +1049,7 @@ def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
         sides=oval_sides,
         center_y=-0.25,
         center_z=0.2,
-        half_width_x=1.215,
+        half_width_x=1.35,
         half_depth_z=1.6,
         vertical_rake=0.22,
         vertical_crown=-0.12,
@@ -1058,25 +1058,25 @@ def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
 
     stern_upper_loop = [
         Vector3(0.0, 1.2, -2.2),
-        Vector3(2.25, 1.1, -2.6),
-        Vector3(2.79, 1.0, -3.4),
-        Vector3(2.07, 0.9, -4.1),
+        Vector3(2.5, 1.1, -2.6),
+        Vector3(3.1, 1.0, -3.4),
+        Vector3(2.3, 0.9, -4.1),
         Vector3(0.0, 0.9, -4.2),
-        Vector3(-2.07, 0.9, -4.1),
-        Vector3(-2.79, 1.0, -3.4),
-        Vector3(-2.25, 1.1, -2.6),
+        Vector3(-2.3, 0.9, -4.1),
+        Vector3(-3.1, 1.0, -3.4),
+        Vector3(-2.5, 1.1, -2.6),
     ]
     _loop_segments(segments, stern_upper_loop)
 
     stern_lower_loop = [
         Vector3(0.0, -0.8, -2.4),
-        Vector3(2.07, -0.7, -2.8),
-        Vector3(2.61, -0.6, -3.6),
-        Vector3(1.89, -0.5, -4.2),
+        Vector3(2.3, -0.7, -2.8),
+        Vector3(2.9, -0.6, -3.6),
+        Vector3(2.1, -0.5, -4.2),
         Vector3(0.0, -0.5, -4.2),
-        Vector3(-1.89, -0.5, -4.2),
-        Vector3(-2.61, -0.6, -3.6),
-        Vector3(-2.07, -0.7, -2.8),
+        Vector3(-2.1, -0.5, -4.2),
+        Vector3(-2.9, -0.6, -3.6),
+        Vector3(-2.3, -0.7, -2.8),
     ]
     _loop_segments(segments, stern_lower_loop)
 
@@ -1100,10 +1100,10 @@ def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
         segments.append((start, end))
 
     module_ridges = [
-        Vector3(-1.125, 1.5, 0.9),
-        Vector3(-1.215, 1.4, -0.1),
-        Vector3(-1.215, 1.4, -1.2),
-        Vector3(-1.08, 1.5, -2.0),
+        Vector3(-1.25, 1.5, 0.9),
+        Vector3(-1.35, 1.4, -0.1),
+        Vector3(-1.35, 1.4, -1.2),
+        Vector3(-1.2, 1.5, -2.0),
     ]
     for point in module_ridges:
         mirrored = _mirror_vector(point)
@@ -1112,9 +1112,9 @@ def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
         segments.append((mirrored, Vector3(mirrored.x, 0.9, mirrored.z)))
 
     strake_points = [
-        Vector3(-2.79, 1.8, 3.1),
-        Vector3(-2.97, 1.5, 2.2),
-        Vector3(-2.79, 1.2, 1.0),
+        Vector3(-3.1, 1.8, 3.1),
+        Vector3(-3.3, 1.5, 2.2),
+        Vector3(-3.1, 1.2, 1.0),
     ]
     for point in strake_points:
         mirrored = _mirror_vector(point)
@@ -1123,10 +1123,10 @@ def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
         segments.append((mirrored, Vector3(mirrored.x, 0.6, mirrored.z)))
 
     thruster_points = [
-        Vector3(-1.26, 0.6, -4.2),
-        Vector3(-0.36, 0.6, -4.2),
-        Vector3(0.36, 0.6, -4.2),
-        Vector3(1.26, 0.6, -4.2),
+        Vector3(-1.4, 0.6, -4.2),
+        Vector3(-0.4, 0.6, -4.2),
+        Vector3(0.4, 0.6, -4.2),
+        Vector3(1.4, 0.6, -4.2),
     ]
     for point in thruster_points:
         segments.append((point, Vector3(point.x, -0.4, -4.2)))
