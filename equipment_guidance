@@ -1,296 +1,355 @@
-Scope: Items usable by Strike ships. Units: meters (m), m/s, deg/s, deg/s², seconds, currency shown as the UI displays (e.g., 10,000). Durability values are the item’s max at L1.
+Equipment Guidance Document
 
-Global combat/stat rules (for the engine to use consistently)
+Scope: Items usable by ships in the classes Strike, Escort, Line, and Capital.
+Units: meters (m), m/s, deg/s, deg/s², seconds, currency shown as UI (e.g., 10,000).
+Durability values are the item’s maximum at Level 1 (L1).
 
-Hit chance: hit_chance = clamp01( (AttackerAccuracy - DefenderAvoidance) / accuracy_scale )
-– Use your game’s accuracy_scale (e.g., 400 = baseline). Negative values clamp to 0.
-– Avoidance comes from the ship + modules (e.g., Light RCS Ducting +15).
+Global Combat / Stat Rules
 
-Armor & AP: EffectiveArmor = max(0, Armor - ArmorPiercing);
-DamageTaken = RawDamage * (1 - EffectiveArmor/100) (clamped ≥ 0).
+Hit Chance
 
-Criticals: On hit, compute crit using attacker’s Critical Offense vs defender’s Critical Defense (already defined in your combat model).
+hit_chance = clamp01((AttackerAccuracy - DefenderAvoidance) / accuracy_scale)
 
-Firing arc: Degrees the hardpoint can legally fire within (don’t roll the mount beyond this).
 
-Reload: Cooldown between shots.
+Use your engine’s global accuracy_scale (e.g., 400 = baseline).
 
-Power cost: Energy removed from the ship per shot/activation.
+Negative results clamp to 0.
 
-Upgrade axes: For the L1 items below, note which fields upgrade. If not listed as “(upgrades)”, keep the value constant across levels unless you later capture higher-level screenshots.
+Avoidance comes from the ship + modules (e.g., Light RCS Ducting +15).
 
-Weapons (Light hardpoints – Strike only)
+Armor & Armor Piercing
+
+EffectiveArmor = max(0, Armor - ArmorPiercing)
+DamageTaken = RawDamage * (1 - EffectiveArmor / 100)
+
+
+Clamp final value ≥ 0.
+
+Criticals
+On hit, compute crit using attacker’s Critical Offense vs defender’s Critical Defense (as defined in combat model).
+
+Firing Arc
+Degrees the hardpoint can legally fire within (do not roll beyond this).
+
+Reload
+Cooldown between shots.
+
+Power Cost
+Energy removed from the ship per shot or activation.
+
+Upgrade Axes
+Only attributes labeled “(upgrades)” scale with item level.
+Other values remain constant unless higher-level screenshots show changes.
+
+STRIKE CLASS EQUIPMENT
+
+Light, fast attack craft emphasizing agility, precision, and low durability.
+
+Weapons (Light Hardpoints – Strike Only)
+
 MEC-A6 “Fang” — Light Autocannon (L1)
-
 Damage: 1–10 (upgrades)
-
 Armor Piercing: 5
-
 Range: 0–750 m
-
 Optimal Range: 300 m (upgrades)
-
 Accuracy: 400
-
 Critical Offense: 100
-
 Reload: 0.5 s
-
 Power Cost: 1
-
 Firing Arc: 75°
-
 Cost: 10,000
-
 Durability: 2500 / 2500
-
-Upgrade model: Increase Damage and Optimal Range per level. All other fields fixed unless you collect higher-level data.
+Upgrade Model: Damage and Optimal Range scale per level.
+Notes: Baseline autocannon. Standard accuracy, mid-range DPS.
 
 MEC-A6P “Fang-P” — Light Autocannon (L1)
-
 Damage: 1–10 (upgrades)
-
 Armor Piercing: 5
-
 Range: 0–750 m
-
 Optimal Range: 300 m
-
 Accuracy: 400
-
 Critical Offense: 100 (upgrades)
-
 Reload: 0.5 s
-
 Power Cost: 1
-
 Firing Arc: 75°
-
 Cost: 10,000
-
 Durability: 2500 / 2500
-
-Upgrade model: Increase Damage and Critical Offense per level. Others fixed.
+Upgrade Model: Damage and Critical Offense scale.
+Notes: Precision variant emphasizing crit damage.
 
 MEC-A8 “Tornado” — Light Autocannon (L1)
-
 Damage: 1–10 (upgrades)
-
 Armor Piercing: 5
-
 Range: 0–600 m
-
 Optimal Range: 250 m (upgrades)
-
 Accuracy: 400
-
 Critical Offense: 100
-
 Reload: 0.4 s
-
 Power Cost: 1
-
 Firing Arc: 75°
-
 Cost: 10,000
-
 Durability: 2500 / 2500
-
-Upgrade model: Increase Damage and Optimal Range. Fast ROF variant.
+Upgrade Model: Damage and Optimal Range scale.
+Notes: Fast ROF variant; lower range for higher DPS.
 
 MEC-A8P “Tornado-P” — Light Autocannon (L1)
-
 Damage: 1–10 (upgrades)
-
 Armor Piercing: 5
-
 Range: 0–600 m
-
 Optimal Range: 250 m
-
 Accuracy: 400
-
 Critical Offense: 100 (upgrades)
-
 Reload: 0.4 s
-
 Power Cost: 1
-
 Firing Arc: 75°
-
 Cost: 10,000
-
 Durability: 2500 / 2500
+Upgrade Model: Damage and Critical Offense scale.
+Notes: Critical-leaning rapid-fire variant.
 
-Upgrade model: Increase Damage and Critical Offense. Fast, crit-leaning variant.
+MEL-N2 “Needle” — Light Railgun (L1)
+Damage: 8–20 (upgrades)
+Armor Piercing: 18
+Range: 0–900 m
+Optimal Range: 500 m (upgrades)
+Accuracy: 380
+Critical Offense: 120
+Reload: 0.9 s
+Power Cost: 3
+Firing Arc: 60°
+Cost: 18,000
+Durability: 2500 / 2500
+Upgrade Model: Damage and Optimal Range scale.
+Notes: Precision kinetic weapon with high AP and long reach.
 
-Implementation notes (all four autocannons):
+MEL-V1 “Viper Pod” — Light Rocket Pod (L1)
+Damage: 5 × 4 (burst) (upgrades)
+Armor Piercing: 8
+Range: 0–600 m
+Optimal Range: 200 m (upgrades)
+Accuracy: 360
+Critical Offense: 80
+Reload: 1.6 s (between bursts)
+Power Cost: 4
+Firing Arc: 85°
+Cost: 14,000
+Durability: 2500 / 2500
+Upgrade Model: Per-rocket Damage and Optimal Range scale.
+Notes: Close-range burst weapon; 4 rockets per trigger pull.
 
-Use Optimal Range to apply your standard range falloff (e.g., peak DPS near optimal, degrade toward max).
+MEL-S3 “Stiletto” — Light Beam Emitter (L1)
+Damage: 3.0/s (continuous) (upgrades)
+Armor Piercing: 10
+Range: 0–700 m
+Optimal Range: 350 m (upgrades)
+Accuracy: 420
+Critical Offense: 90
+Reload: 0.2 s tick (continuous)
+Power Cost: 1 per tick (0.2 s)
+Firing Arc: 70°
+Cost: 16,000
+Durability: 2500 / 2500
+Upgrade Model: Damage/s and Optimal Range scale.
+Notes: Continuous beam; best for sustained tracking.
 
-Accuracy 400 plugs into your hit formula; AP 5 into armor math.
+MEL-W9 “Wasp” — Light Seeker Missile (L1)
+Damage: 24 (upgrades)
+Armor Piercing: 14
+Range: 200–1200 m
+Optimal Range: 650 m
+Accuracy: 410
+Critical Offense: 110
+Reload: 2.2 s
+Power Cost: 6
+Firing Arc: 120° (soft-lock cone)
+Cost: 22,000
+Durability: 2500 / 2500
+Upgrade Model: Damage and (optionally) Reload.
+Notes: Guided missile with soft-lock tracking.
 
-If multiple identical cannons are mounted, track independent reloads.
+Hull Systems (Strike / Light Hull Slot, Passive)
 
-Hull systems (Strike / Light hull slot, passive)
 Strike Composite Plating (L1)
-
 Armor Value: +2.25
-
 Hull Points: +22.5
-
 Acceleration: −0.3
-
 Turn Acceleration: −0.75 deg/s²
-
 Cost: 8,000
-
 Durability: 2500 / 2500
-
-Effect: Mixed survivability (armor + hull) with small maneuver penalties.
-
-Upgrade axis: If you capture higher levels, expect Armor and Hull to scale; penalties typically remain constant per level unless UI shows otherwise.
+Effect: Balanced armor + hull with mild maneuver penalties.
+Upgrade Axis: Armor and Hull scale.
 
 Strike Hull Plating (L1)
-
 Hull Points: +45
-
 Acceleration: −0.2
-
 Turn Acceleration: −1.0 deg/s²
-
 Cost: 8,000
-
 Durability: 2500 / 2500
-
-Effect: Larger flat hull buffer; slightly heavier turn-accel penalty.
-
-Upgrade axis: Hull Points scale with level.
+Effect: Greater hull padding, slightly heavier penalty.
+Upgrade Axis: Hull Points scale.
 
 Strike Armor Plating (L1)
-
 Armor Value: +4.5
-
 Acceleration: −0.4
-
 Turn Acceleration: −0.5 deg/s²
-
 Cost: 8,000
-
 Durability: 2500 / 2500
+Effect: Strong armor boost, biggest accel penalty.
+Upgrade Axis: Armor Value scales.
 
-Effect: Stronger Armor boost; biggest linear accel penalty of the three.
+Strike Ablative Lattice (L1)
+Armor Value: +6.0
+Hull Points: +10
+Acceleration: −0.5
+Turn Acceleration: −0.3 deg/s²
+Cost: 10,000
+Durability: 2500 / 2500
+Effect: Heavier armor focus; reduced accel.
+Upgrade Axis: Armor scales strongly; Hull modestly.
 
-Upgrade axis: Armor Value scales with level.
+Strike Bulkhead Reinforcement (L1)
+Hull Points: +70
+Acceleration: −0.3
+Turn Acceleration: −1.2 deg/s²
+Cost: 10,000
+Durability: 2500 / 2500
+Effect: High hull buffer with noticeable handling penalty.
+Upgrade Axis: Hull Points scale.
 
-Hull module application order (recommended):
+Strike Reactive Plating (L1)
+Armor Value: +3.0
+Avoidance: +5
+Acceleration: −0.2
+Cost: 12,000
+Durability: 2500 / 2500
+Effect: Reactive armor layer adds modest Avoidance.
+Upgrade Axis: Armor and Avoidance scale modestly.
 
-Recompute max_hull = base + sum(hull_points_mods); clamp current hull to new max.
+Engine Systems (Strike / Light Engine Slot, Passive)
 
-armor = base + sum(armor_value_mods)
-
-Add kinematic penalties/bonuses: lin_accel += sum(accel_deltas); turn_accel += sum(turn_accel_deltas).
-
-Engine systems (Strike / Light engine slot, passive)
 Light Drive Overcharger (L1)
-
 Speed: +1.25 m/s
-
 Boost Speed: +1.25 m/s
-
 Cost: 5,000
-
 Durability: 2500 / 2500
-
-Effect: Flat increases to cruise & boost top speeds.
-
-Upgrade axis: Speed and Boost Speed scale.
+Effect: Flat boost to both cruise and sprint.
+Upgrade Axis: Speed & Boost Speed scale.
 
 Light Turbo Boosters (L1)
-
 Acceleration: +1.0
-
 Boost Speed: +2.5 m/s
-
 Cost: 5,000
-
 Durability: 2500 / 2500
-
-Effect: Better sprint; adds linear acceleration and higher boost cap.
-
-Upgrade axis: Acceleration and Boost Speed scale.
+Effect: Increases sprint capability.
+Upgrade Axis: Accel & Boost Speed scale.
 
 Light Gyro-Stabilization (L1)
-
 Turn Speed: +2.5 deg/s
-
 Turn Acceleration: +2.5 deg/s²
-
 Cost: 5,000
-
 Durability: 2500 / 2500
+Effect: Improves rotational agility.
+Upgrade Axis: Turn Speed & Accel scale.
 
-Effect: Improves rotational performance.
-
-Upgrade axis: Turn Speed & Turn Acceleration scale.
-
-Light RCS Ducting (L1) — NEW
-
+Light RCS Ducting (L1)
 Avoidance: +15
-
 Cost: 5,000
-
 Durability: 2500 / 2500
+Effect: Increases Avoidance (harder to hit).
+Upgrade Axis: Avoidance scales.
 
-Effect: Increases Avoidance (harder to hit with cannons).
+Light Afterburn Coupling (L1)
+Speed: +0.5 m/s
+Boost Speed: +3.5 m/s (upgrades)
+Acceleration: +0.5
+Cost: 7,500
+Durability: 2500 / 2500
+Effect: Prioritizes sprint speed.
+Upgrade Axis: Boost Speed & Accel scale.
 
-Upgrade axis: Avoidance scales with level.
+Light Vectoring Nozzles (L1)
+Turn Speed: +3.5 deg/s
+Turn Acceleration: +3.0 deg/s²
+Acceleration: −0.2
+Cost: 7,500
+Durability: 2500 / 2500
+Effect: Improves turning, minor accel tradeoff.
+Upgrade Axis: Turn stats scale; penalty fixed.
 
-Engine module application order (recommended):
-max_speed += sum(speed_bonus); boost_speed += sum(boost_bonus); lin_accel += sum(accel_bonus); turn_rate += sum(turn_speed_bonus); turn_accel += sum(turn_accel_bonus); avoidance += sum(avoidance_bonus).
+Light Inertial Dampeners (L1)
+Acceleration: +1.5
+Turn Acceleration: +1.0 deg/s²
+Speed: −0.5 m/s
+Cost: 6,500
+Durability: 2500 / 2500
+Effect: Snappier handling; slightly lower top speed.
+Upgrade Axis: Accel & Turn Accel scale.
 
-Store/fit rules for Strike items
+Light ECM Weave (L1)
+Avoidance: +12 (upgrades)
+Turn Speed: +1.0 deg/s
+Cost: 9,000
+Durability: 2500 / 2500
+Effect: Reduced tracking signature; complements RCS Ducting.
+Upgrade Axis: Avoidance scales.
 
-Eligibility: Ship class must be Strike (enforce in Store & Fitting).
+Module Application Order (Strike Engines):
 
-Stacking: Same family modules stack additively unless you later add DR (diminishing returns).
+max_speed += sum(speed_bonus)
+boost_speed += sum(boost_bonus)
+lin_accel += sum(accel_bonus)
+turn_rate += sum(turn_speed_bonus)
+turn_accel += sum(turn_accel_bonus)
+avoidance += sum(avoidance_bonus)
 
-Durability & cost: Show item Durability and Price on the card. Items at 0% cannot function until repaired.
+ESCORT CLASS EQUIPMENT
 
-Preview deltas: On hover/select, compute the delta vs current ship (+X / −Y) and show it in green/red for: Speed, Boost Speed, Accel, Turn Speed/Accel, Avoidance, Armor, Hull, etc.
+(Reserved for future development — medium-weight hybrid fighters between Strike and Line.)
 
-Upgrade preview: If the user holds the “Max Upgrade” hotkey (your UI shows [SHIFT]), switch the stat block to show the level-cap values (once you’ve captured them).
+LINE CLASS EQUIPMENT
 
-Weapons (Medium/Heavy hardpoints – Line class only)
+Durable gunships designed for sustained frontline combat.
+
+Weapons (Medium / Heavy Hardpoints – Line Only)
 
 MEC-L31(S) “Talon” — Heavy Cannon Battery (L1)
-
-Damage: 35 – 70 (upgrades)
+Damage: 35–70 (upgrades)
 Armor Piercing: 35
-Range: 0 – 1700 m
+Range: 0–1700 m
 Optimal Range: 675 m (upgrades)
 Accuracy: 125
 Critical Offense: 100
 Reload: 4 s
 Power Cost: 25
 Firing Arc: 180°
-Cost: 20 000
-Durability: 17 500 / 17 500
-
+Cost: 20,000
+Durability: 17,500 / 17,500
 Effect: General-purpose heavy cannon battery for Line-class ships.
-Delivers high single-shot kinetic impact with moderate firing arc and substantial energy draw.
-Performs best at medium-long range near its optimal distance; severe energy cost and long reload make timing important.
+High-impact kinetic firepower, medium arc, significant energy cost.
+Best performance at mid-range; excels against large, armored targets.
+Upgrade Model: Damage and Optimal Range scale with level.
+Implementation Notes:
 
-Upgrade model: Increase Damage and Optimal Range per level. Other fields remain fixed unless higher-level data show otherwise.
+Uses same hit, armor, and crit formulas as light cannons.
 
-Implementation notes:
+Consumes Power instantly on fire; long reload cycle.
 
-Treat as a standard ballistic cannon using the same hit, armor, and crit formulas as Strike-class autocannons.
+Accuracy tuned for heavy targets; not reliable versus Strike ships.
 
-Each shot consumes Power Cost energy instantly on fire; cannot queue fire until reload complete.
+Enforce ship class restriction in Store/Fitting UI.
 
-Integrates with Line-class hardpoints only (enforce ship-class check in Store & Fitting UI).
+CAPITAL CLASS EQUIPMENT
 
-Accuracy 125 is below Strike-grade light weapons, so large targets are preferred; apply normal accuracy_scale (≈ 400 baseline).
+(Reserved for future additions — dreadnought-scale systems, heavy plasma, broadside batteries, etc.)
 
-Use Optimal Range for falloff curve (peak DPS near 675 m, taper toward 1700 m max).
+General Store / Fitting Rules
+
+Eligibility: Enforce per-ship-class restrictions.
+
+Stacking: Same-family modules stack additively (add diminishing returns later if needed).
+
+Durability & Cost: Display item Durability and Price on the card. Items at 0% Durability are disabled until repaired.
+
+Preview Deltas: On hover/select, display stat deltas vs current ship in green/red for Speed, Boost, Accel, Turn, Avoidance, Armor, Hull, etc.
+
+Upgrade Preview: Holding [SHIFT] shows maximum-level values once captured from UI.
