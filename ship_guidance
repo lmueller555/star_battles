@@ -341,173 +341,237 @@ If an Advanced Raptor FR exists in your data, provide its pane so we can add upg
 Strike — Viper Mk III (Role: Multi-Role)
 Identity
 
-
 Class / Role: Strike · Multi-Role
-
 
 Level Requirement: 1
 
-
 Counterpart / Upgrade To: TBD
-
 
 Economy
 
-
 Purchase Cost: 23,000 (confirm currency from icon)
-
 
 Operating: Boost Cost 0.5 Tyl/s, FTL Cost 30 Tyl
 
-
 Upgrade Cost (→ Advanced): TBD
-
 
 Equipment Slots (weight: Light)
 
-
 Weapons: 3
-
 
 Hull: 3
 
-
 Engine: 3
-
 
 Computer: 2
 
-
 Gun / Launcher / Defensive / Special: 0 / 0 / 0 / 0
-
 
 Hull / Survivability
 
-
 Hull Points: 515
-
 
 Hull Recovery: 3.5 /s
 
-
 Durability: 4,500
-
 
 Armor Value: 5
 
-
 Critical Defense: 80
-
 
 Engine / Mobility
 
-
 Speed: 55 m/s
-
 
 Boost Speed: 100 m/s
 
-
 Boost Cost: 0.5 Tyl/s
-
 
 Acceleration: 14 m/s²
 
-
 Boost Acceleration: 4.5 m/s²
-
 
 Inertial Compensation: 100 m/s
 
-
 Avoidance: 510
-
 
 Avoidance Fading: 0.75
 
-
 Pitch/Yaw Speed: 51 / 51 deg/s
-
 
 Pitch/Yaw Acceleration: 55 / 55 deg/s²
 
-
 Roll Speed: 180 deg/s
-
 
 Roll Acceleration: 748 deg/s²
 
-
 Strafe Speed / Accel: 0 / 0
-
 
 FTL
 
-
 Range: 4.5 LY
-
 
 Charge Time: 15 s
 
-
 Cooldown: 35 s
-
 
 Cost: 30 Tyl
 
-
 Energy & Sensors / EW
-
 
 Power Points: 100
 
-
 Power Recovery: 5.2 /s
-
 
 Firewall Rating: 100
 
-
 Emitter Rating: 100
-
 
 DRADIS Base / Max: 1,000 m / 2,000 m
 
-
 Visual Range: 200 m
-
 
 Environmental
 
-
 Max Radiation Level: 80
-
 
 Radioactive Decay: 0.5
 
-
 Radioresistance: 0
-
 
 Pre-installed systems
 
-
 TBD (none shown on the pane)
-
 
 Traits & role notes
 
-
 Balanced multi-role Strike with even slot spread (3/3/3/2); sits between the high-energy Recon (Raptor FR) and the faster Interceptor-style Vipers.
-
 
 Open items / TBD
 
-
 Confirm currency type for purchase.
 
-
 Provide Advanced Viper Mk III pane (if it exists) so we can add any blue upgrade deltas (+Δ) for fields that improve on upgrade.
+
+Strike — Rhino (Role: Assault)
+
+Identity
+
+Class / Role: Strike · Assault
+
+Level Requirement: 1
+
+Counterpart / Upgrade To: TBD
+
+Economy
+
+Purchase Cost: 36,000 (confirm currency from icon)
+
+Operating: Boost Cost 0.7 Tyl/s, FTL Cost 30 Tyl (per the slot panel)
+
+Upgrade Cost (→ Advanced): TBD
+
+Equipment Slots (weight: Light)
+
+Weapons: 4
+
+Hull: 5 (Assault signature: more Hull slots)
+
+Engine: 2
+
+Computer: 2
+
+Gun / Launcher / Defensive / Special: 0 / 0 / 0 / 0
+
+Hull / Survivability
+
+Hull Points: 715
+
+Hull Recovery: 5.5 /s
+
+Durability: 11,000
+
+Armor Value: 10
+
+Critical Defense: 120
+
+Engine / Mobility
+
+Speed: 50 m/s
+
+Boost Speed: 75 m/s
+
+Boost Cost: 0.7 Tyl/s
+
+Acceleration: 8 m/s²
+
+Boost Acceleration: 7 m/s²
+
+Inertial Compensation: 100 m/s
+
+Avoidance: 490
+
+Avoidance Fading: 0.75
+
+Pitch/Yaw Speed: 45 / 45 deg/s
+
+Pitch/Yaw Acceleration: 45 / 45 deg/s²
+
+Roll Speed: 101.25 deg/s
+
+Roll Acceleration: 450 deg/s²
+
+Strafe Speed / Accel: 0 / 0
+
+FTL
+
+Range: 5 LY
+
+Charge Time: 15 s
+
+Cooldown: 32.5 s
+
+Cost: 30 Tyl
+
+Energy & Sensors / EW
+
+Power Points: 150
+
+Power Recovery: 5 /s
+
+Firewall Rating: 150
+
+Emitter Rating: 150
+
+DRADIS Base / Max: 1,000 m / 2,500 m (panel list shows 2,500 m; top sheet shows Base 1,000 m → keep both)
+
+Visual Range: 250 m
+
+Environmental
+
+Max Radiation Level: 130
+
+Radioactive Decay: 0.8
+
+Radioresistance: 0
+
+Pre-installed systems
+
+TBD (none shown)
+
+Traits & role notes
+
+Heavily armored Strike with highest Armor (10) and high Critical Defense (120) among Strikes you’ve listed so far.
+
+Assault identity is reinforced by 5 Hull slots; trades speed/handling for toughness.
+
+Best used as a brawler/point holder; benefits strongly from Hull and Armor modules.
+
+Open items / TBD
+
+Confirm currency for purchase cost.
+
+Provide Advanced Rhino pane if available to record upgrade deltas (+Δ) for any blue stats/slots.
 
 ESCORT CLASS
 
