@@ -1,6 +1,7 @@
 """Sandbox combat scene."""
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 import pygame
@@ -25,17 +26,15 @@ from game.ui.sector_map import SectorMapView
 from game.ui.hangar import HangarView
 from game.ui.ship_info import ShipInfoPanel
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from game.ships.data import ShipFrame
-
 
 KEY_LOOK_SCALE = 6.0
-SECTOR_SPAWN_RADIUS = 8000.0
-STRIKE_SPAWNS_PER_SIDE = 10
-ESCORT_SPAWNS_PER_SIDE = 6
-LINE_SPAWNS_PER_SIDE = 3
+SECTOR_SCALE = 5.0
+FORMATION_SPACING = 1200.0 * SECTOR_SCALE
+SHIP_FORMATION_OFFSETS = (
+    Vector3(-FORMATION_SPACING, 0.0, -FORMATION_SPACING),
+    Vector3(0.0, 0.0, 0.0),
+    Vector3(FORMATION_SPACING, 0.0, FORMATION_SPACING),
+)
 
 
 @dataclass
@@ -105,89 +104,6 @@ class SandboxScene(Scene):
         else:
             ship.apply_default_loadout(self.content)
 
-    def _frames_for_size(self, size: str) -> list["ShipFrame"]:
-        if not self.content:
-            return []
-        target = size.lower()
-        return [
-            frame
-            for frame in self.content.ships.frames.values()
-            if frame.size.lower() == target
-        ]
-
-    def _random_sector_position(self, radius: float) -> Vector3:
-        if not self.world:
-            return Vector3(0.0, 0.0, 0.0)
-        radius_sq = radius * radius
-        for _ in range(12):
-            candidate = Vector3(
-                self.world.rng.uniform(-radius, radius),
-                self.world.rng.uniform(-radius, radius),
-                self.world.rng.uniform(-radius, radius),
-            )
-            if candidate.length_squared() <= radius_sq:
-                return candidate
-        fallback = Vector3(
-            self.world.rng.uniform(-1.0, 1.0),
-            self.world.rng.uniform(-1.0, 1.0),
-            self.world.rng.uniform(-1.0, 1.0),
-        )
-        if fallback.length_squared() == 0.0:
-            return Vector3(0.0, 0.0, 0.0)
-        fallback.scale_to_length(self.world.rng.uniform(0.0, radius))
-        return fallback
-
-    def _spawn_team_ships(
-        self,
-        team: str,
-        composition: dict[str, int],
-    ) -> list[Ship]:
-        if not self.world:
-            return []
-        spawned: list[Ship] = []
-        for size, count in composition.items():
-            frames = self._frames_for_size(size)
-            if not frames or count <= 0:
-                continue
-            for _ in range(count):
-                if size.lower() == "strike" and self.player is not None:
-                    frame = self.player.frame
-                else:
-                    frame = self.world.rng.choice(frames)
-                ship = Ship(frame, team=team)
-                self._equip_ship(ship)
-                ship.kinematics.position = self._random_sector_position(SECTOR_SPAWN_RADIUS)
-                ship.kinematics.velocity = Vector3(0.0, 0.0, 0.0)
-                ship.kinematics.angular_velocity = Vector3(0.0, 0.0, 0.0)
-                ai = create_ai_for_ship(ship)
-                self.world.add_ship(ship, ai=ai)
-                spawned.append(ship)
-        return spawned
-
-    def _spawn_sector_fleets(self) -> None:
-        if not self.world:
-            return
-        composition = {
-            "strike": STRIKE_SPAWNS_PER_SIDE,
-            "escort": ESCORT_SPAWNS_PER_SIDE,
-            "line": LINE_SPAWNS_PER_SIDE,
-        }
-        for team in ("player", "enemy"):
-            spawned = self._spawn_team_ships(team, composition)
-            if team == "enemy" and self.dummy is None:
-                for ship in spawned:
-                    if ship.frame.size.lower() == "strike":
-                        self.dummy = ship
-                        break
-        if self.dummy is None:
-            enemies = [
-                ship
-                for ship in self.world.ships
-                if ship is not self.player and ship.team == "enemy"
-            ]
-            if enemies:
-                self.dummy = enemies[0]
-
     def on_enter(self, **kwargs) -> None:
         self.content = kwargs["content"]
         self.input = kwargs["input"]
@@ -226,8 +142,50 @@ class SandboxScene(Scene):
             self.world.add_ship(self.player)
 
             if self.content:
+                primary_enemy_spawn = (
+                    "enemy",
+                    "viper_mk_vii",
+                    (0.0, 0.0, 820.0),
+                    (0.0, 0.0, -8.0),
+                )
                 self.dummy = None
-                self._spawn_sector_fleets()
+                last_enemy_spawn: Ship | None = None
+                formation_limit = max(1, math.ceil(len(SHIP_FORMATION_OFFSETS) / 2))
+                for index, offset in enumerate(SHIP_FORMATION_OFFSETS):
+                    if index >= formation_limit:
+                        break
+                    frame = self.content.ships.get(primary_enemy_spawn[1])
+                    ship = Ship(frame, team=primary_enemy_spawn[0])
+                    self._equip_ship(ship)
+                    ship.kinematics.position = Vector3(primary_enemy_spawn[2]) * SECTOR_SCALE + offset
+                    ship.kinematics.velocity = Vector3(primary_enemy_spawn[3])
+                    ai = create_ai_for_ship(ship)
+                    self.world.add_ship(ship, ai=ai)
+                    last_enemy_spawn = ship
+                    if index == 1:
+                        self.dummy = ship
+
+                if self.dummy is None:
+                    self.dummy = last_enemy_spawn
+
+                additional_spawns: list[tuple[str, str, tuple[float, float, float], tuple[float, float, float]]] = [
+                    ("player", "viper_mk_vii", (-340.0, -32.0, -210.0), (0.0, 0.0, 0.0)),
+                    ("player", "viper_mk_vii", (280.0, -24.0, -300.0), (0.0, 0.0, 0.0)),
+                    ("enemy", "viper_mk_vii", (420.0, 60.0, 700.0), (-6.0, 0.0, -20.0)),
+                    ("enemy", "viper_mk_vii", (-460.0, 48.0, 780.0), (7.0, 0.0, -18.0)),
+                    ("enemy", "viper_mk_vii", (60.0, -36.0, 940.0), (0.0, 0.0, -14.0)),
+                    ("enemy", "viper_mk_vii", (0.0, -80.0, 1280.0), (0.0, 0.0, -6.0)),
+                ]
+                spawn_subset = additional_spawns[: max(1, len(additional_spawns) // 2)]
+                for offset in SHIP_FORMATION_OFFSETS:
+                    for team, frame_id, position, velocity in spawn_subset:
+                        frame = self.content.ships.get(frame_id)
+                        ship = Ship(frame, team=team)
+                        ship.kinematics.position = Vector3(position) * SECTOR_SCALE + offset
+                        ship.kinematics.velocity = Vector3(velocity)
+                        self._equip_ship(ship)
+                        ai = create_ai_for_ship(ship)
+                        self.world.add_ship(ship, ai=ai)
 
                 edge_distance = max(0.0, AsteroidField.FIELD_RADIUS * 0.95 - 12000.0)
                 outpost_spawns: list[tuple[str, str, Vector3]] = [
