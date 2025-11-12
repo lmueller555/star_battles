@@ -1015,18 +1015,7 @@ def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
     segments.append((ventral_keel[-1], engine_cowl_bottom[0]))
     segments.append((ventral_keel[-1], engine_cowl_bottom[4]))
 
-    # The Glaive coordinates were authored in a much smaller unit space than
-    # the other escort-class wireframes.  This caused the hull geometry to be
-    # an order of magnitude smaller than its engine layout, which made the
-    # thruster effects appear detached well behind the ship.  Scale all
-    # segments up so the model uses the same coordinate space as the other
-    # escort hulls.
-    escort_scale = 12.0
-    scaled_segments: list[tuple[Vector3, Vector3]] = []
-    for start, end in segments:
-        scaled_segments.append((start * escort_scale, end * escort_scale))
-
-    return scaled_segments
+    return segments
 
 
 def _build_scythe_wireframe() -> list[tuple[Vector3, Vector3]]:
