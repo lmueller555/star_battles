@@ -1,7 +1,7 @@
 """Vector renderer built on pygame."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from math import ceil, floor
 import logging
 import math
@@ -17,6 +17,7 @@ from game.ships.ship import Ship
 from game.world.asteroids import Asteroid
 
 from game.render.state import ProjectedVertexCache, RenderSpatialState, TelemetryCounters
+from game.ships.outpost_hull import build_outpost_skin_geometry
 
 BACKGROUND = (5, 8, 12)
 GRID_MINOR_COLOR = (20, 32, 44)
@@ -56,6 +57,7 @@ class ShipGeometry:
     vertices: List[Vector3]
     edges: List[Tuple[int, int]]
     radius: float
+    faces: List[tuple[int, ...]] = field(default_factory=list)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -106,11 +108,26 @@ def _ship_geometry_from_edges(edges: Sequence[tuple[Vector3, Vector3]]) -> ShipG
             vertices.append(Vector3(end))
             max_radius = max(max_radius, vertices[-1].length())
         index_edges.append((vertex_map[start_key], vertex_map[end_key]))
-    return ShipGeometry(vertices=vertices, edges=index_edges, radius=max_radius)
+    return ShipGeometry(vertices=vertices, edges=index_edges, radius=max_radius, faces=[])
+
+
+def _build_outpost_geometry() -> ShipGeometry:
+    vertices, faces, radius = build_outpost_skin_geometry()
+    return ShipGeometry(
+        vertices=[Vector3(vertex) for vertex in vertices],
+        edges=[],
+        radius=radius,
+        faces=[tuple(face) for face in faces],
+    )
 
 
 def _build_ship_geometry_cache() -> Dict[str, ShipGeometry]:
-    return {name: _ship_geometry_from_edges(edge_list) for name, edge_list in WIREFRAMES.items()}
+    cache = {
+        name: _ship_geometry_from_edges(edge_list)
+        for name, edge_list in WIREFRAMES.items()
+    }
+    cache["Outpost"] = _build_outpost_geometry()
+    return cache
 
 
 def _estimate_ship_radius(ship: Ship, geometry: ShipGeometry) -> float:
@@ -171,253 +188,6 @@ def _elliptical_ring(
 
 def _mirror_vector(point: Vector3) -> Vector3:
     return Vector3(-point.x, point.y, point.z)
-
-
-def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
-    """Construct a capital-ship silhouette for Outposts."""
-
-    segments: list[tuple[Vector3, Vector3]] = []
-
-    hull_profile: list[tuple[float, float, float]] = [
-        (-640.0, 150.0, 96.0),
-        (-580.0, 146.0, 92.0),
-        (-520.0, 140.0, 88.0),
-        (-440.0, 148.0, 82.0),
-        (-360.0, 184.0, 94.0),
-        (-240.0, 220.0, 110.0),
-        (-120.0, 240.0, 125.0),
-        (0.0, 250.0, 140.0),
-        (120.0, 230.0, 130.0),
-        (240.0, 200.0, 110.0),
-        (360.0, 170.0, 95.0),
-        (480.0, 140.0, 80.0),
-        (560.0, 120.0, 70.0),
-    ]
-
-    ring_sides = 18
-    previous_ring: list[Vector3] | None = None
-    hull_sections: list[tuple[float, list[Vector3]]] = []
-    for z_pos, half_width, half_height in hull_profile:
-        ring = _elliptical_ring(z_pos, half_width, half_height, sides=ring_sides)
-        hull_sections.append((z_pos, ring))
-        _loop_segments(segments, ring)
-        if previous_ring is not None:
-            for current, previous in zip(ring, previous_ring):
-                segments.append((current, previous))
-            for offset in range(0, ring_sides, 3):
-                segments.append((ring[offset], ring[(offset + 6) % ring_sides]))
-                segments.append((previous_ring[offset], previous_ring[(offset + 6) % ring_sides]))
-                segments.append((ring[offset], previous_ring[(offset + 3) % ring_sides]))
-        previous_ring = ring
-
-    nose_tip = Vector3(0.0, 40.0, hull_profile[-1][0] + 80.0)
-    ventral_spear = Vector3(0.0, -35.0, hull_profile[-1][0] + 70.0)
-    final_section = hull_sections[-1][1]
-    _loop_segments(
-        segments,
-        [
-            nose_tip,
-            ventral_spear,
-            Vector3(40.0, 0.0, nose_tip.z - 30.0),
-            Vector3(-40.0, 0.0, nose_tip.z - 30.0),
-        ],
-    )
-    for point in final_section[::2]:
-        segments.append((point, nose_tip))
-        segments.append((point, ventral_spear))
-
-    # The remaining structure keeps the focus on the primary hull and engines,
-    # avoiding the dorsal and ventral "railings" and other protruding detail
-    # elements that previously extended from the silhouette.
-
-    tail_z = hull_profile[0][0]
-    tail_half_width = hull_profile[0][1]
-    tail_half_height = hull_profile[0][2]
-    housing_front_z = tail_z + 18.0
-    housing_back_z = tail_z - 48.0
-    housing_half_width = tail_half_width + 18.0
-    housing_half_height = tail_half_height + 22.0
-
-    top_front_left = Vector3(-housing_half_width, housing_half_height, housing_front_z)
-    top_back_left = Vector3(-housing_half_width + 20.0, housing_half_height + 8.0, housing_back_z)
-    top_back_right = Vector3(housing_half_width - 20.0, housing_half_height + 8.0, housing_back_z)
-    top_front_right = Vector3(housing_half_width, housing_half_height, housing_front_z)
-    bottom_front_left = Vector3(-housing_half_width, -housing_half_height, housing_front_z)
-    bottom_back_left = Vector3(-housing_half_width + 20.0, -housing_half_height - 8.0, housing_back_z)
-    bottom_back_right = Vector3(housing_half_width - 20.0, -housing_half_height - 8.0, housing_back_z)
-    bottom_front_right = Vector3(housing_half_width, -housing_half_height, housing_front_z)
-
-    top_frame = [top_front_left, top_back_left, top_back_right, top_front_right]
-    bottom_frame = [
-        bottom_front_left,
-        bottom_back_left,
-        bottom_back_right,
-        bottom_front_right,
-    ]
-    _loop_segments(segments, top_frame)
-    _loop_segments(segments, bottom_frame)
-
-    side_frames = [
-        [top_front_left, top_back_left, bottom_back_left, bottom_front_left],
-        [top_front_right, top_back_right, bottom_back_right, bottom_front_right],
-    ]
-    for frame in side_frames:
-        _loop_segments(segments, frame)
-
-    for top_point, bottom_point in zip(top_frame, bottom_frame):
-        segments.append((top_point, bottom_point))
-
-    housing_mount_targets: dict[tuple[int, int], Vector3] = {
-        (-1, 1): top_front_left,
-        (-1, -1): bottom_front_left,
-        (1, 1): top_front_right,
-        (1, -1): bottom_front_right,
-    }
-
-    engine_offset_x = tail_half_width - 36.0
-    engine_offset_y = tail_half_height - 30.0
-    engine_radius_x = 30.0
-    engine_radius_y = 24.0
-    engine_depth = 18.0
-    nozzle_inset = 5.0
-    for sign in (-1, 1):
-        for vertical in (-1, 1):
-            center = Vector3(
-                sign * engine_offset_x,
-                vertical * engine_offset_y,
-                housing_back_z + engine_depth,
-            )
-            ring: list[Vector3] = []
-            nozzle_ring: list[Vector3] = []
-            for step in range(12):
-                angle = step * (2.0 * math.pi / 12)
-                ring.append(
-                    Vector3(
-                        center.x + math.cos(angle) * engine_radius_x,
-                        center.y + math.sin(angle) * engine_radius_y,
-                        center.z,
-                    )
-                )
-                nozzle_ring.append(
-                    Vector3(
-                        center.x + math.cos(angle) * engine_radius_x * 0.68,
-                        center.y + math.sin(angle) * engine_radius_y * 0.68,
-                        housing_back_z + nozzle_inset,
-                    )
-                )
-            _loop_segments(segments, ring)
-            _loop_segments(segments, nozzle_ring)
-
-            thruster_end = Vector3(center.x, center.y, housing_back_z + nozzle_inset)
-            for point in ring[::3]:
-                segments.append((point, thruster_end))
-            for ring_point, nozzle_point in zip(ring[::2], nozzle_ring[::2]):
-                segments.append((ring_point, nozzle_point))
-
-            mount = housing_mount_targets[(sign, vertical)]
-            segments.append((center, mount))
-            for point in ring[::4]:
-                segments.append((point, mount))
-
-            anchor_index = ring_sides // 6 if sign > 0 else (ring_sides * 5) // 6
-            anchor_index += 0 if vertical > 0 else ring_sides // 2
-            hull_anchor_ring = hull_sections[1][1]
-            segments.append((mount, hull_anchor_ring[anchor_index % ring_sides]))
-
-    max_half_width = max(half_width for _, half_width, _ in hull_profile)
-    hull_length = hull_profile[-1][0] - tail_z
-    docking_arm_length = hull_length * 0.5
-    docking_arm_start_z = tail_z + hull_length * 0.35
-    docking_arm_end_z = min(hull_profile[-1][0] - 30.0, docking_arm_start_z + docking_arm_length)
-    docking_arm_offset_x = max_half_width + 70.0
-    docking_arm_offset_y = -58.0
-    docking_arm_radius = 38.0
-    docking_arm_vertical_radius = docking_arm_radius * 0.78
-    docking_arm_ring_sides = 14
-    docking_arm_sections = 7
-
-    def _nearest_hull_ring(z_value: float) -> list[Vector3]:
-        return min(hull_sections, key=lambda entry: abs(entry[0] - z_value))[1]
-
-    arm_caps: dict[int, dict[str, list[Vector3] | Vector3]] = {sign: {} for sign in (-1, 1)}
-
-    for sign in (-1, 1):
-        previous_arm_ring: list[Vector3] | None = None
-        for section_index in range(docking_arm_sections):
-            if docking_arm_sections == 1:
-                position_fraction = 0.0
-            else:
-                position_fraction = section_index / (docking_arm_sections - 1)
-            z_pos = docking_arm_start_z + (docking_arm_end_z - docking_arm_start_z) * position_fraction
-            center = Vector3(sign * docking_arm_offset_x, docking_arm_offset_y, z_pos)
-            arm_ring: list[Vector3] = []
-            for step in range(docking_arm_ring_sides):
-                angle = step * (2.0 * math.pi / docking_arm_ring_sides)
-                arm_ring.append(
-                    Vector3(
-                        center.x + math.cos(angle) * docking_arm_radius,
-                        center.y + math.sin(angle) * docking_arm_vertical_radius,
-                        center.z,
-                    )
-                )
-            _loop_segments(segments, arm_ring)
-            if section_index == 0:
-                arm_caps[sign]["base_ring"] = arm_ring
-                arm_caps[sign]["base_center"] = center
-            if section_index == docking_arm_sections - 1:
-                arm_caps[sign]["tip_ring"] = arm_ring
-                arm_caps[sign]["tip_center"] = center
-            if previous_arm_ring is not None:
-                for current, previous in zip(arm_ring, previous_arm_ring):
-                    segments.append((current, previous))
-            previous_arm_ring = arm_ring
-
-    cone_height = docking_arm_radius * 0.18
-    for sign in (-1, 1):
-        tip_ring = arm_caps[sign].get("tip_ring")
-        tip_center = arm_caps[sign].get("tip_center")
-        if tip_ring is not None and isinstance(tip_center, Vector3):
-            forward_tip = Vector3(tip_center.x, tip_center.y, tip_center.z + cone_height)
-            for point in tip_ring[::2]:
-                segments.append((point, forward_tip))
-        base_ring = arm_caps[sign].get("base_ring")
-        base_center = arm_caps[sign].get("base_center")
-        if base_ring is not None and isinstance(base_center, Vector3):
-            aft_tip = Vector3(base_center.x, base_center.y, base_center.z - cone_height)
-            for point in base_ring[::2]:
-                segments.append((point, aft_tip))
-
-    hull_attachment_indices = {1: 2, -1: 6}
-    connector_positions = [
-        docking_arm_start_z + (docking_arm_end_z - docking_arm_start_z) * fraction
-        for fraction in (0.1, 0.5, 0.9)
-    ]
-    for sign in (-1, 1):
-        for z_pos in connector_positions:
-            hull_ring = _nearest_hull_ring(z_pos)
-            hull_point = hull_ring[hull_attachment_indices[sign]]
-            arm_surface = Vector3(
-                sign * docking_arm_offset_x - sign * docking_arm_radius,
-                docking_arm_offset_y,
-                z_pos,
-            )
-            segments.append((hull_point, arm_surface))
-            brace_lower = Vector3(
-                arm_surface.x,
-                docking_arm_offset_y - docking_arm_vertical_radius * 0.6,
-                z_pos,
-            )
-            segments.append((arm_surface, brace_lower))
-
-    plating_lines = []
-    for fraction in (0.15, 0.35, 0.65, 0.85):
-        idx = int(fraction * (len(hull_sections) - 1))
-        plating_lines.append(hull_sections[idx][1])
-    for section in plating_lines:
-        for offset in range(0, ring_sides, 2):
-            segments.append((section[offset], section[(offset + 2) % ring_sides]))
-
-    return segments
 
 
 def _build_line_wireframe() -> list[tuple[Vector3, Vector3]]:
@@ -1155,7 +925,6 @@ WIREFRAMES = {
     ],
     "Escort": _build_escort_wireframe(),
     "Line": _build_line_wireframe(),
-    "Outpost": _build_outpost_wireframe(),
     "viper_mk_ii": _build_viper_mk_ii_wireframe(),
     "viper_mk_vii": _build_viper_mk_vii_wireframe(),
     "raptor_fr": _build_raptor_wireframe(),
@@ -1287,12 +1056,14 @@ class VectorRenderer:
         right, up, forward = basis
         vertices_2d: List[tuple[float, float]] = []
         visibility: List[bool] = []
+        world_vertices: List[Vector3] = []
         min_x = float("inf")
         max_x = float("-inf")
         min_y = float("inf")
         max_y = float("-inf")
         for local in geometry.vertices:
             world = origin + right * local.x + up * local.y + forward * local.z
+            world_vertices.append(world)
             screen, visible = frame.project_point(world)
             vertices_2d.append((screen.x, screen.y))
             visibility.append(visible)
@@ -1301,7 +1072,13 @@ class VectorRenderer:
                 max_x = max(max_x, screen.x)
                 min_y = min(min_y, screen.y)
                 max_y = max(max_y, screen.y)
-        cache.update(frame.revision, state.world_revision, vertices_2d, visibility)
+        cache.update(
+            frame.revision,
+            state.world_revision,
+            vertices_2d,
+            visibility,
+            world_vertices,
+        )
         if min_x <= max_x and min_y <= max_y:
             state.cached_screen_rect = (min_x, min_y, max_x, max_y)
             state.cached_camera_revision = frame.revision
@@ -1644,6 +1421,69 @@ class VectorRenderer:
                         1,
                     )
 
+    def _draw_ship_skin(
+        self,
+        frame: CameraFrameData,
+        origin: Vector3,
+        ship: Ship,
+        geometry: ShipGeometry,
+        projected: List[tuple[float, float]],
+        visibility: List[bool],
+        color: tuple[int, int, int],
+    ) -> None:
+        if not geometry.faces:
+            return
+        cache = self._vertex_cache.get(id(ship))
+        if not cache or len(cache.world_vertices) != len(geometry.vertices):
+            return
+
+        light_dir = Vector3(0.32, 0.72, 0.58)
+        if light_dir.length_squared() > 1e-6:
+            light_dir = light_dir.normalize()
+        else:
+            light_dir = Vector3(frame.forward)
+
+        face_queue: list[tuple[float, list[tuple[float, float]], tuple[int, int, int], tuple[int, int, int]]] = []
+        for indices in geometry.faces:
+            if len(indices) < 3:
+                continue
+            if any(not visibility[idx] for idx in indices):
+                continue
+
+            world_points = [cache.world_vertices[idx] for idx in indices]
+            screen_points = [projected[idx] for idx in indices]
+            normal = (world_points[1] - world_points[0]).cross(world_points[2] - world_points[0])
+            if normal.length_squared() <= 1e-6:
+                continue
+            normal = normal.normalize()
+
+            center = Vector3()
+            for point in world_points:
+                center += point
+            center /= len(world_points)
+
+            to_origin = center - origin
+            if normal.dot(to_origin) < 0.0:
+                normal = -normal
+
+            to_camera = frame.position - center
+            if normal.dot(to_camera) <= 0.0:
+                continue
+
+            depth = (center - frame.position).dot(frame.forward)
+            diffuse = max(0.0, normal.dot(light_dir))
+            fill_color = _blend(_darken(color, 0.65), _lighten(color, 0.35), diffuse)
+            outline_color = _darken(fill_color, 0.4)
+            face_queue.append((depth, screen_points, fill_color, outline_color))
+
+        if not face_queue:
+            return
+
+        face_queue.sort(key=lambda item: item[0], reverse=True)
+        for _, points, fill_color, outline_color in face_queue:
+            pygame.draw.polygon(self.surface, fill_color, points)
+            pygame.draw.aalines(self.surface, outline_color, True, points, blend=1)
+
     def draw_ship(self, camera: ChaseCamera, ship: Ship) -> None:
         frame = self._get_camera_frame(camera)
         geometry = self._ship_geometry_cache.get(
@@ -1673,6 +1513,7 @@ class VectorRenderer:
             (right, up, forward),
         )
         color = SHIP_COLOR if ship.team == "player" else ENEMY_COLOR
+        self._draw_ship_skin(frame, origin, ship, geometry, projected, visibility, color)
         line_mode = "line" if distance > 7500.0 else "aaline"
         drawn_edges = False
         for idx_a, idx_b in geometry.edges:
