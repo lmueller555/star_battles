@@ -1,18 +1,22 @@
 """Vector renderer built on pygame."""
 from __future__ import annotations
 
+from dataclasses import dataclass
 from math import ceil, floor
+import logging
 import math
 import random
-from typing import Iterable
+from typing import Dict, Iterable, List, Sequence, Tuple
 
 import pygame
 from pygame.math import Vector3
 
 from game.combat.weapons import Projectile
-from game.render.camera import ChaseCamera
+from game.render.camera import CameraFrameData, ChaseCamera
 from game.ships.ship import Ship
 from game.world.asteroids import Asteroid
+
+from game.render.state import ProjectedVertexCache, RenderSpatialState, TelemetryCounters
 
 BACKGROUND = (5, 8, 12)
 GRID_MINOR_COLOR = (20, 32, 44)
@@ -47,6 +51,15 @@ ENGINE_LAYOUTS: dict[str, list[Vector3]] = {
     "Outpost": [],
 }
 
+@dataclass
+class ShipGeometry:
+    vertices: List[Vector3]
+    edges: List[Tuple[int, int]]
+    radius: float
+
+
+LOGGER = logging.getLogger(__name__)
+
 
 def _blend(color_a: tuple[int, int, int], color_b: tuple[int, int, int], amount: float) -> tuple[int, int, int]:
     amount = max(0.0, min(1.0, amount))
@@ -73,6 +86,49 @@ def _ship_axes(ship: Ship) -> tuple[Vector3, Vector3, Vector3]:
     else:
         up = up.normalize()
     return right.normalize(), up, forward.normalize()
+
+
+def _vertex_key(vector: Vector3) -> Tuple[float, float, float]:
+    return (round(vector.x, 6), round(vector.y, 6), round(vector.z, 6))
+
+
+def _ship_geometry_from_edges(edges: Sequence[tuple[Vector3, Vector3]]) -> ShipGeometry:
+    vertex_map: Dict[Tuple[float, float, float], int] = {}
+    vertices: List[Vector3] = []
+    index_edges: List[Tuple[int, int]] = []
+    max_radius = 0.0
+    for start, end in edges:
+        start_key = _vertex_key(start)
+        end_key = _vertex_key(end)
+        if start_key not in vertex_map:
+            vertex_map[start_key] = len(vertices)
+            vertices.append(Vector3(start))
+            max_radius = max(max_radius, vertices[-1].length())
+        if end_key not in vertex_map:
+            vertex_map[end_key] = len(vertices)
+            vertices.append(Vector3(end))
+            max_radius = max(max_radius, vertices[-1].length())
+        index_edges.append((vertex_map[start_key], vertex_map[end_key]))
+    return ShipGeometry(vertices=vertices, edges=index_edges, radius=max_radius)
+
+
+def _build_ship_geometry_cache() -> Dict[str, ShipGeometry]:
+    return {name: _ship_geometry_from_edges(edge_list) for name, edge_list in WIREFRAMES.items()}
+
+
+def _estimate_ship_radius(ship: Ship, geometry: ShipGeometry) -> float:
+    radius = geometry.radius
+    if ship.frame.hardpoints:
+        radius = max(radius, max(hp.position.length() for hp in ship.frame.hardpoints) + 2.0)
+    engine_layout = ENGINE_LAYOUTS.get(ship.frame.size)
+    if engine_layout:
+        radius = max(radius, max(vector.length() for vector in engine_layout) + 2.0)
+    return radius + 2.5
+
+
+def _rect_intersects(rect: tuple[float, float, float, float], width: int, height: int) -> bool:
+    left, top, right, bottom = rect
+    return not (right < 0 or bottom < 0 or left >= width or top >= height)
 
 
 def _loop_segments(
@@ -520,11 +576,147 @@ WIREFRAMES = {
     "Outpost": _build_outpost_wireframe(),
 }
 
+SHIP_GEOMETRY_CACHE = _build_ship_geometry_cache()
+
 
 class VectorRenderer:
     def __init__(self, surface: pygame.Surface) -> None:
         self.surface = surface
         self._rng = random.Random()
+        self._ship_geometry_cache: Dict[str, ShipGeometry] = dict(SHIP_GEOMETRY_CACHE)
+        self._vertex_cache: Dict[int, ProjectedVertexCache] = {}
+        self._frame_counters = TelemetryCounters()
+        self._telemetry_accum = TelemetryCounters()
+        self._frame_active = False
+        self._last_report_ms = pygame.time.get_ticks()
+        self._telemetry_interval_ms = 2500
+        self._current_camera_frame: CameraFrameData | None = None
+
+    def _flush_frame_counters(self) -> None:
+        if (
+            self._frame_counters.objects_total
+            or self._frame_counters.vertices_projected_total
+        ):
+            self._telemetry_accum.accumulate(self._frame_counters)
+        now = pygame.time.get_ticks()
+        if (
+            now - self._last_report_ms >= self._telemetry_interval_ms
+            and (
+                self._telemetry_accum.objects_total
+                or self._telemetry_accum.vertices_projected_total
+            )
+        ):
+            avg_vertices = self._telemetry_accum.average_vertices()
+            LOGGER.info(
+                "Render telemetry: total=%d culled_frustum=%d culled_viewport=%d "
+                "drawn_line=%d drawn_aaline=%d avg_vertices=%.2f",
+                self._telemetry_accum.objects_total,
+                self._telemetry_accum.objects_culled_frustum,
+                self._telemetry_accum.objects_culled_viewport,
+                self._telemetry_accum.objects_drawn_line,
+                self._telemetry_accum.objects_drawn_aaline,
+                avg_vertices,
+            )
+            self._telemetry_accum.reset()
+            self._last_report_ms = now
+        self._frame_counters.reset()
+
+    def _start_frame(self) -> None:
+        if self._frame_active:
+            self._flush_frame_counters()
+        else:
+            self._frame_counters.reset()
+        self._frame_active = True
+        self._current_camera_frame = None
+
+    def _get_camera_frame(self, camera: ChaseCamera) -> CameraFrameData:
+        size = self.surface.get_size()
+        frame = camera.prepare_frame(size)
+        if (
+            self._current_camera_frame
+            and self._current_camera_frame.revision == frame.revision
+            and self._current_camera_frame.screen_size == frame.screen_size
+        ):
+            return self._current_camera_frame
+        self._current_camera_frame = frame
+        return frame
+
+    def _evaluate_visibility(
+        self,
+        state: RenderSpatialState,
+        frame: CameraFrameData,
+    ) -> tuple[bool, float, float]:
+        self._frame_counters.objects_total += 1
+        radius = max(0.0, state.radius)
+        rel = state.center - frame.position
+        distance = rel.length()
+        if not math.isfinite(distance):
+            distance = float("inf")
+        if distance - radius > frame.far:
+            self._frame_counters.objects_culled_frustum += 1
+            return False, distance, 0.0
+        z = rel.dot(frame.forward)
+        if z + radius < frame.near or z - radius > frame.far:
+            self._frame_counters.objects_culled_frustum += 1
+            return False, distance, z
+        x = rel.dot(frame.right)
+        y = rel.dot(frame.up)
+        horizontal_limit = z * frame.tan_half_fov * frame.aspect + radius
+        vertical_limit = z * frame.tan_half_fov + radius
+        if abs(x) > horizontal_limit + radius or abs(y) > vertical_limit + radius:
+            self._frame_counters.objects_culled_frustum += 1
+            return False, distance, z
+        if (
+            state.cached_camera_revision == frame.revision
+            and state.cached_screen_rect is not None
+        ):
+            width, height = frame.screen_size
+            if not _rect_intersects(state.cached_screen_rect, width, height):
+                self._frame_counters.objects_culled_viewport += 1
+                return False, distance, z
+        return True, distance, z
+
+    def _project_ship_vertices(
+        self,
+        ship: Ship,
+        geometry: ShipGeometry,
+        frame: CameraFrameData,
+        state: RenderSpatialState,
+        origin: Vector3,
+        basis: tuple[Vector3, Vector3, Vector3],
+    ) -> tuple[List[tuple[float, float]], List[bool]]:
+        cache = self._vertex_cache.setdefault(id(ship), ProjectedVertexCache())
+        if (
+            cache.camera_revision == frame.revision
+            and cache.world_revision == state.world_revision
+        ):
+            return cache.vertices, cache.visibility
+        right, up, forward = basis
+        vertices_2d: List[tuple[float, float]] = []
+        visibility: List[bool] = []
+        min_x = float("inf")
+        max_x = float("-inf")
+        min_y = float("inf")
+        max_y = float("-inf")
+        for local in geometry.vertices:
+            world = origin + right * local.x + up * local.y + forward * local.z
+            screen, visible = frame.project_point(world)
+            vertices_2d.append((screen.x, screen.y))
+            visibility.append(visible)
+            if visible:
+                min_x = min(min_x, screen.x)
+                max_x = max(max_x, screen.x)
+                min_y = min(min_y, screen.y)
+                max_y = max(max_y, screen.y)
+        cache.update(frame.revision, state.world_revision, vertices_2d, visibility)
+        if min_x <= max_x and min_y <= max_y:
+            state.cached_screen_rect = (min_x, min_y, max_x, max_y)
+            state.cached_camera_revision = frame.revision
+        else:
+            state.clear_cached_projection()
+        self._frame_counters.vertices_projected_total += len(geometry.vertices)
+        self._frame_counters.objects_projected += 1
+        return vertices_2d, visibility
 
     @staticmethod
     def _local_to_world(
@@ -538,7 +730,7 @@ class VectorRenderer:
 
     def _draw_speed_streaks(
         self,
-        camera: ChaseCamera,
+        frame: CameraFrameData,
         origin: Vector3,
         right: Vector3,
         up: Vector3,
@@ -549,19 +741,17 @@ class VectorRenderer:
         if intensity <= 0.0:
             return
 
-        tick = pygame.time.get_ticks()
-        self._rng.seed((id(ship) ^ tick) & 0xFFFFFFFF)
-
+        tick = pygame.time.get_ticks() * 0.001
         velocity = ship.kinematics.velocity
         direction = velocity.normalize() if velocity.length_squared() > 1e-3 else forward
-        screen_size = self.surface.get_size()
 
         streak_count = 6 + int(24 * intensity)
         base_length = 1.6 + 2.4 * intensity
-        for _ in range(streak_count):
+        seed_phase = (ship.render_state.random_seed & 0xFFFF) * 0.001
+        for index in range(streak_count):
             lateral = (
-                camera.right * self._rng.uniform(-6.0, 6.0)
-                + camera.up * self._rng.uniform(-3.5, 3.5)
+                frame.right * self._rng.uniform(-6.0, 6.0)
+                + frame.up * self._rng.uniform(-3.5, 3.5)
             )
             forward_offset = direction * self._rng.uniform(-3.0, 6.0)
             start_world = origin + lateral + forward_offset
@@ -569,14 +759,15 @@ class VectorRenderer:
                 base_length + self._rng.uniform(0.0, base_length * 0.8)
             )
 
-            start_screen, vis_start = camera.project(start_world, screen_size)
-            end_screen, vis_end = camera.project(end_world, screen_size)
+            start_screen, vis_start = frame.project_point(start_world)
+            end_screen, vis_end = frame.project_point(end_world)
             if not (vis_start and vis_end):
                 continue
 
+            phase = tick * 3.0 + index * 0.37 + seed_phase
             brightness = max(
                 0.0,
-                min(1.0, 0.18 + intensity * 0.6 + self._rng.uniform(-0.1, 0.1)),
+                min(1.0, 0.18 + intensity * 0.6 + math.sin(phase) * 0.12),
             )
             streak_color = _blend(BACKGROUND, (210, 240, 255), brightness)
             width = 1 if intensity < 0.55 else 2
@@ -590,7 +781,7 @@ class VectorRenderer:
 
     def _draw_hardpoints(
         self,
-        camera: ChaseCamera,
+        frame: CameraFrameData,
         origin: Vector3,
         right: Vector3,
         up: Vector3,
@@ -601,14 +792,13 @@ class VectorRenderer:
         if not ship.mounts:
             return
 
-        screen_size = self.surface.get_size()
         for mount in ship.mounts:
             local = mount.hardpoint.position
             base_world = self._local_to_world(origin, right, up, forward, local)
             muzzle_world = base_world + forward * 0.9
 
-            base_screen, vis_base = camera.project(base_world, screen_size)
-            muzzle_screen, vis_muzzle = camera.project(muzzle_world, screen_size)
+            base_screen, vis_base = frame.project_point(base_world)
+            muzzle_screen, vis_muzzle = frame.project_point(muzzle_world)
             if not vis_base:
                 continue
 
@@ -641,7 +831,7 @@ class VectorRenderer:
 
     def _draw_engines(
         self,
-        camera: ChaseCamera,
+        frame: CameraFrameData,
         origin: Vector3,
         right: Vector3,
         up: Vector3,
@@ -653,13 +843,12 @@ class VectorRenderer:
         if not layout:
             return
 
-        screen_size = self.surface.get_size()
         tick = pygame.time.get_ticks() * 0.001
         for index, local in enumerate(layout):
             base_world = self._local_to_world(origin, right, up, forward, local)
             nozzle_world = base_world - forward * 0.35
-            base_screen, vis_base = camera.project(base_world, screen_size)
-            nozzle_screen, vis_nozzle = camera.project(nozzle_world, screen_size)
+            base_screen, vis_base = frame.project_point(base_world)
+            nozzle_screen, vis_nozzle = frame.project_point(nozzle_world)
             if not vis_base:
                 continue
 
@@ -673,8 +862,8 @@ class VectorRenderer:
                 flame_length = 1.6 + 1.2 * flicker
                 flame_base = base_world - forward * 0.2
                 flame_tip = flame_base - forward * flame_length
-                flame_base_screen, vis_base_flame = camera.project(flame_base, screen_size)
-                flame_tip_screen, vis_tip_flame = camera.project(flame_tip, screen_size)
+                flame_base_screen, vis_base_flame = frame.project_point(flame_base)
+                flame_tip_screen, vis_tip_flame = frame.project_point(flame_tip)
                 if vis_base_flame and vis_tip_flame:
                     flame_color = _blend((130, 200, 255), (255, 190, 140), flicker * 0.6)
                     width = 2 + int(round(flicker * 2.0))
@@ -690,6 +879,7 @@ class VectorRenderer:
                     pygame.draw.circle(self.surface, glow_color, base_pos, glow_radius, 0)
 
     def clear(self) -> None:
+        self._start_frame()
         self.surface.fill(BACKGROUND)
 
     def draw_grid(
@@ -742,130 +932,185 @@ class VectorRenderer:
             _draw_segment(a, b, color)
 
     def draw_asteroids(self, camera: ChaseCamera, asteroids: Iterable[Asteroid]) -> None:
-        screen_size = self.surface.get_size()
-
-        def _screen_radius(center: Vector3, world_point: Vector3) -> int:
-            other, visible = camera.project(world_point, screen_size)
-            if not visible:
-                return 0
-            delta = Vector3(other.x - center.x, other.y - center.y, 0.0)
-            return int(max(0.0, delta.length()))
-
+        frame = self._get_camera_frame(camera)
         for asteroid in asteroids:
-            center, visible = camera.project(asteroid.position, screen_size)
+            state = asteroid.render_state
+            state.set_radius(max(asteroid.radius * 1.2, 1.0))
+            state.ensure_current(asteroid.position)
+            visible, distance, _ = self._evaluate_visibility(state, frame)
             if not visible:
                 continue
 
+            center, vis_center = frame.project_point(asteroid.position)
+            if not vis_center:
+                state.clear_cached_projection()
+                continue
+
             radius_vectors = [
-                asteroid.position + camera.up * asteroid.radius,
-                asteroid.position - camera.up * asteroid.radius,
-                asteroid.position + camera.right * asteroid.radius,
-                asteroid.position - camera.right * asteroid.radius,
+                asteroid.position + frame.up * asteroid.radius,
+                asteroid.position - frame.up * asteroid.radius,
+                asteroid.position + frame.right * asteroid.radius,
+                asteroid.position - frame.right * asteroid.radius,
             ]
-            radii = [
-                _screen_radius(center, vector)
-                for vector in radius_vectors
-            ]
+            radii: List[float] = []
+            projection_count = 1  # center
+            for world_point in radius_vectors:
+                projected, visible_point = frame.project_point(world_point)
+                if not visible_point:
+                    radii.append(0.0)
+                else:
+                    dx = projected.x - center.x
+                    dy = projected.y - center.y
+                    radii.append(math.hypot(dx, dy))
+                projection_count += 1
             radius_vertical = max(radii[0], radii[1])
             radius_horizontal = max(radii[2], radii[3])
-            if radius_vertical <= 0 and radius_horizontal <= 0:
-                radius_vertical = radius_horizontal = 2
-            radius_vertical = max(2, radius_vertical)
-            radius_horizontal = max(2, radius_horizontal)
+            if radius_vertical <= 0.0 and radius_horizontal <= 0.0:
+                radius_vertical = radius_horizontal = 2.0
+            radius_vertical = max(2.0, radius_vertical)
+            radius_horizontal = max(2.0, radius_horizontal)
+
+            profile = asteroid.render_profile()
+            if not profile.point_angles:
+                state.clear_cached_projection()
+                continue
+
+            points: List[tuple[float, float]] = []
+            for angle, offset, h_scale, v_scale in zip(
+                profile.point_angles,
+                profile.point_offsets,
+                profile.horizontal_scale,
+                profile.vertical_scale,
+            ):
+                x = center.x + math.cos(angle) * radius_horizontal * h_scale * offset
+                y = center.y + math.sin(angle) * radius_vertical * v_scale * offset
+                points.append((x, y))
+
+            if len(points) < 3:
+                state.clear_cached_projection()
+                continue
+
+            self._frame_counters.vertices_projected_total += projection_count
+            self._frame_counters.objects_projected += 1
+
+            polygon_points = [(int(round(px)), int(round(py))) for px, py in points]
+            xs = [px for px, _ in points]
+            ys = [py for _, py in points]
+            state.cached_screen_rect = (min(xs), min(ys), max(xs), max(ys))
+            state.cached_camera_revision = frame.revision
 
             color = asteroid.display_color
-            rng = random.Random(asteroid.id)
-            point_count = rng.randint(8, 14)
-            jaggedness = 0.45
-            points: list[tuple[int, int]] = []
-            angle_step = (2.0 * math.pi) / point_count
-            distortion = 0.75
-            for i in range(point_count):
-                angle = i * angle_step
-                offset = 1.0 - jaggedness + rng.random() * jaggedness * 2.0
-                horizontal = radius_horizontal * (distortion + rng.random() * (1.0 - distortion))
-                vertical = radius_vertical * (distortion + rng.random() * (1.0 - distortion))
-                x = center.x + math.cos(angle) * horizontal * offset
-                y = center.y + math.sin(angle) * vertical * offset
-                points.append((int(round(x)), int(round(y))))
+            pygame.draw.polygon(self.surface, color, polygon_points)
 
-            if len(points) >= 3:
-                pygame.draw.polygon(self.surface, color, points)
+            outline_color = _darken(color, 0.45)
+            line_mode = "line" if distance > 7500.0 else "aaline"
+            if line_mode == "line":
+                pygame.draw.lines(self.surface, outline_color, True, polygon_points, 1)
+                self._frame_counters.objects_drawn_line += 1
+            else:
+                pygame.draw.aalines(self.surface, outline_color, True, points, blend=1)
+                self._frame_counters.objects_drawn_aaline += 1
 
-                outline_color = _darken(color, 0.45)
-                pygame.draw.polygon(self.surface, outline_color, points, 1)
+            if radius_horizontal > 3.0 or radius_vertical > 3.0:
+                highlight_color = _lighten(color, 0.5)
+                shadow_color = _darken(color, 0.6)
+                accent_radius = max(
+                    1,
+                    int(round((radius_horizontal + radius_vertical) * 0.05)),
+                )
+                for accent in profile.accents:
+                    px = center.x + math.cos(accent.angle) * radius_horizontal * accent.distance * accent.horizontal_scale
+                    py = center.y + math.sin(accent.angle) * radius_vertical * accent.distance * accent.vertical_scale
+                    pygame.draw.circle(
+                        self.surface,
+                        highlight_color if accent.highlight else shadow_color,
+                        (int(round(px)), int(round(py))),
+                        accent_radius,
+                    )
 
-                if radius_horizontal > 3 or radius_vertical > 3:
-                    highlight_color = _lighten(color, 0.5)
-                    shadow_color = _darken(color, 0.6)
-
-                    accent_count = rng.randint(3, 6)
-                    for _ in range(accent_count):
-                        angle = rng.uniform(0.0, 2.0 * math.pi)
-                        distance = rng.uniform(0.1, 0.8)
-                        accent_radius = max(1, int(round((radius_horizontal + radius_vertical) * 0.05)))
-                        px = center.x + math.cos(angle) * radius_horizontal * distance * rng.uniform(0.6, 1.0)
-                        py = center.y + math.sin(angle) * radius_vertical * distance * rng.uniform(0.6, 1.0)
-                        color_choice = highlight_color if rng.random() > 0.5 else shadow_color
-                        pygame.draw.circle(
-                            self.surface,
-                            color_choice,
-                            (int(round(px)), int(round(py))),
-                            accent_radius,
-                        )
-
-                    crater_count = rng.randint(2, 4)
-                    crater_fill = _darken(color, 0.55)
-                    crater_rim = _lighten(color, 0.2)
-                    for _ in range(crater_count):
-                        angle = rng.uniform(0.0, 2.0 * math.pi)
-                        distance = rng.uniform(0.15, 0.65)
-                        crater_radius = max(1, int(round((radius_horizontal + radius_vertical) * rng.uniform(0.04, 0.12))))
-                        px = center.x + math.cos(angle) * radius_horizontal * distance
-                        py = center.y + math.sin(angle) * radius_vertical * distance
-                        pygame.draw.circle(
-                            self.surface,
-                            crater_fill,
-                            (int(round(px)), int(round(py))),
-                            crater_radius,
-                        )
-                        pygame.draw.circle(
-                            self.surface,
-                            crater_rim,
-                            (int(round(px)), int(round(py))),
-                            crater_radius,
-                            1,
-                        )
+                crater_fill = _darken(color, 0.55)
+                crater_rim = _lighten(color, 0.2)
+                for crater in profile.craters:
+                    px = center.x + math.cos(crater.angle) * radius_horizontal * crater.distance
+                    py = center.y + math.sin(crater.angle) * radius_vertical * crater.distance
+                    crater_radius = max(
+                        1,
+                        int(round((radius_horizontal + radius_vertical) * crater.radius_scale)),
+                    )
+                    pygame.draw.circle(
+                        self.surface,
+                        crater_fill,
+                        (int(round(px)), int(round(py))),
+                        crater_radius,
+                    )
+                    pygame.draw.circle(
+                        self.surface,
+                        crater_rim,
+                        (int(round(px)), int(round(py))),
+                        crater_radius,
+                        1,
+                    )
 
     def draw_ship(self, camera: ChaseCamera, ship: Ship) -> None:
-        right, up, forward = _ship_axes(ship)
-        color = SHIP_COLOR if ship.team == "player" else ENEMY_COLOR
-        edges = WIREFRAMES.get(ship.frame.size, WIREFRAMES["Strike"])
+        frame = self._get_camera_frame(camera)
+        geometry = self._ship_geometry_cache.get(
+            ship.frame.size, self._ship_geometry_cache["Strike"]
+        )
+        state = getattr(ship, "render_state", None)
+        if state is None:
+            state = RenderSpatialState()
+            ship.render_state = state
+        state.set_radius(_estimate_ship_radius(ship, geometry))
+        state.ensure_current(ship.kinematics.position, ship.kinematics.rotation)
+        visible, distance, _ = self._evaluate_visibility(state, frame)
+        if not visible:
+            return
+
         origin = ship.kinematics.position
+        right, up, forward = _ship_axes(ship)
+        projected, visibility = self._project_ship_vertices(
+            ship,
+            geometry,
+            frame,
+            state,
+            origin,
+            (right, up, forward),
+        )
+        color = SHIP_COLOR if ship.team == "player" else ENEMY_COLOR
+        line_mode = "line" if distance > 7500.0 else "aaline"
+        drawn_edges = False
+        for idx_a, idx_b in geometry.edges:
+            if not (visibility[idx_a] and visibility[idx_b]):
+                continue
+            ax, ay = projected[idx_a]
+            bx, by = projected[idx_b]
+            if line_mode == "line":
+                pygame.draw.line(
+                    self.surface,
+                    color,
+                    (int(round(ax)), int(round(ay))),
+                    (int(round(bx)), int(round(by))),
+                    1,
+                )
+            else:
+                pygame.draw.aaline(self.surface, color, (ax, ay), (bx, by), blend=1)
+            drawn_edges = True
+
+        if drawn_edges:
+            if line_mode == "line":
+                self._frame_counters.objects_drawn_line += 1
+            else:
+                self._frame_counters.objects_drawn_aaline += 1
+
         speed = ship.kinematics.velocity.length()
         speed_intensity = 0.0
         if speed > 80.0:
             speed_intensity = min(1.0, (speed - 80.0) / 35.0)
-
         if speed_intensity > 0.0:
-            self._draw_speed_streaks(camera, origin, right, up, forward, ship, speed_intensity)
+            self._draw_speed_streaks(frame, origin, right, up, forward, ship, speed_intensity)
 
-        for a_local, b_local in edges:
-            a_world = origin + right * a_local.x + up * a_local.y + forward * a_local.z
-            b_world = origin + right * b_local.x + up * b_local.y + forward * b_local.z
-            a_screen, vis_a = camera.project(a_world, self.surface.get_size())
-            b_screen, vis_b = camera.project(b_world, self.surface.get_size())
-            if vis_a and vis_b:
-                pygame.draw.aaline(
-                    self.surface,
-                    color,
-                    (a_screen.x, a_screen.y),
-                    (b_screen.x, b_screen.y),
-                    blend=1,
-                )
-
-        self._draw_hardpoints(camera, origin, right, up, forward, ship, color)
-        self._draw_engines(camera, origin, right, up, forward, ship, color)
+        self._draw_hardpoints(frame, origin, right, up, forward, ship, color)
+        self._draw_engines(frame, origin, right, up, forward, ship, color)
 
     def draw_projectiles(self, camera: ChaseCamera, projectiles: Iterable[Projectile]) -> None:
         for projectile in projectiles:

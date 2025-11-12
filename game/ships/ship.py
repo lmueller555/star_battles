@@ -10,6 +10,7 @@ from pygame.math import Vector3
 from game.assets.content import ItemData
 from .data import Hardpoint, ShipFrame
 from .stats import ShipStats
+from game.render.state import RenderSpatialState
 
 
 if TYPE_CHECKING:
@@ -155,6 +156,8 @@ class Ship:
         if modules:
             for module in modules:
                 self.equip_module(module)
+        self.render_state = RenderSpatialState()
+        self.render_state.ensure_current(self.kinematics.position, self.kinematics.rotation)
 
     # Internal helpers --------------------------------------------------
 
