@@ -169,6 +169,10 @@ def _elliptical_ring(
     ]
 
 
+def _mirror_vector(point: Vector3) -> Vector3:
+    return Vector3(-point.x, point.y, point.z)
+
+
 def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
     """Construct a capital-ship silhouette for Outposts."""
 
@@ -559,6 +563,500 @@ def _build_escort_wireframe() -> list[tuple[Vector3, Vector3]]:
     return segments
 
 
+def _build_viper_mk_ii_wireframe() -> list[tuple[Vector3, Vector3]]:
+    segments: list[tuple[Vector3, Vector3]] = []
+
+    nose = Vector3(0.0, 0.35, 2.8)
+    canopy = Vector3(0.0, 0.7, 1.2)
+    tail = Vector3(0.0, -0.25, -2.6)
+    ventral = Vector3(0.0, -0.9, -0.4)
+    spine = Vector3(0.0, 0.15, -0.8)
+
+    left_points = [
+        Vector3(-1.4, -0.05, 1.4),
+        Vector3(-1.85, -0.02, 0.0),
+        Vector3(-0.65, 0.3, -2.1),
+        Vector3(-0.55, 0.35, 1.9),
+    ]
+
+    for point in left_points:
+        mirrored = _mirror_vector(point)
+        segments.append((point, mirrored))
+        segments.append((point, nose))
+        segments.append((mirrored, nose))
+        segments.append((point, tail))
+        segments.append((mirrored, tail))
+        segments.append((point, spine))
+        segments.append((mirrored, spine))
+
+    segments.append((nose, canopy))
+    segments.append((canopy, tail))
+    segments.append((ventral, tail))
+    segments.append((ventral, nose))
+    segments.append((ventral, spine))
+    segments.append((canopy, spine))
+    segments.append((left_points[1], ventral))
+    segments.append((_mirror_vector(left_points[1]), ventral))
+
+    return segments
+
+
+def _build_viper_mk_vii_wireframe() -> list[tuple[Vector3, Vector3]]:
+    segments: list[tuple[Vector3, Vector3]] = []
+
+    nose = Vector3(0.0, 0.32, 2.7)
+    canopy = Vector3(0.0, 0.58, 1.6)
+    tail = Vector3(0.0, -0.18, -2.4)
+    ventral = Vector3(0.0, -0.75, -0.6)
+    dorsal_spine = Vector3(0.0, 0.42, -1.2)
+
+    left_points = [
+        Vector3(-1.25, -0.1, 1.8),
+        Vector3(-1.6, -0.05, 0.6),
+        Vector3(-1.05, 0.18, -1.8),
+        Vector3(-0.55, 0.48, 0.4),
+    ]
+
+    for point in left_points:
+        mirrored = _mirror_vector(point)
+        segments.append((point, mirrored))
+        segments.append((point, nose))
+        segments.append((mirrored, nose))
+        segments.append((point, tail))
+        segments.append((mirrored, tail))
+        segments.append((point, dorsal_spine))
+        segments.append((mirrored, dorsal_spine))
+
+    twin_tail_left = Vector3(-0.5, 0.2, -2.4)
+    twin_tail_right = _mirror_vector(twin_tail_left)
+    segments.append((twin_tail_left, twin_tail_right))
+    segments.append((twin_tail_left, tail))
+    segments.append((twin_tail_right, tail))
+    segments.append((twin_tail_left, dorsal_spine))
+    segments.append((twin_tail_right, dorsal_spine))
+
+    segments.append((nose, canopy))
+    segments.append((canopy, dorsal_spine))
+    segments.append((ventral, tail))
+    segments.append((ventral, nose))
+    segments.append((ventral, left_points[1]))
+    segments.append((ventral, _mirror_vector(left_points[1])))
+
+    return segments
+
+
+def _build_raptor_wireframe() -> list[tuple[Vector3, Vector3]]:
+    segments: list[tuple[Vector3, Vector3]] = []
+
+    nose = Vector3(0.0, 0.5, 2.2)
+    cockpit = Vector3(0.0, 0.8, 0.8)
+    tail = Vector3(0.0, 0.1, -2.2)
+    ventral = Vector3(0.0, -0.7, -0.8)
+
+    hull_points = [
+        Vector3(-1.4, 0.2, 1.4),
+        Vector3(-1.6, 0.15, -0.4),
+        Vector3(-0.9, 0.35, -2.0),
+        Vector3(-1.0, -0.4, 1.0),
+    ]
+
+    for point in hull_points:
+        mirrored = _mirror_vector(point)
+        segments.append((point, mirrored))
+        segments.append((point, nose))
+        segments.append((mirrored, nose))
+        segments.append((point, tail))
+        segments.append((mirrored, tail))
+        segments.append((point, ventral))
+        segments.append((mirrored, ventral))
+
+    boom_left = Vector3(-0.8, 0.1, -2.6)
+    boom_right = _mirror_vector(boom_left)
+    segments.append((boom_left, boom_right))
+    segments.append((boom_left, tail))
+    segments.append((boom_right, tail))
+    segments.append((boom_left, ventral))
+    segments.append((boom_right, ventral))
+
+    segments.append((nose, cockpit))
+    segments.append((cockpit, tail))
+    segments.append((ventral, nose))
+    segments.append((ventral, tail))
+
+    return segments
+
+
+def _build_viper_mk_iii_wireframe() -> list[tuple[Vector3, Vector3]]:
+    segments: list[tuple[Vector3, Vector3]] = []
+
+    nose = Vector3(0.0, 0.4, 2.6)
+    canopy = Vector3(0.0, 0.65, 1.3)
+    tail = Vector3(0.0, -0.2, -2.5)
+    ventral = Vector3(0.0, -0.8, -0.3)
+    dorsal = Vector3(0.0, 0.25, -1.1)
+
+    left_points = [
+        Vector3(-1.3, -0.05, 1.6),
+        Vector3(-1.7, -0.03, 0.2),
+        Vector3(-1.0, 0.22, -1.9),
+    ]
+
+    for point in left_points:
+        mirrored = _mirror_vector(point)
+        segments.append((point, mirrored))
+        segments.append((point, nose))
+        segments.append((mirrored, nose))
+        segments.append((point, tail))
+        segments.append((mirrored, tail))
+        segments.append((point, dorsal))
+        segments.append((mirrored, dorsal))
+
+    wing_tip_left = Vector3(-1.9, -0.08, 0.8)
+    wing_tip_right = _mirror_vector(wing_tip_left)
+    segments.append((wing_tip_left, wing_tip_right))
+    segments.append((wing_tip_left, nose))
+    segments.append((wing_tip_right, nose))
+    segments.append((wing_tip_left, tail))
+    segments.append((wing_tip_right, tail))
+
+    segments.append((nose, canopy))
+    segments.append((canopy, dorsal))
+    segments.append((ventral, tail))
+    segments.append((ventral, nose))
+    segments.append((ventral, wing_tip_left))
+    segments.append((ventral, wing_tip_right))
+
+    return segments
+
+
+def _build_rhino_wireframe() -> list[tuple[Vector3, Vector3]]:
+    segments: list[tuple[Vector3, Vector3]] = []
+
+    nose = Vector3(0.0, 0.55, 2.4)
+    canopy = Vector3(0.0, 0.85, 1.1)
+    tail = Vector3(0.0, 0.1, -2.3)
+    keel = Vector3(0.0, -0.9, -0.5)
+
+    left_points = [
+        Vector3(-1.5, 0.15, 1.5),
+        Vector3(-1.9, 0.12, 0.2),
+        Vector3(-1.2, 0.35, -1.8),
+        Vector3(-1.0, -0.4, 1.0),
+    ]
+
+    for point in left_points:
+        mirrored = _mirror_vector(point)
+        segments.append((point, mirrored))
+        segments.append((point, nose))
+        segments.append((mirrored, nose))
+        segments.append((point, tail))
+        segments.append((mirrored, tail))
+        segments.append((point, keel))
+        segments.append((mirrored, keel))
+
+    armor_left = Vector3(-1.3, 0.55, -0.3)
+    armor_right = _mirror_vector(armor_left)
+    segments.append((armor_left, armor_right))
+    segments.append((armor_left, canopy))
+    segments.append((armor_right, canopy))
+    segments.append((armor_left, keel))
+    segments.append((armor_right, keel))
+
+    segments.append((nose, canopy))
+    segments.append((canopy, tail))
+    segments.append((keel, tail))
+    segments.append((keel, nose))
+
+    return segments
+
+
+def _build_raven_wireframe() -> list[tuple[Vector3, Vector3]]:
+    segments: list[tuple[Vector3, Vector3]] = []
+
+    nose = Vector3(0.0, 0.25, 3.0)
+    canopy = Vector3(0.0, 0.55, 1.5)
+    tail = Vector3(0.0, -0.25, -2.2)
+    ventral = Vector3(0.0, -0.75, -0.6)
+
+    left_points = [
+        Vector3(-0.95, -0.05, 2.0),
+        Vector3(-1.35, -0.02, 0.8),
+        Vector3(-0.8, 0.18, -1.6),
+    ]
+
+    for point in left_points:
+        mirrored = _mirror_vector(point)
+        segments.append((point, mirrored))
+        segments.append((point, nose))
+        segments.append((mirrored, nose))
+        segments.append((point, tail))
+        segments.append((mirrored, tail))
+
+    strake_left = Vector3(-0.4, 0.4, 0.6)
+    strake_right = _mirror_vector(strake_left)
+    segments.append((strake_left, strake_right))
+    segments.append((strake_left, canopy))
+    segments.append((strake_right, canopy))
+    segments.append((strake_left, nose))
+    segments.append((strake_right, nose))
+
+    segments.append((nose, canopy))
+    segments.append((canopy, tail))
+    segments.append((ventral, tail))
+    segments.append((ventral, nose))
+    segments.append((ventral, strake_left))
+    segments.append((ventral, strake_right))
+
+    return segments
+
+
+def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
+    segments: list[tuple[Vector3, Vector3]] = []
+
+    prow = Vector3(0.0, 1.6, 4.0)
+    bridge = Vector3(0.0, 2.4, 1.6)
+    stern = Vector3(0.0, -1.0, -4.2)
+
+    ring_points = [
+        Vector3(-3.4, 0.6, 1.0),
+        Vector3(-3.8, 0.6, -0.8),
+        Vector3(-2.0, 0.4, -3.2),
+    ]
+
+    for point in ring_points:
+        mirrored = _mirror_vector(point)
+        segments.append((point, mirrored))
+        segments.append((point, prow))
+        segments.append((mirrored, prow))
+        segments.append((point, stern))
+        segments.append((mirrored, stern))
+        segments.append((point, bridge))
+        segments.append((mirrored, bridge))
+
+    dorsal_ring = [
+        Vector3(-1.6, 2.4, -0.4),
+        Vector3(0.0, 2.6, -1.2),
+        Vector3(1.6, 2.4, -0.4),
+        Vector3(0.0, 2.2, 0.6),
+    ]
+    _loop_segments(segments, dorsal_ring)
+    for point in dorsal_ring:
+        segments.append((point, bridge))
+
+    ventral_keel = [
+        Vector3(-1.2, -1.6, 2.2),
+        Vector3(0.0, -1.8, 0.0),
+        Vector3(1.2, -1.6, 2.2),
+    ]
+    _loop_segments(segments, ventral_keel)
+    for point in ventral_keel:
+        segments.append((point, stern))
+
+    segments.append((prow, bridge))
+    segments.append((bridge, stern))
+
+    return segments
+
+
+def _build_scythe_wireframe() -> list[tuple[Vector3, Vector3]]:
+    segments: list[tuple[Vector3, Vector3]] = []
+
+    nose = Vector3(0.0, 1.1, 3.2)
+    canopy = Vector3(0.0, 1.5, 1.0)
+    tail = Vector3(0.0, -0.6, -3.4)
+
+    left_points = [
+        Vector3(-3.0, 0.4, 1.6),
+        Vector3(-3.4, 0.3, -0.6),
+        Vector3(-2.2, 0.6, -2.4),
+    ]
+
+    for point in left_points:
+        mirrored = _mirror_vector(point)
+        segments.append((point, mirrored))
+        segments.append((point, nose))
+        segments.append((mirrored, nose))
+        segments.append((point, tail))
+        segments.append((mirrored, tail))
+
+    dorsal_fin = [
+        Vector3(-0.6, 1.8, -0.4),
+        Vector3(0.0, 2.1, -1.2),
+        Vector3(0.6, 1.8, -0.4),
+    ]
+    _loop_segments(segments, dorsal_fin)
+    for point in dorsal_fin:
+        segments.append((point, canopy))
+
+    ventral = Vector3(0.0, -1.2, -0.2)
+    segments.append((ventral, nose))
+    segments.append((ventral, tail))
+    segments.append((ventral, left_points[1]))
+    segments.append((ventral, _mirror_vector(left_points[1])))
+    segments.append((nose, canopy))
+    segments.append((canopy, tail))
+
+    return segments
+
+
+def _build_maul_wireframe() -> list[tuple[Vector3, Vector3]]:
+    segments: list[tuple[Vector3, Vector3]] = []
+
+    prow = Vector3(0.0, 1.8, 3.6)
+    bridge = Vector3(0.0, 2.6, 1.2)
+    stern = Vector3(0.0, -1.4, -3.8)
+
+    armor_ridge_left = [
+        Vector3(-3.2, 1.0, 2.0),
+        Vector3(-3.6, 0.9, 0.2),
+        Vector3(-2.4, 1.1, -2.6),
+    ]
+
+    for point in armor_ridge_left:
+        mirrored = _mirror_vector(point)
+        segments.append((point, mirrored))
+        segments.append((point, prow))
+        segments.append((mirrored, prow))
+        segments.append((point, stern))
+        segments.append((mirrored, stern))
+        segments.append((point, bridge))
+        segments.append((mirrored, bridge))
+
+    lower_keel = [
+        Vector3(-2.0, -1.8, 1.6),
+        Vector3(0.0, -2.2, -0.4),
+        Vector3(2.0, -1.8, 1.6),
+    ]
+    _loop_segments(segments, lower_keel)
+    for point in lower_keel:
+        segments.append((point, stern))
+
+    dorsal_plate = [
+        Vector3(-1.6, 2.8, 0.4),
+        Vector3(0.0, 3.0, -0.8),
+        Vector3(1.6, 2.8, 0.4),
+        Vector3(0.0, 2.4, 1.6),
+    ]
+    _loop_segments(segments, dorsal_plate)
+    for point in dorsal_plate:
+        segments.append((point, bridge))
+
+    segments.append((prow, bridge))
+    segments.append((bridge, stern))
+
+    return segments
+
+
+def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
+    segments: list[tuple[Vector3, Vector3]] = []
+
+    prow = Vector3(0.0, 6.0, 9.5)
+    bridge = Vector3(0.0, 8.0, 2.4)
+    stern = Vector3(0.0, -4.0, -9.0)
+
+    port_hull = [
+        Vector3(-6.5, 2.5, 6.4),
+        Vector3(-7.2, 2.2, 2.0),
+        Vector3(-5.6, 2.0, -4.5),
+        Vector3(-4.2, 1.6, -8.2),
+    ]
+
+    for point in port_hull:
+        mirrored = _mirror_vector(point)
+        segments.append((point, mirrored))
+        segments.append((point, prow))
+        segments.append((mirrored, prow))
+        segments.append((point, stern))
+        segments.append((mirrored, stern))
+        segments.append((point, bridge))
+        segments.append((mirrored, bridge))
+
+    dorsal_spine = [
+        Vector3(-2.0, 9.0, -1.0),
+        Vector3(0.0, 9.4, -3.0),
+        Vector3(2.0, 9.0, -1.0),
+        Vector3(0.0, 8.6, 1.8),
+    ]
+    _loop_segments(segments, dorsal_spine)
+    for point in dorsal_spine:
+        segments.append((point, bridge))
+
+    keel = [
+        Vector3(-3.0, -5.5, 4.0),
+        Vector3(0.0, -6.0, 0.0),
+        Vector3(3.0, -5.5, 4.0),
+        Vector3(0.0, -4.8, 6.8),
+    ]
+    _loop_segments(segments, keel)
+    for point in keel:
+        segments.append((point, stern))
+
+    segments.append((prow, bridge))
+    segments.append((bridge, stern))
+
+    return segments
+
+
+def _build_brimir_wireframe() -> list[tuple[Vector3, Vector3]]:
+    segments: list[tuple[Vector3, Vector3]] = []
+
+    prow = Vector3(0.0, 12.0, 22.0)
+    tower = Vector3(0.0, 18.0, 6.0)
+    stern = Vector3(0.0, -10.0, -20.0)
+
+    port_planes = [
+        Vector3(-12.0, 6.0, 14.0),
+        Vector3(-16.0, 5.0, 6.0),
+        Vector3(-14.0, 4.5, -2.0),
+        Vector3(-10.0, 4.0, -12.0),
+    ]
+
+    for point in port_planes:
+        mirrored = _mirror_vector(point)
+        segments.append((point, mirrored))
+        segments.append((point, prow))
+        segments.append((mirrored, prow))
+        segments.append((point, stern))
+        segments.append((mirrored, stern))
+        segments.append((point, tower))
+        segments.append((mirrored, tower))
+
+    dorsal_array = [
+        Vector3(-4.0, 16.0, -4.0),
+        Vector3(0.0, 17.5, -6.0),
+        Vector3(4.0, 16.0, -4.0),
+        Vector3(0.0, 14.5, 0.0),
+    ]
+    _loop_segments(segments, dorsal_array)
+    for point in dorsal_array:
+        segments.append((point, tower))
+
+    ventral_keel = [
+        Vector3(-6.0, -12.0, 8.0),
+        Vector3(0.0, -13.0, 2.0),
+        Vector3(6.0, -12.0, 8.0),
+        Vector3(0.0, -11.0, 12.0),
+    ]
+    _loop_segments(segments, ventral_keel)
+    for point in ventral_keel:
+        segments.append((point, stern))
+
+    hangar_frame = [
+        Vector3(-8.0, -2.0, 4.0),
+        Vector3(-8.0, -2.0, -4.0),
+        Vector3(8.0, -2.0, -4.0),
+        Vector3(8.0, -2.0, 4.0),
+    ]
+    _loop_segments(segments, hangar_frame)
+    for point in hangar_frame:
+        segments.append((point, ventral_keel[1]))
+
+    segments.append((prow, tower))
+    segments.append((tower, stern))
+
+    return segments
+
+
 WIREFRAMES = {
     "Strike": [
         (Vector3(0, 0.3, 2.5), Vector3(0.9, 0, -2.0)),
@@ -571,6 +1069,17 @@ WIREFRAMES = {
     "Escort": _build_escort_wireframe(),
     "Line": _build_line_wireframe(),
     "Outpost": _build_outpost_wireframe(),
+    "viper_mk_ii": _build_viper_mk_ii_wireframe(),
+    "viper_mk_vii": _build_viper_mk_vii_wireframe(),
+    "raptor_fr": _build_raptor_wireframe(),
+    "viper_mk_iii": _build_viper_mk_iii_wireframe(),
+    "rhino_strike": _build_rhino_wireframe(),
+    "raven_mk_vi_r": _build_raven_wireframe(),
+    "glaive_command": _build_glaive_wireframe(),
+    "scythe_interceptor": _build_scythe_wireframe(),
+    "maul_assault": _build_maul_wireframe(),
+    "vanir_command": _build_vanir_wireframe(),
+    "brimir_carrier": _build_brimir_wireframe(),
 }
 
 SHIP_GEOMETRY_CACHE = _build_ship_geometry_cache()
@@ -1051,7 +1560,10 @@ class VectorRenderer:
     def draw_ship(self, camera: ChaseCamera, ship: Ship) -> None:
         frame = self._get_camera_frame(camera)
         geometry = self._ship_geometry_cache.get(
-            ship.frame.size, self._ship_geometry_cache["Strike"]
+            ship.frame.id,
+            self._ship_geometry_cache.get(
+                ship.frame.size, self._ship_geometry_cache["Strike"]
+            ),
         )
         state = getattr(ship, "render_state", None)
         if state is None:
