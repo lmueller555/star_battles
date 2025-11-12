@@ -12,7 +12,7 @@ import pygame
 from pygame.math import Vector3
 
 from game.combat.weapons import Projectile
-from game.render.camera import CameraFrameData, ChaseCamera
+from game.render.camera import CameraFrameData, ChaseCamera, DEFAULT_SHIP_LENGTHS
 from game.ships.ship import Ship
 from game.world.asteroids import Asteroid
 
@@ -56,6 +56,7 @@ class ShipGeometry:
     vertices: List[Vector3]
     edges: List[Tuple[int, int]]
     radius: float
+    length: float
 
 
 LOGGER = logging.getLogger(__name__)
@@ -94,6 +95,8 @@ def _ship_geometry_from_edges(edges: Sequence[tuple[Vector3, Vector3]]) -> ShipG
     vertices: List[Vector3] = []
     index_edges: List[Tuple[int, int]] = []
     max_radius = 0.0
+    min_z = float("inf")
+    max_z = float("-inf")
     for start, end in edges:
         start_key = _vertex_key(start)
         end_key = _vertex_key(end)
@@ -101,22 +104,45 @@ def _ship_geometry_from_edges(edges: Sequence[tuple[Vector3, Vector3]]) -> ShipG
             vertex_map[start_key] = len(vertices)
             vertices.append(Vector3(start))
             max_radius = max(max_radius, vertices[-1].length())
+            min_z = min(min_z, vertices[-1].z)
+            max_z = max(max_z, vertices[-1].z)
         if end_key not in vertex_map:
             vertex_map[end_key] = len(vertices)
             vertices.append(Vector3(end))
             max_radius = max(max_radius, vertices[-1].length())
+            min_z = min(min_z, vertices[-1].z)
+            max_z = max(max_z, vertices[-1].z)
         index_edges.append((vertex_map[start_key], vertex_map[end_key]))
-    return ShipGeometry(vertices=vertices, edges=index_edges, radius=max_radius)
+    if min_z == float("inf") or max_z == float("-inf"):
+        length = 0.0
+    else:
+        length = max(0.0, max_z - min_z)
+    return ShipGeometry(vertices=vertices, edges=index_edges, radius=max_radius, length=length)
 
 
 def _build_ship_geometry_cache() -> Dict[str, ShipGeometry]:
     return {name: _ship_geometry_from_edges(edge_list) for name, edge_list in WIREFRAMES.items()}
 
 
-def _estimate_ship_radius(ship: Ship, geometry: ShipGeometry) -> float:
-    radius = geometry.radius
+def _ship_geometry_scale(ship: Ship, geometry: ShipGeometry) -> float:
+    target_length = DEFAULT_SHIP_LENGTHS.get(ship.frame.size)
+    if not target_length:
+        return 1.0
+    if geometry.length <= 0.0:
+        return 1.0
+    scale = target_length / geometry.length
+    if abs(scale - 1.0) < 0.01:
+        return 1.0
+    return scale
+
+
+def _estimate_ship_radius(ship: Ship, geometry: ShipGeometry, scale: float) -> float:
+    radius = geometry.radius * scale
     if ship.frame.hardpoints:
-        radius = max(radius, max(hp.position.length() for hp in ship.frame.hardpoints) + 2.0)
+        radius = max(
+            radius,
+            max(hp.position.length() for hp in ship.frame.hardpoints) * scale + 2.0,
+        )
     engine_layout = ENGINE_LAYOUTS.get(ship.frame.size)
     if engine_layout:
         radius = max(radius, max(vector.length() for vector in engine_layout) + 2.0)
@@ -1277,6 +1303,8 @@ class VectorRenderer:
         state: RenderSpatialState,
         origin: Vector3,
         basis: tuple[Vector3, Vector3, Vector3],
+        *,
+        scale: float,
     ) -> tuple[List[tuple[float, float]], List[bool]]:
         cache = self._vertex_cache.setdefault(id(ship), ProjectedVertexCache())
         if (
@@ -1292,7 +1320,8 @@ class VectorRenderer:
         min_y = float("inf")
         max_y = float("-inf")
         for local in geometry.vertices:
-            world = origin + right * local.x + up * local.y + forward * local.z
+            scaled = Vector3(local) * scale
+            world = origin + right * scaled.x + up * scaled.y + forward * scaled.z
             screen, visible = frame.project_point(world)
             vertices_2d.append((screen.x, screen.y))
             visibility.append(visible)
@@ -1381,14 +1410,16 @@ class VectorRenderer:
         forward: Vector3,
         ship: Ship,
         color: tuple[int, int, int],
+        *,
+        scale: float,
     ) -> None:
         if not ship.mounts:
             return
 
         for mount in ship.mounts:
-            local = mount.hardpoint.position
+            local = Vector3(mount.hardpoint.position) * scale
             base_world = self._local_to_world(origin, right, up, forward, local)
-            muzzle_world = base_world + forward * 0.9
+            muzzle_world = base_world + forward * (0.9 * scale)
 
             base_screen, vis_base = frame.project_point(base_world)
             muzzle_screen, vis_muzzle = frame.project_point(muzzle_world)
@@ -1431,6 +1462,8 @@ class VectorRenderer:
         forward: Vector3,
         ship: Ship,
         color: tuple[int, int, int],
+        *,
+        scale: float,
     ) -> None:
         layout = ENGINE_LAYOUTS.get(ship.frame.size, ENGINE_LAYOUTS.get("Strike", []))
         if not layout:
@@ -1439,7 +1472,7 @@ class VectorRenderer:
         tick = pygame.time.get_ticks() * 0.001
         for index, local in enumerate(layout):
             base_world = self._local_to_world(origin, right, up, forward, local)
-            nozzle_world = base_world - forward * 0.35
+            nozzle_world = base_world - forward * (0.35 * scale)
             base_screen, vis_base = frame.project_point(base_world)
             nozzle_screen, vis_nozzle = frame.project_point(nozzle_world)
             if not vis_base:
@@ -1452,8 +1485,8 @@ class VectorRenderer:
 
             if ship.thrusters_active and vis_nozzle:
                 flicker = 0.6 + 0.4 * math.sin(tick * 12.0 + index * 1.3)
-                flame_length = 1.6 + 1.2 * flicker
-                flame_base = base_world - forward * 0.2
+                flame_length = (1.6 + 1.2 * flicker) * scale
+                flame_base = base_world - forward * (0.2 * scale)
                 flame_tip = flame_base - forward * flame_length
                 flame_base_screen, vis_base_flame = frame.project_point(flame_base)
                 flame_tip_screen, vis_tip_flame = frame.project_point(flame_tip)
@@ -1652,11 +1685,12 @@ class VectorRenderer:
                 ship.frame.size, self._ship_geometry_cache["Strike"]
             ),
         )
+        scale = _ship_geometry_scale(ship, geometry)
         state = getattr(ship, "render_state", None)
         if state is None:
             state = RenderSpatialState()
             ship.render_state = state
-        state.set_radius(_estimate_ship_radius(ship, geometry))
+        state.set_radius(_estimate_ship_radius(ship, geometry, scale))
         state.ensure_current(ship.kinematics.position, ship.kinematics.rotation)
         visible, distance, _ = self._evaluate_visibility(state, frame)
         if not visible:
@@ -1671,6 +1705,7 @@ class VectorRenderer:
             state,
             origin,
             (right, up, forward),
+            scale=scale,
         )
         color = SHIP_COLOR if ship.team == "player" else ENEMY_COLOR
         line_mode = "line" if distance > 7500.0 else "aaline"
@@ -1705,8 +1740,8 @@ class VectorRenderer:
         if speed_intensity > 0.0:
             self._draw_speed_streaks(frame, origin, right, up, forward, ship, speed_intensity)
 
-        self._draw_hardpoints(frame, origin, right, up, forward, ship, color)
-        self._draw_engines(frame, origin, right, up, forward, ship, color)
+        self._draw_hardpoints(frame, origin, right, up, forward, ship, color, scale=scale)
+        self._draw_engines(frame, origin, right, up, forward, ship, color, scale=scale)
 
     def draw_projectiles(self, camera: ChaseCamera, projectiles: Iterable[Projectile]) -> None:
         for projectile in projectiles:
