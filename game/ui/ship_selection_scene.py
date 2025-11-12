@@ -11,7 +11,7 @@ from pygame.math import Vector2
 from game.assets.content import ContentManager
 from game.engine.scene import Scene
 from game.ships.data import ShipFrame
-from game.ui.ship_info import get_model_layout
+from game.ui.ship_info import MODEL_LAYOUTS
 
 BACKGROUND_COLOR = (6, 10, 16)
 PANEL_COLOR = (18, 26, 36)
@@ -413,7 +413,7 @@ class ShipSelectionScene(Scene):
         return self.content.ships.frames.get(self.selected_ship_id)
 
     def _model_points(self, frame: ShipFrame) -> List[Vector2]:
-        layout = get_model_layout(frame.size, frame.id)
+        layout = MODEL_LAYOUTS.get(frame.size, MODEL_LAYOUTS["Strike"])
         shape = layout.get("shape")
         if not shape:
             return [Vector2(0, 0)]

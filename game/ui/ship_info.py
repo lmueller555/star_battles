@@ -176,80 +176,6 @@ MODEL_LAYOUTS: Dict[str, Dict[str, object]] = {
     },
 }
 
-VANIR_LINE_SHAPE: List[Tuple[float, float]] = [
-    (0.0, -212.0),
-    (36.0, -204.0),
-    (74.0, -190.0),
-    (110.0, -172.0),
-    (144.0, -148.0),
-    (174.0, -118.0),
-    (194.0, -84.0),
-    (204.0, -48.0),
-    (198.0, -16.0),
-    (182.0, 10.0),
-    (158.0, 36.0),
-    (134.0, 58.0),
-    (114.0, 78.0),
-    (98.0, 102.0),
-    (92.0, 130.0),
-    (102.0, 154.0),
-    (124.0, 178.0),
-    (148.0, 202.0),
-    (156.0, 222.0),
-    (142.0, 232.0),
-    (112.0, 228.0),
-    (78.0, 212.0),
-    (38.0, 196.0),
-    (0.0, 232.0),
-    (-38.0, 196.0),
-    (-78.0, 212.0),
-    (-112.0, 228.0),
-    (-142.0, 232.0),
-    (-156.0, 222.0),
-    (-148.0, 202.0),
-    (-124.0, 178.0),
-    (-102.0, 154.0),
-    (-92.0, 130.0),
-    (-98.0, 102.0),
-    (-114.0, 78.0),
-    (-134.0, 58.0),
-    (-158.0, 36.0),
-    (-182.0, 10.0),
-    (-198.0, -16.0),
-    (-204.0, -48.0),
-    (-194.0, -84.0),
-    (-174.0, -118.0),
-    (-144.0, -148.0),
-    (-110.0, -172.0),
-    (-74.0, -190.0),
-    (-36.0, -204.0),
-]
-
-SHIP_LAYOUT_OVERRIDES: Dict[str, Dict[str, object]] = {
-    "vanir_command": {"shape": VANIR_LINE_SHAPE},
-    "advanced_vanir": {"shape": VANIR_LINE_SHAPE},
-}
-
-
-def get_model_layout(size: str, frame_id: str | None = None) -> Dict[str, object]:
-    base_layout = MODEL_LAYOUTS.get(size, MODEL_LAYOUTS["Strike"])
-    layout: Dict[str, object] = dict(base_layout)
-    if "shape" in layout:
-        layout["shape"] = list(layout["shape"])  # type: ignore[assignment]
-    else:
-        layout["shape"] = list(MODEL_LAYOUTS["Strike"]["shape"])
-    if "anchors" in layout:
-        layout["anchors"] = dict(layout["anchors"])  # type: ignore[assignment]
-    override = SHIP_LAYOUT_OVERRIDES.get(frame_id or "")
-    if override:
-        if "shape" in override:
-            layout["shape"] = list(override["shape"])  # type: ignore[assignment]
-        if "anchors" in override:
-            base_anchors = dict(layout.get("anchors", {}))
-            base_anchors.update(override["anchors"])  # type: ignore[arg-type]
-            layout["anchors"] = base_anchors
-    return layout
-
 DEFAULT_ANCHORS: Dict[str, Dict[str, float]] = {
     "default": {"mode": "sym", "y": 0.0, "spacing": 96.0},
     "cannon": {"mode": "sym", "y": -60.0, "spacing": 96.0},
@@ -368,10 +294,8 @@ class ShipInfoPanel:
         if not self.current_ship:
             self._scaled_shape = []
             return
-        frame = self.current_ship.frame
-        layout = get_model_layout(frame.size, frame.id)
-        shape_data = layout.get("shape", MODEL_LAYOUTS["Strike"]["shape"])
-        shape: List[Tuple[float, float]] = list(shape_data)
+        layout = MODEL_LAYOUTS.get(self.current_ship.frame.size, MODEL_LAYOUTS["Strike"])
+        shape: List[Tuple[float, float]] = list(layout.get("shape", MODEL_LAYOUTS["Strike"]["shape"]))
         slot_counts = self._slot_counts(self.current_ship)
         positions_by_slot: Dict[str, List[Tuple[float, float]]] = {}
         max_x = max((abs(point[0]) for point in shape), default=1.0)
