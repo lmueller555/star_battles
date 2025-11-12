@@ -1,4 +1,4 @@
-Ship Classes, Roles, Specs, and Implementation Rules
+Ship Classes, Roles, Specs, and Implementation Rules (with Stats Library)
 1) Taxonomy & Identity
 1.1 Size Classes
 
@@ -8,589 +8,343 @@ Escort (Medium): balanced mobility/survivability, more hardpoints.
 
 Line (Heavy): tanky, slow turn/accel, heavy weapon arrays.
 
-Capital (XL): carriers/battlestars; special slot families (guns, launchers, defensive weapons), logistics/respawn roles.
+Capital (XL): carriers/battlestars; distinct weapon slot families (Guns / Launchers / Defensive), logistics/respawn roles.
 
 1.2 Combat Roles
 
-Interceptor: speed/agility specialists. More engine slots (and even more when upgraded).
+Interceptor: speed/agility specialists. +Engine slots (even more on Advanced).
 
-Assault: frontline brawler/tank. More hull slots (and even more when upgraded).
+Assault: frontline brawler/tank. +Hull slots (even more on Advanced).
 
-Command: electronic warfare/support. More computer slots (and even more when upgraded) + higher base energy than Interceptor/Assault of comparable size.
+Command: electronic warfare/support. +Computer slots (even more on Advanced) and the highest energy within size class.
 
 Multi-Role: flexible baseline; balanced slots/stats.
 
-Upgrade principle: Each base frame has an Advanced version with (a) modestly improved core stats, (b) +1–2 relevant slots based on role rule above, and (c) slightly higher energy (all roles), with Command receiving the highest energy uplift.
+Advanced Variants: Every base frame has an Advanced version with (a) modest core-stat increases, (b) +1 to the role’s signature slot family (Command: Computer; Interceptor: Engine; Assault: Hull), and (c) extra Power Capacity/Recharge to sustain the added slots.
 
 2) Spec Model (what every ship must define)
+2.1 Identity
 
-Identity
+name, level_requirement, faction_counterpart, class (Strike/Escort/Line/Capital), role (Interceptor/Assault/Command/Multi-Role), upgrade_to (Advanced …).
 
-Class (Strike/Escort/Line/Capital), Role, Level requirement, Faction counterpart, Upgrade path.
+2.2 Economy
 
-Economy
+Purchase Cost: currency mix (Cubits, Tylium, Merits).
 
-Purchase cost (currency: e.g., cubits or tylium; include merits if applicable).
+Upgrade Cost (to Advanced): currency + level gate.
 
-Upgrade cost (to Advanced): currency + gated level.
+Operating: Boost Cost (Tylium/sec), FTL Cost (Tylium/LY).
 
-Operating costs: boost drain (Tyl/s), FTL cost (Tyl/LY).
+2.3 Equipment Slots (by family)
 
-Equipment Slots (by family)
+Strike/Escort/Line: weapons, hull, engine, computer.
 
-Weapons (or Gun/Launcher/Defensive for Capitals), Hull, Engine, Computer, optional Utility.
+Capital: guns, launchers, defensive_weapons, plus hull, engine, computer.
 
-Hull Systems (survivability)
+Optional: utility/special if your design needs it.
 
-Hull Points, Hull Recovery (/s), Durability, Armor, Critical Defense.
+2.4 Hull Systems (survivability)
 
-Engine Systems (mobility)
+Hull Points (HP)
 
-Avoidance, Turning Speed (deg/s), Turning Acceleration (deg/s²), Inertial Compensation (m/s), Linear Acceleration (m/s²), Cruise Speed (m/s), Boost Speed (m/s), Boost Cost (Tyl/s).
+Hull Recovery (HP/sec)
 
-FTL Systems
+Durability (structural integrity; reduces under heavy stress)
 
-Range (LY), Charge (s), Threat Charge (optional, s), Cost (Tyl/LY).
+Armor Value (flat damage reduction / penetration check)
 
-Computer Systems (energy/sensors)
+Critical Defense (reduces attacker crit chance/efficacy)
 
-Power (capacity), Power Recharge (/s), Firewall Rating (defensive EW), Emitter Rating (offensive EW), DRADIS Range (m), Visual Range (m).
+2.5 Engine Systems (mobility)
 
-Notes
+Speed (m/s), Boost Speed (m/s), Boost Cost (Tylium/sec)
 
-Firing-arc characteristics (e.g., nearly 360° arrays on certain escorts), weak-spot coverage, role bonuses (e.g., command bonus to FTL transponder power cost).
+Acceleration (m/s²), Boost Acceleration (m/s²)
 
-3) How Specs Behave In-Game (implementation formulas & behaviors)
+Turning Speeds: Pitch/Yaw/Roll Speed (deg/s)
 
-Textual formulas only—express them clearly for the LLM to implement.
+Turning Accelerations: Pitch/Yaw/Roll Accel (deg/s²)
 
+Inertial Compensation (m/s; how quickly lateral drift is auto-trimmed)
+
+Strafe Speed/Acceleration (if enabled)
+
+Avoidance (evasiveness vs. incoming accuracy)
+
+Avoidance Fading (rate at which avoidance bonus decays while under fire)
+
+2.6 FTL Systems
+
+FTL Range (LY)
+
+FTL Charge Time (s)
+
+FTL Cooldown (s)
+
+FTL Cost (Tylium/LY unless explicitly defined otherwise)
+
+2.7 Computer/Energy & Sensors
+
+Power Points (capacity)
+
+Power Recovery (per second)
+
+Firewall Rating (defensive EW)
+
+Emitter Rating (offensive EW)
+
+Base DRADIS Range (m), Maximum DRADIS Range (m)
+
+Visual Range (m)
+
+2.8 Environmental
+
+Max Radiation Level (threshold)
+
+Radioactive Decay (rate)
+
+Radioresistance (modifier)
+
+Unit discipline:
+Distances in meters (m); speeds in m/s; linear acceleration in m/s²; angular rates in deg/s and deg/s²; FTL distance in light-years (LY); time in seconds (s); energy points for capacity; currency in Tylium/Cubits/Merits.
+
+3) How Specs Behave In-Game (clear formulas & behaviors)
 3.1 Survivability & Damage
 
-Hit resolution: Attacker Accuracy − Defender Avoidance → clamp to [0,1] as hit chance.
+Hit chance: hit = clamp01( (AttackerAccuracy − DefenderAvoidance) / scale ) (choose a scale that yields sensible mid-tier hit rates).
 
-Crit: (Base Crit + Attacker bonus − Defender Critical Defense) → on hit, apply Crit Multiplier.
+Critical: (BaseCrit + AttackerCrit − DefenderCriticalDefense); on hit, apply crit multiplier.
 
-Armor: Reduce incoming damage by Armor value but enforce a penetration floor (e.g., at least 15% of pre-armor damage always goes through) to prevent total nullification.
+Armor: reduce incoming damage by ArmorValue after penetration checks; enforce a minimum-throughput floor (e.g., ≥15%) so damage never fully zeros out.
 
-Hull Recovery: Regenerates per second; pause briefly after taking damage unless a module overrides.
+Hull Recovery: heal HullRecovery per second out of combat (or per your rules).
 
-Durability: Long-term integrity; heavy collision and sustained hits reduce Durability alongside hull.
+Durability: long-term HP; collision and sustained damage can reduce it; repairable at stations.
 
 3.2 Movement
 
-Throttle/Boost: Target speed is Cruise or Boost; approach using Acceleration.
+Speed control: approach target speed using Acceleration; when Boosting, use Boost Acceleration and consume Boost Cost.
 
-Turning: Apply Turning Speed as cap, Turning Acceleration as responsiveness.
+Turning: cap with Pitch/Yaw/Roll Speed, adjust responsiveness via corresponding Accelerations.
 
-Inertial Compensation: Gradually realign actual velocity vector with ship forward; lower values = more drift.
+Inertial Compensation: steer velocity vector toward forward direction over time; higher = snappier, lower = more drift.
 
-Strafing (if supported): Cap lateral/vertical speed; scale to size class.
+Avoidance Fading: while targeted/under fire, decay avoidance at rate AvoidanceFading toward a floor; recover when not under fire.
 
-3.3 Energy Economy
+3.3 Energy/Sensors
 
-Power Capacity/Recharge feed all energy-using actions (weapons, PD, ECM/ECCM, boost if designed that way).
+Power Points (capacity) + Power Recovery (regen) feed weapons, PD, ECM/ECCM, and any energy-using flight aids (if applicable).
 
-Command ships: higher baselines; Advanced variants add a further margin.
+DRADIS: detects contacts up to Base; skills/modules can push to Maximum temporarily.
 
-3.4 Sensors & Targeting
+Visual Range: proximity at which you get full target detail/ID.
 
-DRADIS Range determines detection radius; Visual Range gates close-in identification.
+Firewall/Emitter: defensive vs offensive EW contests.
 
-Lock-on advances when target remains in arc, range, and LOS; decays when broken.
+3.4 Weapons/Arcs
 
-EW: Firewall defends vs. jams/hacks; Emitter increases offensive EW; Command frames get bonuses.
+Each mount has a gimbal cone; can only track within that cone.
 
-3.5 Weapons & Arcs
+Hitscan: roll hit vs target Avoidance.
 
-Gimbal limits per hardpoint define firing cone; outside cone, mount cannot track.
+Projectile/Missile: compute lead; missiles may need lock; PD can intercept.
 
-Hitscan: roll accuracy vs avoidance;
+Frame traits can broaden coverage (e.g., escorts with near-360° head arrays).
 
-Projectile/Missile: compute lead solution; missiles require/benefit from target lock; PD/defensive weapons can intercept.
+3.5 FTL
 
-Heavy escorts/lines may mount side/ dorsal batteries to widen coverage; Glaive-like escorts can approach near-360° coverage via head/circumferential mounts (documented as a frame trait).
+Eligibility: distance ≤ FTL Range; not interdicted; energy/cost available.
 
-3.6 FTL
+Cost: (FTL Cost) × distance (LY) unless the ship’s sheet defines a different rule.
 
-Jump allowed if distance ≤ Range and ship pays Cost = (Tyl/LY) × distance;
+Charge/Cooldown: enforce both Charge Time and Cooldown timers.
 
-Charge time applies (use “Threat Charge” when recently in combat);
+4) Role-Based Slot & Energy Rules (base → Advanced)
 
-Transponder/Command bonus: reduce transponder power cost on Command frames; Advanced Command reduces further.
+Interceptor: Base +1 Engine vs size baseline; Advanced +1 more Engine (total +2 vs baseline). Modest Power/Recovery bump.
 
-4) Role-Based Slot & Energy Rules (applies to base → Advanced)
+Assault: Base +1 Hull; Advanced +1 more Hull (total +2). Small–moderate Power bump.
 
-Interceptor (any size):
-
-Base: +1 Engine slot relative to role-neutral baseline for that size.
-
-Advanced: +1 additional Engine slot (total +2 vs baseline).
-
-Energy: +small upgrade (enough to sustain extra engine/boost modules).
-
-Assault:
-
-Base: +1 Hull slot vs baseline.
-
-Advanced: +1 additional Hull slot (total +2 vs baseline).
-
-Energy: +small-to-moderate upgrade (support heavier armor/regen modules).
-
-Command:
-
-Base: +2 Computer slots vs baseline (Escorts) or +1 vs baseline (Lines), choose consistent policy and apply across sizes.
-
-Advanced: +1 additional Computer slot (aggregate advantage persists).
-
-Energy: highest baseline within class; Advanced adds the largest energy uplift.
-
-(You can tune the exact deltas, but keep the relationship consistent so identity is clear.)
+Command: Base +Computer advantage (e.g., +2 for Escorts, +1 for Lines; choose and stay consistent); Advanced +1 more Computer. Highest Power/Recovery within size class.
 
 5) Economy & Progression
 
-Currencies: Cubits (premium), Tylium (fuel/soft currency), Merits (rank/rep).
+Currencies: Cubits (premium), Tylium (fuel/soft), Merits (rank/rep).
 
-Costs:
+Purchase/Upgrade costs are per-frame; Operating includes Boost drain and FTL cost.
 
-Purchase Cost per frame (can be cubits or tylium; capitals may need both + merits).
+Pre-installed systems: list the exact starter equipment (weapons/modules) a frame spawns with.
 
-Upgrade Cost to Advanced (same currency family, scaled 1.3–1.8× plus level gate).
+6) Implementation Workflow (data-driven)
 
-Operating: Boost Cost (Tyl/s), FTL Cost (Tyl/LY).
+Author a spec sheet per ship using §2 fields (exact names/units).
 
-Pre-installed Systems: Ship may spawn with starter weapons (e.g., 2 light autocannons on Viper Mk VII).
+Validate slot counts with §4 role rules.
 
-Role Bonuses: e.g., Command reduces FTL transponder power cost; Advanced Command increases the reduction.
+Define weapon arcs/gimbals per mount; document any frame trait (e.g., broad coverage rings).
 
-6) Implementation Workflow (data-driven—no code required here)
+Attach economy (purchase/upgrade/operating) and pre-installs.
 
-Author a canonical spec sheet per ship with all fields in §2.
+QA with the checklist in §11.
 
-Validate units (m, m/s, s, LY) and currencies.
+7) Class Playbooks (feel targets)
 
-Derive role-based slot counts & energy from the class baseline using §4.
+Strike / Multi-Role: crisp accel/turn; survivability built on Avoidance + smart armor.
 
-Define weapon arcs: per hardpoint gimbal; note special traits (e.g., Glaive’s near-360° coverage).
+Escort / Command: broad firing coverage, EW utility; needs escort vs. fast strikes.
 
-Attach economy: purchase/upgrade/operating costs; pre-installed starter items.
+Line / Command: anchor and area control; missile/energy builds viable; relies on screen.
 
-QA checklist:
+Capital / Carrier: logistics, respawn, area buffs; “Outpost mode”-like role powers if implemented.
 
-Time-to-kill within target bands vs peers.
+8) Stats Library (authoritative per-ship numbers)
 
-Boost/energy sustainability (≥8–10 s under typical loadouts).
+This section is the single source of truth for concrete stats. Add a new subsection for each ship you share. Do not invent values—only record those provided. Use units exactly as defined in §2.
 
-FTL range/cost feels right for its tier.
+8.1 Strike — Viper Mk VII (Multi-Role) — Baseline stats from your screenshot
 
-Sensors/lock and PD feel fair relative to role.
+Identity & requirements
 
-Advanced frames provide clear, not runaway, improvements.
+Class: Strike
 
-7) Class Playbooks (how to “code” the feel)
-7.1 Strike / Multi-Role (Viper Mk VII exemplar)
+Role: Multi-Role
 
-Identity: agile, balanced strike fighter; Multi-Role.
+Level Requirement: 1
 
-Typical spec shape (based on your example):
+Purchase Cost: 100,000 (currency shown as icon in screenshot; confirm whether this is Cubits or Tylium) [verify currency]
 
-Slots: Weapons 4; Hull 3; Engine 3; Computer 3.
+Equipment slots (from earlier docs for Mk VII; keep until you confirm this sheet’s UI shows them)
 
-Survivability: Hull 585; Regen 4.5/s; Durability 9,000; Armor 5; Crit Def 80.
+Weapons: 4
 
-Mobility: Avoid 510; Turn 50 deg/s; Turn Accel 55 deg/s²; Inertial Comp 100 m/s; Accel 12 m/s²; Speed 55; Boost 85; Boost Cost 0.75 Tyl/s.
+Hull: 3
 
-FTL: Range 4.5 LY; Charge 15 s; Cost 30 Tyl/LY.
+Engine: 3
 
-Energy/Sensors: Power 150; Recharge 5/s; Firewall 100; Emitter 100; DRADIS 2,000 m; Visual 200 m.
+Computer: 3
 
-Advanced upgrade: +1 weapon (to 5) or maintain 4 weapons but add +1 engine if you classify Viper as Interceptor; modest boosts to Power/Recharge to sustain extra module/weapon.
+Hull / Survivability
 
-Play: excels in burst/angles; survivability depends on avoidance and discipline.
+Hull Points: 450
 
-7.2 Escort / Command (Glaive exemplar)
+Hull Recovery: 2.5 /sec
 
-Identity: medium hull with Command role (EW/support), high computer slot count.
+Armor Value: 5
 
-Spec shape (your example):
+Critical Defense: 80
 
-Slots: Weapons 6; Hull 2; Engine 2; Computer 5.
+Durability: (not shown on this panel; if present elsewhere, record it here) [verify]
 
-Survivability: Hull 1,700; Regen 15/s; Durability 30,000; Armor 25; Crit Def 100.
+Engine / Mobility
 
-Mobility: Avoid 270; Turn 22.5; Turn Accel 22.5; Inertial Comp 50; Accel 5; Speed 37.5; Boost 57.5; Boost Cost 1.8 Tyl/s.
+Speed: 55 m/s
 
-FTL: Range 8.25 LY; Charge 20 s; Cost 80 Tyl/LY.
+Boost Speed: 90 m/s [verify from image—appears 90]
 
-Energy/Sensors: Power 330; Recharge 12/s; Firewall 200; Emitter 200; DRADIS 3,500 m; Visual 750 m.
+Boost Cost: 0.5 Tylium/sec
 
-Trait: near-360° firing coverage via head + circumferential mounts; underside exposure—mitigate with roll.
+Acceleration: 13.5 m/s²
 
-Advanced upgrade: +1 Computer slot (to 6) and slight Power/Recharge bump; optional +1 Weapon if you want a late-tier variant.
+Boost Acceleration: 1.5 m/s²
 
-Play: holds angles, buffs allies, suppresses with broad arcs; needs escort vs fast strikes.
+Inertial Compensation: 175 m/s
 
-7.3 Line / Command (Vanir exemplar)
+Avoidance: 510
 
-Identity: heavy command line ship; mobile base flavor.
+Avoidance Fading: 0.75
 
-Spec shape (your example):
+Pitch Speed: 52 deg/s
 
-Slots: Weapons 6; Hull 2; Engine 2; Computer 4.
+Yaw Speed: 52 deg/s
 
-Survivability: Hull 3,500; Regen 19/s; Durability 35,000; Armor 40; Crit Def 100.
+Roll Speed: 182 deg/s
 
-Mobility: Avoid 50; Turn 9; Turn Accel 9; Inertial Comp 50; Accel 2; Speed 27.5; Boost 42.5; Boost Cost 5.4 Tyl/s.
+Pitch Acceleration: 55 deg/s²
 
-FTL: Range 11 LY; Charge 25 s; Cost 250 Tyl/LY.
+Yaw Acceleration: 55 deg/s²
 
-Energy/Sensors: Power 650; Recharge 28/s; Firewall 200; Emitter 200; DRADIS 4,000 m; Visual 1,000 m.
+Roll Acceleration: 748 deg/s²
 
-Advanced upgrade: +1 Computer slot (to 5) and significant Power/Recharge bump; optionally +1 Weapon if you want a missile-boat flavor.
+Strafe Speed: 0
 
-Play: anchor and area control; relies on escorts; excels at EW and sustained volleys.
+Strafe Acceleration: 0
 
-7.4 Capital / Carrier (Brimir exemplar)
+FTL
 
-Identity: faction carrier; logistics/respawn/area buffs; special weapon families.
+FTL Range: 90 LY [verify—very high vs earlier Mk VII data]
 
-Spec shape (your example):
+FTL Charge Time: 15 s
 
-Slots: Guns 4; Launchers 2; Defensive 4; Hull 2; Engine 3; Computer 3.
+FTL Cooldown: 35 s
 
-Survivability: Hull 8,000; Regen 40/s; Durability 100,000; Armor 40; Crit Def 150.
+FTL Cost: 1 (unit not labeled) [verify: normally Tylium/LY]
 
-Mobility: Avoid 20; Turn 8; Turn Accel 9; Inertial Comp 44; Accel 3; Speed 18; Boost 30; Boost Cost 18 Tyl/s.
+Energy & Sensors / EW
 
-FTL: Range 12.5 LY; Charge 30 s; Cost 600 Tyl/LY.
+Power Points (Capacity): 100
 
-Energy/Sensors: Power 1,000; Recharge 40/s; Firewall 240; Emitter 240; DRADIS 4,500 m; Visual 1,750 m.
+Power Recovery: 5 /sec
 
-Role abilities: Outpost Mode (immobile fortress + jump beacon), faction-wide jump-to-carrier, area buffs, repair/rearm aura, strike docking.
+Firewall Rating: 100
 
-Advanced upgrade: modest increases across survivability/energy; possibly +1 defensive slot or improved role auras.
+Emitter Rating: 100
 
-Play: mobile base and objective pivot; never solo—operates with fleet screen.
+Base DRADIS Range: 1,000 m
 
-8) Example Data Sheets (how to author them—textual)
+Maximum DRADIS Range: 2,000 m
 
-For each ship, capture exactly these sections so your LLM can serialize them into data later.
+Visual Range: 200 m
 
-Header: Name; Level Req; Class; Role; Counterpart; Purchase Cost; Upgrade To.
+Environmental
 
-Slots: list counts by family (and weapon subfamilies for Capitals).
+Max Radiation Level: 80
 
-Hull Systems: HP, Regen/s, Durability, Armor, Critical Defense.
+Radioactive Decay: 0.5
 
-Engine Systems: Avoidance; Turn; Turn Accel; Inertial Comp; Accel; Speed; Boost; Boost Cost.
+Radioresistance: 0
 
-FTL Systems: Range; Charge; (Threat Charge if used); Cost per LY.
+Notes & open items
 
-Computer Systems: Power; Recharge; Firewall; Emitter; DRADIS Range; Visual Range.
+Values tagged [verify] looked ambiguous on the screenshot; please confirm numerically (we’ll update the sheet verbatim).
 
-Role Bonuses & Traits: e.g., command transponder discount; near-360° arcs; weak spots.
+If this frame’s slot counts differ in this UI, paste that panel and we’ll replace the placeholder counts.
 
-Pre-installed Systems: specify starter weapons/modules.
+When you share the Advanced Viper Mk VII, add a sibling entry “Viper Mk VII (Advanced)” with only the fields that change (slot deltas, Power/Recovery increase, etc.) to avoid duplication.
 
-Economy Notes: where to purchase; currency mix; upgrade gate.
+9) Balance Guardrails (unchanged, restated for reference)
 
-(Populate the four exemplars with the exact values you provided.)
+TTK targets: 8–14 s for equal-tier duels within a class.
 
-9) Balance Guardrails
+Energy sustain: baseline builds sustain ≥8–10 s of continuous fire + maneuver; Advanced +15–25%.
 
-TTK targets: 8–14 s for equal-tier duels (Strike vs Strike, Escort vs Escort, etc.).
+Mobility ladder: Strike > Escort > Line > Capital (turn rates & accel).
 
-Energy: baseline build must sustain continuous fire + maneuver for ≥8 s; Advanced +15–25%.
+Sensor ladder: DRADIS increases with size; Visual only slightly.
 
-Mobility ladders: Strike > Escort > Line > Capital; never let an Escort turn faster than your fastest Strike.
+FTL ladder: larger hulls tend to more range and higher cost; Command frames may discount transponder costs.
 
-Sensor ladders: Line/Capital DRADIS ≥ Escort ≥ Strike; Visual increases with size only slightly.
+Slot identity: Enforce role slot advantages rigorously.
 
-FTL ladders: larger hulls tend to longer range and steeper cost; Command gets transponder discounts.
+10) Feature Notes Specific to Named Frames (context for coders)
 
-Slot identity: Enforce role slot deltas rigorously so identity is unmistakable.
+Viper Mk VII (Strike/Multi-Role): balanced strike with reliable PD/missile denial when fitted; excels in angles; survivability via Avoidance + modest Armor.
 
-10) Feature Notes Specific to Your Examples (to encode as traits)
-
-Viper Mk VII (Strike/Multi-Role): balanced slot spread for a strike; common fleet pick; PD/missile denial competency when built for it.
-
-Glaive (Escort/Command): 5 computer slots base; near-360° coverage from its head ring; underside vulnerability; rolling to defend belly; high power & recharge for an Escort.
-
-Vanir (Line/Command): heavy command with high energy and computer count; missile-boat viable with energy builds; unique twin-hull silhouette is cosmetic (collision like other Lines).
-
-Brimir (Capital/Carrier): distinct weapon slot families; Outpost Mode, jump beacon, strike docking (up to a squad size); repair/rearm aura; large energy pool.
+(Examples retained for future entries:) Glaive (Escort/Command), Vanir (Line/Command), Brimir (Capital/Carrier)—add their concrete stat sheets under Stats Library as you provide them.
 
 11) QA & Acceptance Checklist (per ship)
 
-Spec sheet is complete and consistent with class/role rules.
+Spec sheet complete and unit-correct (no missing fields; no invented numbers).
 
-Arcs/gimbals match the frame’s intended coverage.
+Slots obey §4 role rules; Advanced variant shows correct deltas.
 
-Economy numbers align with tier (purchase, upgrade, operating).
+Arcs/gimbals defined per mount; any frame trait documented.
 
-Role bonus (if any) is active and visible (e.g., Command transponder discount).
+Economy (purchase/upgrade/operating) present and coherent.
 
-Pre-installs appear correctly on first spawn.
+Pre-installs spawn correctly.
 
-Advanced variant: added slots and stat upticks adhere to §4 (Engine/Hull/Computer by role) and energy increases accordingly.
+Movement & energy behavior matches numbers (e.g., measured Boost Speed ≤ configured value).
 
-Outposts (stations, system control, sentry networks, services)
-1) Concept & role
+Sensors/lock feel consistent with DRADIS/Visual numbers.
 
-Outposts are stationary battle stations that function as the hub of a star system: they enable docking, refit/repair, resource management, and (at certain control levels) act as FTL jump beacons. Each faction can field an Outpost in a system; if both are present, the sector map displays a split ring (half blue/half red). On the system map, show the station icon; on the sector map, render a red or blue circle (split when both factions are present).
-
-Outposts exist in three strength tiers:
-
-Regular — base hull 50,000
-
-Upgraded — base hull 55,000
-
-Fortified — base hull 60,000
-
-The tier and the number/weight of Sentry Platforms around an Outpost are determined by System Control Level, which is driven by Outpost Progress % in that system.
-
-2) System control & Outpost Progress
-2.1 Progress scale & visibility
-
-Progress value: 0% … 300% (cap at 300%).
-
-UI: show a persistent “Outpost progress” widget (top-left), with current System Control Level (0–10) derived from the progress value.
-
-2.2 How progress increases (player/system activity)
-
-Increase progress by any of the following activities performed by the owning faction in that system:
-
-Mining (individual and via Mining Ships)
-
-PVE (killing NPCs)
-
-PVP (killing enemy players)
-
-Freighter in Distress mission success
-
-Drone Incursion (Nexus) mission success
-
-Penalty: an unsuccessful Freighter in Distress mission subtracts 15% from the progress counter.
-
-2.3 Auto-drain & retreat
-
-Auto-drain: progress decreases per minute when player activity subsides (make the drain rate a tunable).
-
-Retreat threshold: if progress drops below 90%, any active Outpost jumps out (despawns from the system).
-
-2.4 Destruction & repair timer
-
-If an Outpost is destroyed, it leaves the system. The owning faction’s progress UI replaces the percent with a Repair Timer set to 60 minutes.
-
-During repair countdown, players can still contribute to progress by doing the activities above. When the timer expires:
-
-If accumulated progress corresponds to Control Level ≥ 2 (≥90%), the progress resumes from that level (and the Outpost will re-enter per the level rules below).
-
-Otherwise, resume normal progress at the achieved number and wait for re-entry conditions to be met.
-
-2.5 Control levels & what they unlock
-
-Map progress to levels and station capabilities:
-
-Level	Progress	Station Change / Unlocks
-1	50%	System “captured” by a faction. No Outpost yet.
-2	90%	Regular Outpost enters system.
-3	125%	Outpost gains FTL Jump Beacon + 2 Light Sentry Platforms.
-4	175%	+2 more Light Sentry Platforms (total 4 Light).
-5	200%	Outpost upgrades to Upgraded; 2 Light → 2 Medium (net: 2 Light + 2 Medium).
-6	225%	Remaining 2 Light → 2 Medium (net: 4 Medium).
-7	250%	2 Medium → 2 Heavy (net: 2 Medium + 2 Heavy).
-8	275%	Outpost upgrades to Fortified; remaining 2 Medium → 2 Heavy (net: 4 Heavy).
-9–10	300%	No further changes (capstone stability).
-
-Both factions can have Outposts in the same system when their respective progress/levels warrant it. The sector ring becomes a split color.
-
-3) Sentry Platforms (defensive perimeter)
-
-Purpose: add graduated firepower and area denial around the Outpost based on the current control level.
-
-Placement: spawn platforms at equal angular intervals on a ring around the Outpost at a fixed radius (tunable), with line-of-fire overlap but no occlusion of the dock bay.
-
-Categories & given stats:
-
-Light Sentry Platform
-
-Hull: 7,500
-
-Energy: 3,000
-
-Armor: 35
-
-Armament: 8 × 20 mm autocannon turrets, 2 × Interceptor Missile Launchers
-
-Medium Sentry Platform
-
-Hull: 10,000
-
-Energy: 3,000
-
-Armor: 60
-
-Armament: 8 × 127 mm autocannon turrets, 5 × Medium Missile Launchers
-
-Heavy Sentry Platform
-
-Stats not provided in your brief. Define as a tunable upgrade over Medium (greater hull/armor/energy and heavier weapons). Document values explicitly when you decide them.
-
-Behavior:
-
-Platforms are immobile, inherit faction allegiance and IFF.
-
-Targeting priorities: missiles → strike craft → escorts → lines → capitals (tunable).
-
-Power economy: weapons consume platform energy; platforms pause fire to recharge if depleted.
-
-Respawn: no auto-respawn during the same Outpost life; they’re recreated when the Outpost re-enters at the appropriate level.
-
-4) Station services & docking
-4.1 Docking mechanics
-
-Docking radius: use your game’s standard (e.g., ≤ 800–1000 m) for interact prompts.
-
-Flow: slow to docking speed → press Interact → fade to Outpost Interior scene (faction-specific).
-
-Collision: dock entry corridor is non-combat; disable weapons once docking begins.
-
-4.2 Services available inside
-
-Fitting / Equipment Management: swap ship modules and weapons by slot family; validate power and slot constraints.
-
-Repairs & Recharge:
-
-Repair Hull (instant in bay) and Durability (consumes Titanium or credits).
-
-Recharge Power pool instantly; refill ammo/missiles.
-
-Resource Banking & Trade: deposit Tylium, Titanium, Water; exchange consistent with your economy rules.
-
-Mission Board: accept Freighter in Distress, Drone Incursion, contracts, etc.
-
-Spawn/Respawn Point: player can set Outpost as local respawn.
-
-FTL Beacon Access: if the Outpost has a beacon (Control Level ≥ 3), show Jump-to-Outpost/Jump-from-Outpost options subject to rules below.
-
-4.3 FTL beacon behavior
-
-Unlock level: from Level 3 upward.
-
-Jump-to-Outpost: allies can FTL to the Outpost if (a) they are not interdicted, (b) pay per-LY cost, (c) within their ship’s FTL range or you decide to allow beacon as a destination outside ship range (design choice; carriers often enabled global jumps—decide and document).
-
-Jump-from-Outpost: standard ship FTL rules apply (range/cost/charge).
-
-Interdiction: enemy jammers near the Outpost can delay or block inbound/outbound jumps (tunable radius/time).
-
-5) Ownership, UI, and map representation
-
-Ownership: store owner_faction per Outpost instance; when destroyed or retreated, set owner_faction = None.
-
-Sector map ring: draw a blue or red ring at system node; draw split ring if both factions have Outposts.
-
-System map icon: station glyph with a tier badge (Regular/Upgraded/Fortified) and a small counter of active platforms (L/M/H).
-
-HUD cues: broadcast faction-colored homing marker and distance in meters when Outpost exists.
-
-6) State machine (no code—behavioral blueprint)
-
-States
-
-Absent (no Outpost)
-
-Spooling (progress at/above threshold, jump-in pending)
-
-Deployed: Regular / Upgraded / Fortified
-
-Retreating (progress fell below 90% or hull reached 0 → jump-out)
-
-Repair Countdown (60 min), with progress accumulation active
-
-Transitions
-
-Absent → Spooling when progress ≥ 90%
-
-Spooling → Deployed(Regular) enter sequence & spawn perimeter platforms per current level
-
-Deployed(Regular/Upgraded/Fortified) → Retreating when progress < 90% OR hull ≤ 0
-
-Retreating → Repair Countdown (if destroyed) or Retreating → Absent (if progress fell)
-
-Repair Countdown → Absent when timer ends but progress < 90%
-
-Repair Countdown → Spooling when timer ends and progress ≥ 90% (resume at achieved level)
-
-7) Combat interactions & objectives
-
-Attack/defense: Outposts and platforms engage hostiles automatically; attackers can force retreat by destroying the Outpost, which also triggers the 60-minute repair timer.
-
-PVP/PVE hooks: killing enemies near the Outpost contributes to progress (for defenders) or stalls it (for attackers) per your contribution rules.
-
-Objective UI: when the Outpost is present, show an objective card with hull %, tier, platform status, and whether the FTL beacon is online.
-
-8) Tuning & fairness guidelines
-
-Platform DPS: set to deter lone attackers but not to erase full fleets; scale with level (Light < Medium < Heavy).
-
-Auto-drain: choose a value that empties a quiet system back below 90% within a reasonable window (e.g., tens of minutes) to keep the galaxy dynamic.
-
-Beacon power: powerful, but keep interdiction counters viable.
-
-Progress sources: weight group activities (Freighters/Drone Incursions) slightly higher than solo mining so systems with coordinated play upgrade faster.
-
-Spawn radius: position platforms so defenders can reach the fight, but attackers can also maneuver around blind sectors.
-
-9) Data you must define (per Outpost & per Platform)
-
-Outpost
-
-Faction, System ID, Position
-
-Tier (Regular/Upgraded/Fortified)
-
-Hull HP (per tier), Armor, Regen (if any)
-
-Control Level (derived) and Progress %
-
-Auto-drain rate (%/min)
-
-Repair Timer remaining (if any)
-
-Beacon enabled (bool)
-
-Platform layout (ring radius, count by category)
-
-Services enabled (booleans)
-
-Sentry Platform (by category)
-
-Hull, Armor, Energy, Recharge (if applicable)
-
-Weapons package (counts & types)
-
-Target priorities & engagement range
-
-Spawn transform relative to Outpost (radius, angle)
-
-Faction IFF
-
-Heavy Platform: stats not provided—fill these as a deliberate design pass and document them before implementation.
-
-10) Test scenarios (acceptance)
-
-Progress build-up: perform mining/PVE/PVP until 90% → Outpost jumps in at Level 2; verify tier = Regular.
-
-Level ups: continue to 125%, 175%, 200%, 225%, 250%, 275% → verify beacon and platform upgrades exactly match the table.
-
-Auto-drain: leave system idle until progress < 90% → Outpost retreats.
-
-Destruction: kill a Level-N Outpost → immediate retreat; 60-minute repair timer starts; continue contributing; after timer, ensure re-entry at the correct level.
-
-Dual presence: both factions cross thresholds → both Outposts present; sector ring splits correctly.
-
-Beacon: at Level ≥ 3, jump to/from Outpost; verify interdiction correctly blocks/delays.
-
-Services: dock and use fit/repair/rearm/bank; verify costs and constraints.
-
-Platform scaling: platform composition and stats match level; no respawn until station cycles.
+FTL respects range/charge/cost; cooldown enforced.
