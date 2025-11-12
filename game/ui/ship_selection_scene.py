@@ -6,12 +6,12 @@ from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
 import pygame
-from pygame.math import Vector2
+from pygame.math import Vector2, Vector3
 
 from game.assets.content import ContentManager
 from game.engine.scene import Scene
+from game.render.renderer import WIREFRAMES
 from game.ships.data import ShipFrame
-from game.ui.ship_info import MODEL_LAYOUTS
 
 BACKGROUND_COLOR = (6, 10, 16)
 PANEL_COLOR = (18, 26, 36)
@@ -24,7 +24,6 @@ BUTTON_IDLE = (30, 44, 58)
 BUTTON_HOVER = (70, 110, 150)
 BUTTON_ACTIVE = (110, 180, 240)
 MODEL_LINE_COLOR = (140, 210, 255)
-MODEL_FILL_COLOR = (24, 36, 52)
 SCROLLBAR_TRACK = (32, 46, 62)
 SCROLLBAR_GRIP = (86, 140, 190)
 
@@ -285,31 +284,14 @@ class ShipSelectionScene(Scene):
         frame = self._current_frame()
         if not frame or not self.font_medium:
             return
-        points = self._model_points(frame)
-        if not points:
+        segments = self._wireframe_segments(frame)
+        if not segments:
             return
-        max_extent_x = max(abs(point.x) for point in points)
-        max_extent_y = max(abs(point.y) for point in points)
-        if max_extent_x <= 0 or max_extent_y <= 0:
+        projected = self._project_wireframe(segments, rect)
+        if not projected:
             return
-        padding_x = rect.width * 0.08
-        padding_y = rect.height * 0.12
-        scale_x = (rect.width / 2 - padding_x) / max_extent_x
-        scale_y = (rect.height / 2 - padding_y) / max_extent_y
-        scale = max(4.0, min(scale_x, scale_y))
-        center = Vector2(rect.centerx, rect.centery + 16)
-        angle = self.rotation
-        cos_a = math.cos(angle)
-        sin_a = math.sin(angle)
-        rotated = [
-            Vector2(
-                center.x + (point.x * cos_a - point.y * sin_a) * scale,
-                center.y + (point.x * sin_a + point.y * cos_a) * scale,
-            )
-            for point in points
-        ]
-        pygame.draw.polygon(surface, MODEL_FILL_COLOR, rotated)
-        pygame.draw.lines(surface, MODEL_LINE_COLOR, True, rotated, 2)
+        for start, end in projected:
+            pygame.draw.line(surface, MODEL_LINE_COLOR, start, end, 2)
         name_surface = self.font_medium.render(frame.name, True, TEXT_COLOR)
         surface.blit(
             name_surface,
@@ -412,12 +394,72 @@ class ShipSelectionScene(Scene):
             return None
         return self.content.ships.frames.get(self.selected_ship_id)
 
-    def _model_points(self, frame: ShipFrame) -> List[Vector2]:
-        layout = MODEL_LAYOUTS.get(frame.size, MODEL_LAYOUTS["Strike"])
-        shape = layout.get("shape")
-        if not shape:
-            return [Vector2(0, 0)]
-        return [Vector2(point[0], point[1]) for point in shape]
+    def _wireframe_segments(self, frame: ShipFrame) -> List[Tuple[Vector3, Vector3]]:
+        if frame.id in WIREFRAMES:
+            return WIREFRAMES[frame.id]
+        return WIREFRAMES.get(frame.size, WIREFRAMES.get("Strike", []))
+
+    def _project_wireframe(
+        self,
+        segments: List[Tuple[Vector3, Vector3]],
+        rect: pygame.Rect,
+    ) -> List[Tuple[Vector2, Vector2]]:
+        if not segments:
+            return []
+
+        yaw = self.rotation
+        tilt = math.radians(18.0)
+        cos_y = math.cos(yaw)
+        sin_y = math.sin(yaw)
+        cos_x = math.cos(tilt)
+        sin_x = math.sin(tilt)
+
+        def rotate(point: Vector3) -> Vector3:
+            x = point.x * cos_y + point.z * sin_y
+            z = -point.x * sin_y + point.z * cos_y
+            y = point.y
+            y2 = y * cos_x - z * sin_x
+            return Vector3(x, y2, 0.0)
+
+        rotated_points = [rotate(vertex) for segment in segments for vertex in segment]
+        if not rotated_points:
+            return []
+
+        min_x = min(point.x for point in rotated_points)
+        max_x = max(point.x for point in rotated_points)
+        min_y = min(point.y for point in rotated_points)
+        max_y = max(point.y for point in rotated_points)
+        span_x = max_x - min_x
+        span_y = max_y - min_y
+        padding_x = rect.width * 0.1
+        padding_y = rect.height * 0.15
+        usable_width = max(1.0, rect.width - padding_x * 2)
+        usable_height = max(1.0, rect.height - padding_y * 2)
+        scale_candidates: List[float] = []
+        if span_x > 1e-3:
+            scale_candidates.append(usable_width / span_x)
+        if span_y > 1e-3:
+            scale_candidates.append(usable_height / span_y)
+        scale = min(scale_candidates) if scale_candidates else 1.0
+        scale = max(4.0, scale)
+        center_x = (min_x + max_x) / 2.0
+        center_y = (min_y + max_y) / 2.0
+        anchor = Vector2(rect.centerx, rect.centery + rect.height * 0.08)
+
+        projected: List[Tuple[Vector2, Vector2]] = []
+        for start, end in segments:
+            start_rot = rotate(start)
+            end_rot = rotate(end)
+            start_2d = Vector2(
+                anchor.x + (start_rot.x - center_x) * scale,
+                anchor.y + (start_rot.y - center_y) * scale,
+            )
+            end_2d = Vector2(
+                anchor.x + (end_rot.x - center_x) * scale,
+                anchor.y + (end_rot.y - center_y) * scale,
+            )
+            projected.append((start_2d, end_2d))
+        return projected
 
     def _scroll_info(self, amount: float, view_height: int | None = None) -> None:
         view = view_height if view_height is not None else self._info_view_height
