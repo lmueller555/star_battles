@@ -135,7 +135,7 @@ def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
         (560.0, 120.0, 70.0),
     ]
 
-    ring_sides = 24
+    ring_sides = 18
     previous_ring: list[Vector3] | None = None
     hull_sections: list[list[Vector3]] = []
     for z_pos, half_width, half_height in hull_profile:
@@ -230,7 +230,7 @@ def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
                     center.y + math.sin(angle) * 70.0,
                     center.z,
                 )
-                for angle in [step * (2.0 * math.pi / 16) for step in range(16)]
+                for angle in [step * (2.0 * math.pi / 12) for step in range(12)]
             ]
             engine_clusters.append(ring)
             _loop_segments(segments, ring)
@@ -295,7 +295,7 @@ def _build_line_wireframe() -> list[tuple[Vector3, Vector3]]:
         (280.0, 82.0, 44.0),
     ]
 
-    ring_sides = 22
+    ring_sides = 18
     previous_ring: list[Vector3] | None = None
     hull_sections: list[list[Vector3]] = []
     for z_pos, half_width, half_height in hull_profile:
@@ -389,7 +389,7 @@ def _build_line_wireframe() -> list[tuple[Vector3, Vector3]]:
                     center.y + math.sin(angle) * 26.0,
                     center.z,
                 )
-                for angle in [step * (2.0 * math.pi / 14) for step in range(14)]
+                for angle in [step * (2.0 * math.pi / 12) for step in range(12)]
             ]
             _loop_segments(segments, ring)
             thruster_end = Vector3(center.x, center.y, center.z - 44.0)
@@ -422,7 +422,7 @@ def _build_escort_wireframe() -> list[tuple[Vector3, Vector3]]:
         (66.0, 20.0, 12.0),
     ]
 
-    ring_sides = 18
+    ring_sides = 14
     previous_ring: list[Vector3] | None = None
     hull_sections: list[list[Vector3]] = []
     for z_pos, half_width, half_height in hull_profile:
@@ -485,7 +485,7 @@ def _build_escort_wireframe() -> list[tuple[Vector3, Vector3]]:
                 math.sin(angle) * 10.0 - 18.0,
                 engine_center,
             )
-            for angle in [step * (2.0 * math.pi / 10) for step in range(10)]
+            for angle in [step * (2.0 * math.pi / 8) for step in range(8)]
         ]
         _loop_segments(segments, ring)
         nozzle = Vector3(sign * (hull_profile[0][1] + 12.0), -18.0, engine_center - 18.0)
