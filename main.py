@@ -1,7 +1,10 @@
 """Entry point for the Star Battles vector prototype."""
 from __future__ import annotations
 
+import cProfile
+import io
 import json
+import pstats
 from pathlib import Path
 from typing import Any, Dict
 
@@ -87,12 +90,22 @@ def main() -> None:
         fixed_hz=settings.get("simHz", 60),
     )
 
+    profiler = cProfile.Profile()
     try:
+        profiler.enable()
         loop.run()
     finally:
+        profiler.disable()
+
+        stats_stream = io.StringIO()
+        stats = pstats.Stats(profiler, stream=stats_stream)
+        stats.strip_dirs().sort_stats("cumulative").print_stats(25)
+
         pygame.quit()
         print("\nUsage: WASD strafe, mouse to aim, Shift boost, Ctrl brake, Q/E vertical strafe, Z/C roll, LMB cannons, RMB missiles (needs lock), T target nearest, R cycle, F3 debug overlay.")
         print("TODO Milestone 2: add Escort/Line hulls, sector FTL map with 5+ systems, mining gameplay loop, fitting UI, expanded AI behaviours.")
+        print("\nProfiler results (top 25 cumulative):")
+        print(stats_stream.getvalue())
 
 
 if __name__ == "__main__":
