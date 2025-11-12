@@ -1317,14 +1317,47 @@ def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
         Vector3(-2.8, 2.2, -7.2),
         Vector3(-2.8, 2.4, -9.8),
     ]
+    port_lower_hull = [
+        Vector3(-2.6, 1.6, 12.0),
+        Vector3(-2.9, 1.2, 10.6),
+        Vector3(-3.1, 0.8, 9.0),
+        Vector3(-3.3, 0.5, 7.4),
+        Vector3(-3.4, 0.0, 5.6),
+        Vector3(-3.3, -0.4, 3.8),
+        Vector3(-3.2, -0.7, 2.0),
+        Vector3(-3.0, -0.9, 0.0),
+        Vector3(-2.9, -1.0, -2.2),
+        Vector3(-2.8, -1.1, -4.6),
+        Vector3(-2.7, -1.0, -7.2),
+        Vector3(-2.6, -0.8, -11.2),
+    ]
+
+    ventral_keel = [
+        Vector3(0.0, 1.4, 12.0),
+        Vector3(0.0, 1.0, 10.6),
+        Vector3(0.0, 0.6, 9.0),
+        Vector3(0.0, 0.4, 7.4),
+        Vector3(0.0, -0.1, 5.6),
+        Vector3(0.0, -0.5, 3.8),
+        Vector3(0.0, -0.8, 2.0),
+        Vector3(0.0, -1.0, 0.0),
+        Vector3(0.0, -1.1, -2.2),
+        Vector3(0.0, -1.2, -4.6),
+        Vector3(0.0, -1.0, -7.2),
+        Vector3(0.0, -0.8, -11.2),
+    ]
 
     _loop_segments(segments, port_outer_hull, close=False)
     _loop_segments(segments, port_inner_hull, close=False)
+    _loop_segments(segments, port_lower_hull, close=False)
+    _loop_segments(segments, ventral_keel, close=False)
 
     mirrored_outer_hull = [_mirror_vector(point) for point in port_outer_hull]
     mirrored_inner_hull = [_mirror_vector(point) for point in port_inner_hull]
+    mirrored_lower_hull = [_mirror_vector(point) for point in port_lower_hull]
     _loop_segments(segments, mirrored_outer_hull, close=False)
     _loop_segments(segments, mirrored_inner_hull, close=False)
+    _loop_segments(segments, mirrored_lower_hull, close=False)
 
     hull_anchor_points = [
         prow,
@@ -1342,15 +1375,45 @@ def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
     ]
 
     rear_support_start = 8
+    lower_cross_start = 1
+
+    ventral_anchor_points = [
+        prow,
+        forward_spine,
+        forward_spine,
+        mid_spine,
+        mid_spine,
+        brace_spine,
+        brace_spine,
+        reactor,
+        reactor,
+        engine_core,
+        engine_tail,
+        stern,
+    ]
 
     for index in range(len(port_outer_hull)):
         outer = port_outer_hull[index]
         inner = port_inner_hull[index]
         mirrored_outer = mirrored_outer_hull[index]
         mirrored_inner = mirrored_inner_hull[index]
+        lower = port_lower_hull[index]
+        mirrored_lower = mirrored_lower_hull[index]
+        ventral_point = ventral_keel[index]
 
         segments.append((outer, inner))
         segments.append((mirrored_outer, mirrored_inner))
+
+        segments.append((inner, lower))
+        segments.append((mirrored_inner, mirrored_lower))
+
+        segments.append((lower, ventral_point))
+        segments.append((mirrored_lower, ventral_point))
+
+        ventral_anchor = ventral_anchor_points[index]
+        segments.append((ventral_point, ventral_anchor))
+        segments.append((lower, ventral_anchor))
+        segments.append((mirrored_lower, ventral_anchor))
 
         if index >= rear_support_start:
             segments.append((inner, mirrored_inner))
@@ -1359,9 +1422,20 @@ def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
             segments.append((inner, anchor))
             segments.append((mirrored_inner, anchor))
 
+        if index >= lower_cross_start:
+            segments.append((lower, mirrored_lower))
+
         if index >= len(port_outer_hull) - 2:
             segments.append((outer, stern))
             segments.append((mirrored_outer, stern))
+            segments.append((lower, stern))
+            segments.append((mirrored_lower, stern))
+
+    stern_ventral = Vector3(0.0, -0.6, -12.0)
+    segments.append((ventral_keel[-1], stern_ventral))
+    segments.append((stern_ventral, stern))
+    segments.append((port_lower_hull[-1], stern_ventral))
+    segments.append((mirrored_lower_hull[-1], stern_ventral))
 
     rear_spine = [
         reactor,
