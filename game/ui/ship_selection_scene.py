@@ -381,7 +381,6 @@ class ShipSelectionScene(Scene):
                 ),
             )
             self._ship_button_rects.append((button_rect, frame))
-            x += button_width + spacing
 
     def _draw_start_button(self, surface: pygame.Surface, picker_rect: pygame.Rect) -> None:
         if not self.font_medium:
