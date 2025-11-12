@@ -361,10 +361,23 @@ class ShipAI:
                 self._notice_chances.pop(enemy_id, None)
 
     def _set_target(self, enemy: Ship) -> None:
+        previous_target = self.target
         self.target = enemy
         self._disengage_timer = 0.0
         self._disengage_chance = 1.0
         self.ship.target_id = id(enemy)
+        if (
+            enemy.team == "player"
+            and self.ship.team != "player"
+            and (previous_target is None or previous_target is not enemy or previous_target.team != "player")
+        ):
+            distance = self.ship.kinematics.position.distance_to(enemy.kinematics.position)
+            ship_name = getattr(self.ship.frame, "name", self.ship.frame.id)
+            enemy_name = getattr(enemy.frame, "name", enemy.frame.id)
+            print(
+                f"[AGGRO] {ship_name} ({self.ship.team}) is engaging player ship "
+                f"{enemy_name} at {distance:.0f}m"
+            )
 
 
 class InterceptorAI(ShipAI):
