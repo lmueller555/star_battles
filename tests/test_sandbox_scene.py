@@ -4,9 +4,17 @@ import pygame
 
 from game.assets.content import ContentManager
 from game.engine.logger import GameLogger, LoggerConfig
+from collections import Counter
+
 import game.ui.sandbox_scene as sandbox_module
 from game.ships.ship import Ship
-from game.ui.sandbox_scene import SandboxScene
+from game.ui.sandbox_scene import (
+    ESCORT_SPAWNS_PER_SIDE,
+    LINE_SPAWNS_PER_SIDE,
+    SandboxScene,
+    SECTOR_SPAWN_RADIUS,
+    STRIKE_SPAWNS_PER_SIDE,
+)
 
 
 class _DummySurface:
@@ -52,7 +60,7 @@ def test_surface_mouse_pos_clamps_letterbox_regions(monkeypatch):
     assert scene._surface_mouse_pos((960, 30)) == (640, 0)
 
 
-def test_sandbox_scene_initializes_strike_npcs(monkeypatch):
+def test_sandbox_scene_spawns_mixed_fleet(monkeypatch):
     content = ContentManager(Path("game/assets"))
     content.load()
     logger = GameLogger(LoggerConfig(level=0, channels={}))
@@ -79,14 +87,36 @@ def test_sandbox_scene_initializes_strike_npcs(monkeypatch):
     assert npc_ships
 
     outposts = [ship for ship in npc_ships if ship.frame.size.lower() == "outpost"]
-    non_strike = [
+    combatants = [
         ship
         for ship in npc_ships
-        if ship.frame.size.lower() not in {"outpost", "strike"}
+        if ship.frame.size.lower() != "outpost"
     ]
 
     assert outposts, "Expected sandbox setup to include Outposts"
-    assert not non_strike, "NPCs should only field Strike-class hulls"
+    assert combatants
+
+    friendly_counts = Counter(
+        ship.frame.size.lower()
+        for ship in combatants
+        if ship.team == "player"
+    )
+    enemy_counts = Counter(
+        ship.frame.size.lower()
+        for ship in combatants
+        if ship.team == "enemy"
+    )
+
+    assert friendly_counts["strike"] == STRIKE_SPAWNS_PER_SIDE
+    assert friendly_counts["escort"] == ESCORT_SPAWNS_PER_SIDE
+    assert friendly_counts["line"] == LINE_SPAWNS_PER_SIDE
+
+    assert enemy_counts["strike"] == STRIKE_SPAWNS_PER_SIDE
+    assert enemy_counts["escort"] == ESCORT_SPAWNS_PER_SIDE
+    assert enemy_counts["line"] == LINE_SPAWNS_PER_SIDE
+
+    for ship in combatants:
+        assert ship.kinematics.position.length() <= SECTOR_SPAWN_RADIUS + 1e-6
 
 
 def test_strike_npcs_mirror_player_loadout(monkeypatch):
