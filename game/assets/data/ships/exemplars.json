@@ -1731,9 +1731,9 @@
         "id": "hp_outpost_north",
         "slot": "gun",
         "position": [
-          0.0,
-          60.0,
-          260.0
+          -70.0,
+          32.0,
+          600.0
         ],
         "gimbal": 35,
         "tracking_speed": 36,
@@ -1743,9 +1743,9 @@
         "id": "hp_outpost_south",
         "slot": "gun",
         "position": [
-          0.0,
-          -60.0,
-          -260.0
+          70.0,
+          32.0,
+          600.0
         ],
         "gimbal": 35,
         "tracking_speed": 36,
@@ -1755,9 +1755,9 @@
         "id": "hp_outpost_east",
         "slot": "gun",
         "position": [
-          260.0,
-          0.0,
-          0.0
+          248.0,
+          42.0,
+          -40.0
         ],
         "gimbal": 42,
         "tracking_speed": 32,
@@ -1767,9 +1767,9 @@
         "id": "hp_outpost_west",
         "slot": "gun",
         "position": [
-          -260.0,
-          0.0,
-          0.0
+          -248.0,
+          42.0,
+          -40.0
         ],
         "gimbal": 42,
         "tracking_speed": 32,
@@ -1779,9 +1779,9 @@
         "id": "hp_outpost_launcher_port",
         "slot": "launcher",
         "position": [
-          -180.0,
-          120.0,
-          180.0
+          -235.0,
+          -50.0,
+          -260.0
         ],
         "gimbal": 30,
         "tracking_speed": 24,
@@ -1791,9 +1791,9 @@
         "id": "hp_outpost_launcher_starboard",
         "slot": "launcher",
         "position": [
-          180.0,
-          120.0,
-          180.0
+          235.0,
+          -50.0,
+          -260.0
         ],
         "gimbal": 30,
         "tracking_speed": 24,
@@ -1803,9 +1803,9 @@
         "id": "hp_outpost_pd_north",
         "slot": "launcher",
         "position": [
-          0.0,
-          180.0,
-          220.0
+          220.0,
+          -42.0,
+          60.0
         ],
         "gimbal": 70,
         "tracking_speed": 180,
@@ -1815,9 +1815,9 @@
         "id": "hp_outpost_pd_south",
         "slot": "launcher",
         "position": [
-          0.0,
-          -180.0,
-          -220.0
+          -220.0,
+          -42.0,
+          60.0
         ],
         "gimbal": 70,
         "tracking_speed": 180,
@@ -1827,9 +1827,9 @@
         "id": "hp_outpost_pd_east",
         "slot": "defensive",
         "position": [
-          220.0,
-          0.0,
-          180.0
+          205.0,
+          38.0,
+          200.0
         ],
         "gimbal": 75,
         "tracking_speed": 180,
@@ -1839,9 +1839,9 @@
         "id": "hp_outpost_pd_west",
         "slot": "defensive",
         "position": [
-          -220.0,
-          0.0,
-          180.0
+          -205.0,
+          38.0,
+          200.0
         ],
         "gimbal": 75,
         "tracking_speed": 180,
