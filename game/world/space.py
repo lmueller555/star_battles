@@ -503,6 +503,8 @@ class SpaceWorld:
                 return None
             target_ship = target
         elif isinstance(target, Asteroid):
+            if weapon.wclass == "missile":
+                return None
             if target.is_destroyed():
                 return None
             target_asteroid = target
@@ -568,7 +570,7 @@ class SpaceWorld:
             target_id = None
             if target_ship:
                 target_id = id(target_ship)
-            elif target_asteroid:
+            elif target_asteroid and weapon.wclass != "missile":
                 target_id = id(target_asteroid)
             tracer = Projectile(
                 weapon=weapon,
@@ -600,7 +602,7 @@ class SpaceWorld:
             target_id = None
             if target_ship:
                 target_id = id(target_ship)
-            elif target_asteroid:
+            elif target_asteroid and weapon.wclass != "missile":
                 target_id = id(target_asteroid)
             ttl = weapon.max_range / max(1.0, weapon.projectile_speed)
             if weapon.wclass == "missile":
