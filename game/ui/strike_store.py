@@ -284,18 +284,34 @@ class FittingService:
         stats = {
             "hull_hp": float(getattr(base, "hull_hp", 0.0)),
             "armor": float(getattr(base, "armor", 0.0)),
+            "critical_defense": float(getattr(base, "critical_defense", 0.0)),
+            "hull_recovery": float(getattr(base, "hull_recovery", 0.0)),
             "acceleration": float(getattr(base, "acceleration", 0.0)),
             "turn_accel": float(getattr(base, "turn_accel", 0.0)),
             "turn_rate": float(getattr(base, "turn_rate", 0.0)),
             "max_speed": float(getattr(base, "max_speed", 0.0)),
             "boost_speed": float(getattr(base, "boost_speed", 0.0)),
+            "strafe_speed": float(getattr(base, "strafe_speed", 0.0)),
+            "boost_cost": float(getattr(base, "boost_cost", 0.0)),
             "avoidance_rating": float(getattr(base, "avoidance_rating", 0.0)),
         }
         stats["avoidance"] = float(getattr(base, "avoidance", 0.0))
+        percent_mods = {
+            "max_speed": 0.0,
+            "boost_speed": 0.0,
+            "acceleration": 0.0,
+            "turn_rate": 0.0,
+            "turn_accel": 0.0,
+            "avoidance_rating": 0.0,
+            "strafe_speed": 0.0,
+            "boost_cost": 0.0,
+        }
         for module in modules:
             if module.slot_family == "hull":
                 stats["hull_hp"] += module.stats.get("hull_hp", 0.0)
                 stats["armor"] += module.stats.get("armor", 0.0)
+                stats["critical_defense"] += module.stats.get("critical_defense", 0.0)
+                stats["hull_recovery"] += module.stats.get("hull_recovery", 0.0)
                 stats["acceleration"] += module.stats.get("acceleration", 0.0)
                 stats["turn_accel"] += module.stats.get("turn_accel", 0.0)
                 if "avoidance_rating" in module.stats:
@@ -306,11 +322,26 @@ class FittingService:
                 stats["acceleration"] += module.stats.get("acceleration", 0.0)
                 stats["turn_rate"] += module.stats.get("turn_rate", 0.0)
                 stats["turn_accel"] += module.stats.get("turn_accel", 0.0)
+                stats["strafe_speed"] += module.stats.get("strafe_speed", 0.0)
+                stats["boost_cost"] += module.stats.get("boost_cost", 0.0)
                 if "avoidance_rating" in module.stats:
                     stats["avoidance_rating"] += module.stats["avoidance_rating"]
+                percent_mods["max_speed"] += module.stats.get("max_speed_percent", 0.0)
+                percent_mods["boost_speed"] += module.stats.get("boost_speed_percent", 0.0)
+                percent_mods["acceleration"] += module.stats.get("acceleration_percent", 0.0)
+                percent_mods["turn_rate"] += module.stats.get("turn_rate_percent", 0.0)
+                percent_mods["turn_accel"] += module.stats.get("turn_accel_percent", 0.0)
+                percent_mods["strafe_speed"] += module.stats.get("strafe_speed_percent", 0.0)
+                percent_mods["boost_cost"] += module.stats.get("boost_cost_percent", 0.0)
+                percent_mods["avoidance_rating"] += module.stats.get("avoidance_percent", 0.0)
             elif module.slot_family == "weapon":
                 # Weapons do not impact ship stats in this preview.
                 continue
+        for key, percent in percent_mods.items():
+            if abs(percent) < 1e-6:
+                continue
+            base_value = float(getattr(base, key, stats.get(key, 0.0)))
+            stats[key] = stats.get(key, base_value) + base_value * (percent / 100.0)
         if stats["avoidance_rating"] > 1.0:
             stats["avoidance"] = stats["avoidance_rating"] / 1000.0
         else:
