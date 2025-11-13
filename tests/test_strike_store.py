@@ -95,6 +95,74 @@ def test_hull_module_preview_deltas(item_id: str, expected: dict[str, float]) ->
 
 
 @pytest.mark.parametrize(
+    "item_id,expected",
+    [
+        (
+            "escort_composite_plating",
+            {
+                "hull_hp": 82.5,
+                "armor": 2.13,
+                "acceleration": -0.15,
+                "turn_accel": -0.38,
+            },
+        ),
+        (
+            "escort_hull_plating",
+            {"hull_hp": 165.0, "acceleration": -0.1, "turn_accel": -0.5},
+        ),
+        (
+            "escort_armor_plating",
+            {"armor": 4.25, "acceleration": -0.2, "turn_accel": -0.25},
+        ),
+        (
+            "escort_ht_plating",
+            {"critical_defense": 7.5},
+        ),
+        (
+            "escort_ht_hull_plating",
+            {
+                "critical_defense": 2.5,
+                "hull_hp": 110.0,
+                "acceleration": -0.07,
+                "turn_accel": -0.33,
+            },
+        ),
+        (
+            "escort_ht_armor_plating",
+            {
+                "armor": 2.83,
+                "critical_defense": 2.5,
+                "acceleration": -0.13,
+                "turn_accel": -0.17,
+            },
+        ),
+        (
+            "escort_ht_composite_plating",
+            {
+                "armor": 1.7,
+                "critical_defense": 1.5,
+                "hull_hp": 66.0,
+                "acceleration": -0.12,
+                "turn_accel": -0.3,
+            },
+        ),
+        (
+            "escort_system_redundancy",
+            {"hull_recovery": 1.5},
+        ),
+    ],
+)
+def test_escort_hull_module_preview_deltas(
+    item_id: str, expected: dict[str, float]
+) -> None:
+    ship = _make_ship("glaive_command")
+    preview = fitting.preview_with(item_id)
+    deltas = preview["deltas_by_stat"]
+    for key, value in expected.items():
+        assert deltas[key] == pytest.approx(value)
+
+
+@pytest.mark.parametrize(
     "item_id,frame_id,expected",
     [
         (

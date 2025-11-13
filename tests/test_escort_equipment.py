@@ -15,6 +15,97 @@ def _assert_stats(actual, expected):
 
 
 EXPECTED_ESCORT_EQUIPMENT = {
+    "escort_composite_plating": {
+        "price": 12_000,
+        "durability": 18_000,
+        "upgrades": ("armor", "hull_hp"),
+        "stats": {
+            "armor": 2.13,
+            "hull_hp": 82.5,
+            "acceleration": -0.15,
+            "turn_accel": -0.38,
+        },
+    },
+    "escort_hull_plating": {
+        "price": 12_000,
+        "durability": 18_000,
+        "upgrades": ("hull_hp",),
+        "stats": {
+            "hull_hp": 165.0,
+            "acceleration": -0.1,
+            "turn_accel": -0.5,
+        },
+    },
+    "escort_armor_plating": {
+        "price": 12_000,
+        "durability": 18_000,
+        "upgrades": ("armor",),
+        "stats": {
+            "armor": 4.25,
+            "acceleration": -0.2,
+            "turn_accel": -0.25,
+        },
+    },
+    "escort_ht_plating": {
+        "price": 12_000,
+        "durability": 18_000,
+        "upgrades": ("critical_defense",),
+        "stats": {
+            "critical_defense": 7.5,
+        },
+    },
+    "escort_ht_hull_plating": {
+        "price": 12_000,
+        "durability": 18_000,
+        "upgrades": ("critical_defense", "hull_hp"),
+        "stats": {
+            "critical_defense": 2.5,
+            "hull_hp": 110.0,
+            "acceleration": -0.07,
+            "turn_accel": -0.33,
+        },
+    },
+    "escort_ht_armor_plating": {
+        "price": 12_000,
+        "durability": 18_000,
+        "upgrades": ("armor", "critical_defense"),
+        "stats": {
+            "armor": 2.83,
+            "critical_defense": 2.5,
+            "acceleration": -0.13,
+            "turn_accel": -0.17,
+        },
+    },
+    "escort_ht_composite_plating": {
+        "price": 12_000,
+        "durability": 18_000,
+        "upgrades": ("armor", "critical_defense", "hull_hp"),
+        "stats": {
+            "armor": 1.7,
+            "critical_defense": 1.5,
+            "hull_hp": 66.0,
+            "acceleration": -0.12,
+            "turn_accel": -0.3,
+        },
+    },
+    "escort_system_redundancy": {
+        "price": 7_500,
+        "durability": 18_000,
+        "upgrades": ("hull_recovery",),
+        "stats": {
+            "hull_recovery": 1.5,
+        },
+    },
+    "escort_damage_control": {
+        "price": 12_000,
+        "durability": 18_000,
+        "upgrades": ("hull_restore",),
+        "stats": {
+            "hull_restore": 150.0,
+            "reload": 30.0,
+            "power": 100.0,
+        },
+    },
     "mec_e12": {
         "price": 15_000,
         "durability": 18_000,
