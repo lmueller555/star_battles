@@ -210,8 +210,7 @@ class SandboxScene(Scene):
         surface = pygame.display.get_surface()
         aspect = surface.get_width() / surface.get_height()
         self.camera = ChaseCamera(70.0, aspect)
-        gl_context = kwargs.get("gl_context") or context.get("gl_context")
-        self.renderer = VectorRenderer(surface, gl_context)
+        self.renderer = VectorRenderer(surface)
         self.hud = HUD(surface)
         self.ship_info_panel = ShipInfoPanel(surface, self.content)
         self.ship_info_open = False

@@ -19,7 +19,6 @@ from game.ui.outpost_scene import OutpostInteriorScene
 from game.ui.sandbox_scene import SandboxScene
 from game.ui.title_scene import TitleScene
 from game.ui.ship_selection_scene import ShipSelectionScene
-from game.render.renderer import acquire_shared_context
 
 
 SETTINGS_PATH = Path("settings.json")
@@ -67,13 +66,7 @@ def main() -> None:
     manager.register("ship_selection", ShipSelectionScene)
     manager.register("sandbox", SandboxScene)
     manager.register("outpost_interior", OutpostInteriorScene)
-    gl_context = acquire_shared_context()
-    manager.set_context(
-        content=content,
-        input=input_mapper,
-        logger=logger,
-        gl_context=gl_context,
-    )
+    manager.set_context(content=content, input=input_mapper, logger=logger)
     manager.activate("title")
 
     def process_events() -> None:
