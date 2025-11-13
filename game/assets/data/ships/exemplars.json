@@ -1718,8 +1718,8 @@
     "slots": {
       "weapons": {
         "guns": 6,
-        "launcher": 2,
-        "defensive": 4
+        "launcher": 4,
+        "defensive": 2
       },
       "hull": 6,
       "engine": 0,
@@ -1825,7 +1825,7 @@
       },
       {
         "id": "hp_outpost_pd_north",
-        "slot": "defensive",
+        "slot": "launcher",
         "position": [
           0.0,
           180.0,
@@ -1833,11 +1833,11 @@
         ],
         "gimbal": 70,
         "tracking_speed": 180,
-        "group": "defense"
+        "group": "aux"
       },
       {
         "id": "hp_outpost_pd_south",
-        "slot": "defensive",
+        "slot": "launcher",
         "position": [
           0.0,
           -180.0,
@@ -1845,7 +1845,7 @@
         ],
         "gimbal": 70,
         "tracking_speed": 180,
-        "group": "defense"
+        "group": "aux"
       },
       {
         "id": "hp_outpost_pd_east",
@@ -1897,16 +1897,16 @@
         ]
       },
       "weapons": {
-        "hp_outpost_north": "mec_l35",
-        "hp_outpost_south": "mec_l35",
-        "hp_outpost_east": "mec_l31",
-        "hp_outpost_west": "mec_l31",
-        "hp_outpost_dorsal": "mec_l34",
-        "hp_outpost_ventral": "mec_l34",
+        "hp_outpost_north": "m_39f",
+        "hp_outpost_south": "m_37a",
+        "hp_outpost_east": "hag_mk16a",
+        "hp_outpost_west": "hag_mk16a",
+        "hp_outpost_dorsal": "hag_mk16a",
+        "hp_outpost_ventral": "hag_mk16a",
         "hp_outpost_launcher_port": "ram_179a",
-        "hp_outpost_launcher_starboard": "rgm_48",
-        "hp_outpost_pd_north": "pd_x30p",
-        "hp_outpost_pd_south": "pd_x30p",
+        "hp_outpost_launcher_starboard": "ram_179a",
+        "hp_outpost_pd_north": "ram_179a",
+        "hp_outpost_pd_south": "ram_179a",
         "hp_outpost_pd_east": "pd_x30p",
         "hp_outpost_pd_west": "pd_x30p"
       }
