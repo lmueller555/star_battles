@@ -17,6 +17,7 @@ DEFAULT_SHIP_LENGTHS: dict[str, float] = {
     "Strike": 4.5,
     "Escort": 124.0,
     "Line": 458.0,
+    "Capital": 952.5,
     "Outpost": 1270.0,
 }
 

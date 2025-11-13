@@ -484,5 +484,9 @@ class ShipSlotLayout:
     def defensive(self) -> int:
         return self.weapon_capacity("defensive")
 
+    @property
+    def special(self) -> int:
+        return self.weapon_capacity("special")
+
 
 __all__ = ["ShipStats", "ShipSlotLayout", "UpgradeValue"]
