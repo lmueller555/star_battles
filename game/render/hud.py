@@ -16,6 +16,7 @@ from game.ui.sector_map import map_display_rect
 from game.world.mining import MiningHUDState
 from game.ships.ship import Ship
 from game.ships.flight import effective_thruster_speed
+from game.render.renderer import WIREFRAMES
 
 
 FLANK_SLIDER_WIDTH = 18
@@ -97,6 +98,7 @@ class WeaponSlotHUDState:
     weapon_class: str
     facing: str
     relative_position: tuple[float, float]
+    mount_position: tuple[float, float, float] | None = None
 
 
 class HUD:
@@ -159,14 +161,15 @@ class HUD:
                 # Avoid overcrowding the reticle if many auxiliary groups exist.
                 break
 
-    def draw_ship_wireframe(self, slots: Sequence[WeaponSlotHUDState]) -> None:
-        if not slots:
+    def draw_ship_wireframe(self, player: Ship, slots: Sequence[WeaponSlotHUDState]) -> None:
+        if not player or not slots:
             return
-        display_slots = list(slots)[:6]
+        display_slots = list(slots)
         if not display_slots:
             return
+
         surface_width, surface_height = self.surface.get_size()
-        panel_size = 150
+        panel_size = 180
         bottom_margin = 180
         x = max(20, surface_width - panel_size - 20)
         y = max(12, surface_height - panel_size - bottom_margin)
@@ -181,27 +184,74 @@ class HUD:
         )
         self.surface.blit(title, title_pos)
 
-        nose = (rect.centerx, rect.top + 10)
-        left_wing = (rect.left + 16, rect.top + rect.height * 0.48)
-        right_wing = (rect.right - 16, rect.top + rect.height * 0.48)
-        tail_left = (rect.left + rect.width * 0.32, rect.bottom - 18)
-        tail_right = (rect.right - rect.width * 0.32, rect.bottom - 18)
-        tail = (rect.centerx, rect.bottom - 6)
-        outline = [nose, left_wing, tail_left, tail, tail_right, right_wing, nose]
-        pygame.draw.lines(self.surface, (100, 150, 190), False, outline, 2)
-        pygame.draw.line(
-            self.surface,
-            (80, 120, 160),
-            (rect.centerx, rect.top + 14),
-            (rect.centerx, rect.bottom - 18),
-            1,
-        )
+        frame = getattr(player, "frame", None)
+        if frame is not None:
+            segments_3d = (
+                WIREFRAMES.get(frame.id)
+                or WIREFRAMES.get(frame.size)
+                or WIREFRAMES.get("Strike", [])
+            )
+        else:
+            segments_3d = WIREFRAMES.get("Strike", [])
 
-        usable_height = rect.height - 64
-        base_y = rect.top + 28
-        half_height = usable_height * 0.5
-        max_radius = rect.width * 0.32
-        body_center = Vector2(rect.centerx, base_y + half_height)
+        xs: list[float] = []
+        zs: list[float] = []
+        for start, end in segments_3d:
+            xs.extend((float(start.x), float(end.x)))
+            zs.extend((float(start.z), float(end.z)))
+        for slot in display_slots:
+            if slot.mount_position:
+                x_pos, _, z_pos = slot.mount_position
+                xs.append(float(x_pos))
+                zs.append(float(z_pos))
+
+        if not xs or not zs:
+            xs = [-1.0, 1.0]
+            zs = [-1.0, 1.0]
+
+        min_x = min(xs)
+        max_x = max(xs)
+        min_z = min(zs)
+        max_z = max(zs)
+        center_x = (min_x + max_x) * 0.5
+        center_z = (min_z + max_z) * 0.5
+        ship_width = max(1e-3, max_x - min_x)
+        ship_depth = max(1e-3, max_z - min_z)
+
+        content_rect = pygame.Rect(
+            rect.left + 12,
+            rect.top + 24,
+            rect.width - 24,
+            rect.height - 36,
+        )
+        if content_rect.width <= 0 or content_rect.height <= 0:
+            content_rect = rect
+        model_center = Vector2(content_rect.centerx, content_rect.centery)
+        scale = min(
+            content_rect.width / ship_width,
+            content_rect.height / ship_depth,
+        )
+        if scale <= 0.0:
+            scale = 1.0
+        scale *= 0.85
+
+        def _project(x: float, z: float) -> Vector2:
+            px = (x - center_x) * scale + model_center.x
+            py = model_center.y - (z - center_z) * scale
+            return Vector2(px, py)
+
+        hull_color = (90, 140, 180)
+        for start, end in segments_3d:
+            start_2d = _project(float(start.x), float(start.z))
+            end_2d = _project(float(end.x), float(end.z))
+            pygame.draw.line(
+                self.surface,
+                hull_color,
+                (int(start_2d.x), int(start_2d.y)),
+                (int(end_2d.x), int(end_2d.y)),
+                2,
+            )
+
         circle_radius = 11
         active_fill = (255, 210, 120)
         inactive_fill = (26, 36, 52)
@@ -265,27 +315,98 @@ class HUD:
                 muzzle = (cx, cy + r)
                 pygame.draw.circle(self.surface, accent, muzzle, 2)
 
+        clamp_left = rect.left + circle_radius + 2
+        clamp_right = rect.right - circle_radius - 2
+        clamp_top = rect.top + circle_radius + 2
+        clamp_bottom = rect.bottom - circle_radius - 2
+        min_spacing = circle_radius * 2 + 4
+        base_offset = circle_radius + 8
+
+        def _clamp_point(point: Vector2) -> Vector2:
+            point.x = max(clamp_left, min(clamp_right, point.x))
+            point.y = max(clamp_top, min(clamp_bottom, point.y))
+            return point
+
+        def _resolve_position(anchor: Vector2, direction: Vector2, existing: Sequence[Vector2]) -> Vector2:
+            if direction.length_squared() <= 1e-4:
+                direction = Vector2(0.0, -1.0)
+            else:
+                direction = direction.normalize()
+            distance = base_offset
+            candidate = _clamp_point(anchor + direction * distance)
+            attempt = 0
+            while attempt < 12:
+                if all(candidate.distance_to(other) >= min_spacing for other in existing):
+                    return candidate
+                distance += circle_radius * 0.9
+                candidate = _clamp_point(anchor + direction * distance)
+                attempt += 1
+            # Fallback: try rotating the direction to fan indicators apart
+            for step in range(1, 9):
+                angle = 30 * step
+                rotated = direction.rotate(angle if step % 2 else -angle)
+                distance = base_offset
+                for _ in range(6):
+                    candidate = _clamp_point(anchor + rotated * distance)
+                    if all(candidate.distance_to(other) >= min_spacing for other in existing):
+                        return candidate
+                    distance += circle_radius * 0.9
+            return candidate
+
+        indicator_data: list[tuple[WeaponSlotHUDState, Vector2]] = []
+        centers: list[Vector2] = []
+
         for slot in display_slots:
-            offset_x, offset_z = slot.relative_position
-            px = rect.centerx + offset_x * max_radius
-            py = body_center.y - offset_z * half_height
-            anchor = Vector2(px, py)
-            direction = anchor - body_center
+            if slot.mount_position:
+                mount_x, _, mount_z = slot.mount_position
+            else:
+                offset_x, offset_z = slot.relative_position
+                mount_x = center_x + offset_x * (ship_width * 0.5)
+                mount_z = center_z + offset_z * (ship_depth * 0.5)
+            anchor = _project(mount_x, mount_z)
+            direction = anchor - model_center
             facing = facing_vectors.get(slot.facing)
             if facing is not None:
                 direction += facing * 0.4
-            if direction.length_squared() <= 1e-4:
-                direction = facing or Vector2(0.0, -1.0)
-            try:
-                direction = direction.normalize()
-            except ValueError:
-                direction = Vector2(0.0, -1.0)
-            indicator_offset = circle_radius + 6
-            indicator = anchor + direction * indicator_offset
-            center = (
-                int(max(rect.left + circle_radius + 1, min(rect.right - circle_radius - 1, indicator.x))),
-                int(max(rect.top + circle_radius + 1, min(rect.bottom - circle_radius - 1, indicator.y))),
+            indicator_pos = _resolve_position(anchor, direction, centers)
+            centers.append(Vector2(indicator_pos))
+            indicator_data.append((slot, anchor))
+
+        def _separate_indicators() -> None:
+            if len(centers) <= 1:
+                return
+            max_iterations = 18
+            for _ in range(max_iterations):
+                adjusted = False
+                for i in range(len(centers)):
+                    for j in range(i + 1, len(centers)):
+                        delta = centers[j] - centers[i]
+                        dist = delta.length()
+                        if dist < min_spacing - 0.5:
+                            if dist <= 1e-4:
+                                delta = Vector2(1.0, 0.0)
+                                dist = 1.0
+                            push = (min_spacing - dist) * 0.5
+                            offset = delta.normalize() * push
+                            centers[i] = _clamp_point(centers[i] - offset)
+                            centers[j] = _clamp_point(centers[j] + offset)
+                            adjusted = True
+                if not adjusted:
+                    break
+
+        _separate_indicators()
+
+        for index, (slot, anchor) in enumerate(indicator_data):
+            indicator_pos = centers[index]
+            pygame.draw.circle(
+                self.surface,
+                (60, 110, 150),
+                (int(anchor.x), int(anchor.y)),
+                3,
+                1,
             )
+            center = (int(indicator_pos.x), int(indicator_pos.y))
+
             if slot.active:
                 pygame.draw.circle(self.surface, active_fill, center, circle_radius)
                 pygame.draw.circle(self.surface, active_border, center, circle_radius, 2)
@@ -294,6 +415,7 @@ class HUD:
                 border_color = ready_border if slot.ready else cooldown_border
                 pygame.draw.circle(self.surface, border_color, center, circle_radius, 2)
             _draw_icon(center, slot)
+
             if slot.active:
                 label_color = (255, 225, 170)
             elif slot.ready:
@@ -302,8 +424,16 @@ class HUD:
                 label_color = (140, 160, 180)
             label = self.font.render(slot.label, True, label_color)
             label_rect = label.get_rect()
-            dx = direction.x
-            dy = direction.y
+            direction_vec = centers[index] - anchor
+            if direction_vec.length_squared() <= 1e-4:
+                direction_vec = Vector2(0.0, -1.0)
+            else:
+                try:
+                    direction_vec = direction_vec.normalize()
+                except ValueError:
+                    direction_vec = Vector2(0.0, -1.0)
+            dx = direction_vec.x
+            dy = direction_vec.y
             if abs(dy) >= abs(dx):
                 if dy < 0.0:
                     label_rect.midtop = (center[0], center[1] + circle_radius + 6)
@@ -551,7 +681,7 @@ class HUD:
         self.draw_target_panel(camera, player, target)
         self.draw_target_overlay(target_overlay)
         if weapon_slots:
-            self.draw_ship_wireframe(weapon_slots)
+            self.draw_ship_wireframe(player, weapon_slots)
         self.draw_meters(player)
         self.draw_lock_ring(camera, player, target)
         self.draw_dradis(dradis)
