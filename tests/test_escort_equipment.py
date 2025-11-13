@@ -1,30 +1,25 @@
+from __future__ import annotations
+
 import pytest
 
-from game.ui import equipment_data
+from game.ui.equipment_data import EQUIPMENT_ITEMS
 
 
-def _get_item(item_id: str):
-    for item in equipment_data.EQUIPMENT_ITEMS:
-        if item["id"] == item_id:
-            return item
-    raise AssertionError(f"Equipment {item_id!r} not found")
+def _item_index():
+    return {item["id"]: item for item in EQUIPMENT_ITEMS if item["ship_class"] == "Escort"}
 
 
-def _assert_stats(item, expected_stats):
-    stats = item["stats"]
-    for key, expected in expected_stats.items():
-        assert stats.get(key) == pytest.approx(expected), f"{item['id']} field {key}"
+def _assert_stats(actual, expected):
+    for key, value in expected.items():
+        assert actual.get(key) == pytest.approx(value), f"{key} mismatch"
 
 
-def test_mec_e12_matches_guidance():
-    item = _get_item("mec_e12")
-    assert item["ship_class"] == "Escort"
-    assert item["price"] == 15_000
-    assert item["durability"] == 7_500
-    assert item["upgrades"] == ("damage", "optimal_range")
-    _assert_stats(
-        item,
-        {
+EXPECTED_ESCORT_EQUIPMENT = {
+    "mec_e12": {
+        "price": 15_000,
+        "durability": 18_000,
+        "upgrades": ("damage", "optimal_range"),
+        "stats": {
             "damage_min": 10.0,
             "damage_max": 25.0,
             "armor_piercing": 15.0,
@@ -37,18 +32,48 @@ def test_mec_e12_matches_guidance():
             "power": 6.0,
             "firing_arc": 180.0,
         },
-    )
-
-
-def test_mec_e13_matches_guidance():
-    item = _get_item("mec_e13")
-    assert item["ship_class"] == "Escort"
-    assert item["price"] == 15_000
-    assert item["durability"] == 7_500
-    assert item["upgrades"] == ("damage", "optimal_range")
-    _assert_stats(
-        item,
-        {
+    },
+    "mec_e12m": {
+        "price": 15_000,
+        "durability": 18_000,
+        "upgrades": ("damage", "optimal_range"),
+        "stats": {
+            "damage_min": 10.0,
+            "damage_max": 25.0,
+            "armor_piercing": 15.0,
+            "range_min": 0.0,
+            "range_max": 1_150.0,
+            "optimal_range": 450.0,
+            "accuracy": 335.0,
+            "critical_offense": 100.0,
+            "reload": 1.5,
+            "power": 6.0,
+            "firing_arc": 180.0,
+        },
+    },
+    "mec_e12p": {
+        "price": 15_000,
+        "durability": 18_000,
+        "upgrades": ("damage", "optimal_range", "critical_offense"),
+        "stats": {
+            "damage_min": 10.0,
+            "damage_max": 25.0,
+            "armor_piercing": 15.0,
+            "range_min": 0.0,
+            "range_max": 1_150.0,
+            "optimal_range": 450.0,
+            "accuracy": 335.0,
+            "critical_offense": 100.0,
+            "reload": 1.5,
+            "power": 6.0,
+            "firing_arc": 180.0,
+        },
+    },
+    "mec_e13": {
+        "price": 15_000,
+        "durability": 18_000,
+        "upgrades": ("damage", "optimal_range"),
+        "stats": {
             "damage_min": 10.0,
             "damage_max": 25.0,
             "armor_piercing": 15.0,
@@ -61,18 +86,48 @@ def test_mec_e13_matches_guidance():
             "power": 6.0,
             "firing_arc": 180.0,
         },
-    )
-
-
-def test_mec_e17_matches_guidance():
-    item = _get_item("mec_e17")
-    assert item["ship_class"] == "Escort"
-    assert item["price"] == 15_000
-    assert item["durability"] == 7_500
-    assert item["upgrades"] == ("damage", "optimal_range")
-    _assert_stats(
-        item,
-        {
+    },
+    "mec_e13m": {
+        "price": 15_000,
+        "durability": 18_000,
+        "upgrades": ("damage", "optimal_range"),
+        "stats": {
+            "damage_min": 10.0,
+            "damage_max": 25.0,
+            "armor_piercing": 15.0,
+            "range_min": 0.0,
+            "range_max": 900.0,
+            "optimal_range": 350.0,
+            "accuracy": 335.0,
+            "critical_offense": 100.0,
+            "reload": 1.2,
+            "power": 6.0,
+            "firing_arc": 180.0,
+        },
+    },
+    "mec_e13p": {
+        "price": 15_000,
+        "durability": 18_000,
+        "upgrades": ("damage", "optimal_range", "critical_offense"),
+        "stats": {
+            "damage_min": 10.0,
+            "damage_max": 25.0,
+            "armor_piercing": 15.0,
+            "range_min": 0.0,
+            "range_max": 900.0,
+            "optimal_range": 350.0,
+            "accuracy": 335.0,
+            "critical_offense": 100.0,
+            "reload": 1.2,
+            "power": 6.0,
+            "firing_arc": 180.0,
+        },
+    },
+    "mec_e17": {
+        "price": 15_000,
+        "durability": 18_000,
+        "upgrades": ("damage", "optimal_range"),
+        "stats": {
             "damage_min": 10.0,
             "damage_max": 25.0,
             "armor_piercing": 15.0,
@@ -85,18 +140,67 @@ def test_mec_e17_matches_guidance():
             "power": 6.0,
             "firing_arc": 180.0,
         },
-    )
-
-
-def test_hd_m50p_matches_guidance():
-    item = _get_item("hd_m50p")
-    assert item["ship_class"] == "Escort"
-    assert item["price"] == 15_000
-    assert item["durability"] == 7_500
-    assert item["upgrades"] == ("damage", "critical_offense")
-    _assert_stats(
-        item,
-        {
+    },
+    "mec_e17m": {
+        "price": 15_000,
+        "durability": 18_000,
+        "upgrades": ("damage", "optimal_range"),
+        "stats": {
+            "damage_min": 10.0,
+            "damage_max": 25.0,
+            "armor_piercing": 15.0,
+            "range_min": 0.0,
+            "range_max": 1_350.0,
+            "optimal_range": 550.0,
+            "accuracy": 335.0,
+            "critical_offense": 100.0,
+            "reload": 1.8,
+            "power": 6.0,
+            "firing_arc": 180.0,
+        },
+    },
+    "mec_e17p": {
+        "price": 15_000,
+        "durability": 18_000,
+        "upgrades": ("damage", "optimal_range", "critical_offense"),
+        "stats": {
+            "damage_min": 10.0,
+            "damage_max": 25.0,
+            "armor_piercing": 15.0,
+            "range_min": 0.0,
+            "range_max": 1_350.0,
+            "optimal_range": 550.0,
+            "accuracy": 335.0,
+            "critical_offense": 100.0,
+            "reload": 1.8,
+            "power": 6.0,
+            "firing_arc": 180.0,
+        },
+    },
+    "mole_mining_battery": {
+        "price": 7_500,
+        "durability": 18_000,
+        "upgrades": ("damage", "optimal_range"),
+        "stats": {
+            "damage_min": 4.0,
+            "damage_max": 10.0,
+            "armor_piercing": 25.0,
+            "range_min": 0.0,
+            "range_max": 900.0,
+            "optimal_range": 350.0,
+            "accuracy": 350.0,
+            "critical_offense": 100.0,
+            "reload": 1.5,
+            "power": 12.0,
+            "firing_arc": 180.0,
+            "mining_yield_multiplier": 5.0,
+        },
+    },
+    "hd_m50s": {
+        "price": 15_000,
+        "durability": 18_000,
+        "upgrades": ("range_max", "reload", "power"),
+        "stats": {
             "damage_min": 40.0,
             "damage_max": 100.0,
             "armor_piercing": 25.0,
@@ -111,18 +215,52 @@ def test_hd_m50p_matches_guidance():
             "turn_speed": 75.0,
             "projectile_speed": 100.0,
         },
-    )
-
-
-def test_hd_m63_matches_guidance():
-    item = _get_item("hd_m63")
-    assert item["ship_class"] == "Escort"
-    assert item["price"] == 15_000
-    assert item["durability"] == 7_500
-    assert item["upgrades"] == ("damage", "range")
-    _assert_stats(
-        item,
-        {
+    },
+    "hd_m50m": {
+        "price": 15_000,
+        "durability": 18_000,
+        "upgrades": ("range_max", "reload", "power"),
+        "stats": {
+            "damage_min": 40.0,
+            "damage_max": 100.0,
+            "armor_piercing": 25.0,
+            "range_min": 200.0,
+            "range_max": 1_350.0,
+            "optimal_range": 850.0,
+            "accuracy": 335.0,
+            "critical_offense": 100.0,
+            "reload": 12.5,
+            "power": 50.0,
+            "firing_arc": 180.0,
+            "turn_speed": 75.0,
+            "projectile_speed": 100.0,
+        },
+    },
+    "hd_m50p": {
+        "price": 15_000,
+        "durability": 18_000,
+        "upgrades": ("range_max", "reload", "power", "critical_offense"),
+        "stats": {
+            "damage_min": 40.0,
+            "damage_max": 100.0,
+            "armor_piercing": 25.0,
+            "range_min": 200.0,
+            "range_max": 1_350.0,
+            "optimal_range": 850.0,
+            "accuracy": 335.0,
+            "critical_offense": 100.0,
+            "reload": 12.5,
+            "power": 50.0,
+            "firing_arc": 180.0,
+            "turn_speed": 75.0,
+            "projectile_speed": 100.0,
+        },
+    },
+    "hd_m63": {
+        "price": 15_000,
+        "durability": 18_000,
+        "upgrades": ("range_max", "reload", "power"),
+        "stats": {
             "damage_min": 40.0,
             "damage_max": 100.0,
             "armor_piercing": 25.0,
@@ -137,18 +275,12 @@ def test_hd_m63_matches_guidance():
             "turn_speed": 75.0,
             "projectile_speed": 100.0,
         },
-    )
-
-
-def test_hd_m63p_matches_guidance():
-    item = _get_item("hd_m63p")
-    assert item["ship_class"] == "Escort"
-    assert item["price"] == 15_000
-    assert item["durability"] == 7_500
-    assert item["upgrades"] == ("damage", "critical_offense")
-    _assert_stats(
-        item,
-        {
+    },
+    "hd_m63m": {
+        "price": 15_000,
+        "durability": 18_000,
+        "upgrades": ("range_max", "reload", "power"),
+        "stats": {
             "damage_min": 40.0,
             "damage_max": 100.0,
             "armor_piercing": 25.0,
@@ -163,4 +295,79 @@ def test_hd_m63p_matches_guidance():
             "turn_speed": 75.0,
             "projectile_speed": 100.0,
         },
-    )
+    },
+    "hd_m63p": {
+        "price": 15_000,
+        "durability": 18_000,
+        "upgrades": ("range_max", "reload", "power", "critical_offense"),
+        "stats": {
+            "damage_min": 40.0,
+            "damage_max": 100.0,
+            "armor_piercing": 25.0,
+            "range_min": 200.0,
+            "range_max": 1_600.0,
+            "optimal_range": 900.0,
+            "accuracy": 335.0,
+            "critical_offense": 100.0,
+            "reload": 15.0,
+            "power": 50.0,
+            "firing_arc": 180.0,
+            "turn_speed": 75.0,
+            "projectile_speed": 100.0,
+        },
+    },
+    "ac_42_blaster": {
+        "price": 175_000,
+        "durability": 18_000,
+        "upgrades": ("damage",),
+        "stats": {
+            "damage_min": 120.0,
+            "damage_max": 155.0,
+            "armor_piercing": 60.0,
+            "range_min": 500.0,
+            "range_max": 2_150.0,
+            "optimal_range": 1_450.0,
+            "accuracy": 335.0,
+            "critical_offense": 200.0,
+            "reload": 2.5,
+            "power": 9.0,
+            "firing_arc": 90.0,
+        },
+    },
+    "asm_12_agrius": {
+        "price": 60_000,
+        "durability": 18_000,
+        "upgrades": ("power_damage", "range_max", "reload", "power"),
+        "stats": {
+            "damage_min": 600.0,
+            "damage_max": 1_000.0,
+            "armor_piercing": 25.0,
+            "range_min": 800.0,
+            "range_max": 1_600.0,
+            "optimal_range": 1_200.0,
+            "accuracy": 335.0,
+            "critical_offense": 100.0,
+            "reload": 240.0,
+            "power": 70.0,
+            "firing_arc": 180.0,
+            "turn_speed": 70.0,
+            "projectile_speed": 85.0,
+            "explosion_radius": 400.0,
+            "power_damage_min": 40.0,
+            "power_damage_max": 60.0,
+        },
+    },
+}
+
+
+@pytest.mark.parametrize("item_id", sorted(EXPECTED_ESCORT_EQUIPMENT))
+def test_escort_equipment_matches_guidance(item_id):
+    items = _item_index()
+    assert set(items) == set(EXPECTED_ESCORT_EQUIPMENT)
+
+    expected = EXPECTED_ESCORT_EQUIPMENT[item_id]
+    item = items[item_id]
+    assert item["price"] == expected["price"]
+    assert item["durability"] == expected["durability"]
+    assert item["upgrades"] == expected["upgrades"]
+    _assert_stats(item["stats"], expected["stats"])
