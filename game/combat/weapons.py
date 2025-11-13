@@ -107,7 +107,7 @@ class WeaponData:
             gimbal=float(data.get("gimbal", 20.0)),
         )
         if weapon.wclass == "missile":
-            weapon.projectile_speed = 130.0
+            weapon.projectile_speed = 100.0
         return weapon
 
     @property

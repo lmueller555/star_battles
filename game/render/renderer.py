@@ -1974,15 +1974,20 @@ class VectorRenderer:
             local = Vector3(mount.hardpoint.position) * scale
             base_world = self._local_to_world(origin, right, up, forward, local)
             muzzle_world = base_world + forward * (0.9 * scale)
+            direction = ship.hardpoint_direction(mount.hardpoint)
+            debug_length = 12.0 * scale
+            debug_tip_world = base_world + direction * debug_length
 
             base_screen, vis_base = frame.project_point(base_world)
             muzzle_screen, vis_muzzle = frame.project_point(muzzle_world)
+            debug_screen, vis_debug = frame.project_point(debug_tip_world)
             if not vis_base:
                 continue
 
             armed = bool(mount.weapon_id)
             base_color = _lighten(color, 0.25) if armed else _darken(color, 0.35)
             muzzle_color = _lighten(color, 0.55) if armed else _darken(color, 0.15)
+            debug_color = _lighten(muzzle_color, 0.35)
             radius = 3 if ship.frame.size == "Strike" else 4
             pygame.draw.circle(
                 self.surface,
@@ -2004,6 +2009,14 @@ class VectorRenderer:
                     muzzle_color,
                     (base_screen.x, base_screen.y),
                     (muzzle_screen.x, muzzle_screen.y),
+                    blend=1,
+                )
+            if vis_debug:
+                pygame.draw.aaline(
+                    self.surface,
+                    debug_color,
+                    (base_screen.x, base_screen.y),
+                    (debug_screen.x, debug_screen.y),
                     blend=1,
                 )
 
