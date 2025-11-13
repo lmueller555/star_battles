@@ -2071,7 +2071,7 @@ class VectorRenderer:
         if base_dir.length_squared() <= 1e-6:
             base_dir = base_world - origin
         if base_dir.length_squared() <= 1e-6:
-            base_dir = ship.kinematics.basis.forward
+            base_dir = ship.hardpoint_direction(getattr(mount, "hardpoint", None))
         base_dir = base_dir.normalize()
         rng = self._mount_rng(mount)
         particle_count = max(6, int(18 + 26 * intensity))
@@ -2122,7 +2122,7 @@ class VectorRenderer:
             gimbal = getattr(getattr(mount, "hardpoint", None), "gimbal", 55.0)
         base_dir = base_world - origin
         if base_dir.length_squared() <= 1e-6:
-            base_dir = ship.kinematics.basis.forward
+            base_dir = ship.hardpoint_direction(getattr(mount, "hardpoint", None))
         base_dir = base_dir.normalize()
         rng = self._mount_rng(mount)
         burst_count = max(4, int(10 + 24 * intensity))

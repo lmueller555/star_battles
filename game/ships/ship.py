@@ -289,6 +289,18 @@ class Ship:
                 return
         raise KeyError(f"No hardpoint {hardpoint_id}")
 
+    def hardpoint_direction(self, hardpoint: Hardpoint | None) -> Vector3:
+        basis = self.kinematics.basis
+        if hardpoint is None:
+            return Vector3(basis.forward)
+        local = getattr(hardpoint, "orientation", None)
+        if not isinstance(local, Vector3) or local.length_squared() <= 0.0:
+            return Vector3(basis.forward)
+        direction = basis.right * local.x + basis.up * local.y + basis.forward * local.z
+        if direction.length_squared() <= 0.0:
+            return Vector3(basis.forward)
+        return direction.normalize()
+
     # Module helpers -----------------------------------------------------
 
     def equip_module(
