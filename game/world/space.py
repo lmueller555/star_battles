@@ -9,10 +9,11 @@ from typing import Iterable, List, Optional, TYPE_CHECKING
 
 from pygame.math import Vector3
 
-from game.combat.targeting import update_lock
+from game.combat.targeting import is_within_gimbal, update_lock
 from game.combat.weapons import (
     HitResult,
     Projectile,
+    WeaponData,
     WeaponDatabase,
     resolve_hitscan,
 )
@@ -66,6 +67,10 @@ MISSILE_TTL_BY_SIZE: dict[str, float] = {
     "Line": 50.0,
     "Capital": 60.0,
 }
+
+
+POINT_DEFENSE_WEAPONS: set[str] = {"mec_l30p", "pd_x30p"}
+FLAK_WEAPONS: set[str] = {"mec_l39f", "m_37a", "m_39f"}
 
 
 def _missile_ttl_for_ship(ship: Ship | None, fallback: float) -> float:
@@ -319,6 +324,8 @@ class SpaceWorld:
             else:
                 target = None
             update_lock(ship, target, dt)
+
+        self._auto_fire_outpost_weapons()
 
         for projectile in list(self.projectiles):
             projectile.update(dt, weapons_log)
@@ -583,6 +590,7 @@ class SpaceWorld:
                 visual_only=True,
             )
             self.projectiles.append(tracer)
+            self._trigger_weapon_effect(ship, mount, weapon, effective_gimbal)
             return result
         else:
             launch_direction = aim_direction
@@ -619,7 +627,105 @@ class SpaceWorld:
             self.projectiles.append(projectile)
             if target_ship and (ship.team == "player" or target_ship.team == "player"):
                 self.threat_timer = max(self.threat_timer, 12.0)
+            self._trigger_weapon_effect(ship, mount, weapon, effective_gimbal)
             return None
+
+    def _trigger_weapon_effect(
+        self,
+        ship: Ship,
+        mount: WeaponMount,
+        weapon: WeaponData,
+        gimbal_limit: float,
+    ) -> None:
+        if weapon.id in POINT_DEFENSE_WEAPONS:
+            mount.effect_type = "point_defense"
+            mount.effect_duration = 0.35
+        elif weapon.id in FLAK_WEAPONS:
+            mount.effect_type = "flak"
+            mount.effect_duration = 0.55
+        else:
+            return
+        mount.effect_timer = mount.effect_duration
+        mount.effect_range = max(0.0, weapon.max_range)
+        mount.effect_gimbal = max(0.0, gimbal_limit if gimbal_limit > 0.0 else weapon.gimbal)
+        mount.effect_seed = self.rng.randrange(0, 1 << 30)
+
+    @staticmethod
+    def _is_outpost_ship(ship: Ship) -> bool:
+        role = ship.frame.role.lower()
+        size = ship.frame.size.lower()
+        return "outpost" in role or size == "outpost"
+
+    def _select_outpost_target(
+        self,
+        outpost: Ship,
+        mount: WeaponMount,
+        weapon: WeaponData,
+        muzzle: Vector3,
+        forward: Vector3,
+        enemies: Iterable[Ship],
+        gimbal_limit: float,
+    ) -> Ship | None:
+        best: Ship | None = None
+        best_distance = float("inf")
+        max_range = max(0.0, weapon.max_range)
+        for enemy in enemies:
+            if enemy.team == outpost.team or not enemy.is_alive():
+                continue
+            if not is_within_gimbal(mount, outpost, enemy):
+                continue
+            offset = enemy.kinematics.position - muzzle
+            distance = offset.length()
+            if distance <= 0.0 or (max_range > 0.0 and distance > max_range):
+                continue
+            direction = offset.normalize()
+            angle = forward.angle_to(direction)
+            if gimbal_limit > 0.0 and angle > gimbal_limit:
+                continue
+            if distance < best_distance:
+                best_distance = distance
+                best = enemy
+        return best
+
+    def _auto_fire_outpost_weapons(self) -> None:
+        for outpost in self._station_ships():
+            if not outpost.is_alive() or not self._is_outpost_ship(outpost):
+                continue
+            enemies = [
+                ship
+                for ship in self.ships
+                if ship.team != outpost.team and ship.is_alive()
+            ]
+            if not enemies:
+                continue
+            basis = outpost.kinematics.basis
+            forward = basis.forward
+            right = basis.right
+            up = basis.up
+            for mount in outpost.mounts:
+                if not mount.weapon_id or mount.cooldown > 0.0:
+                    continue
+                try:
+                    weapon = self.weapons.get(mount.weapon_id)
+                except KeyError:
+                    continue
+                if weapon.max_range <= 0.0:
+                    continue
+                muzzle = self._weapon_muzzle_position(outpost, mount, forward, right, up)
+                gimbal_limit = weapon.gimbal
+                if mount.hardpoint:
+                    gimbal_limit = min(gimbal_limit, mount.hardpoint.gimbal)
+                target = self._select_outpost_target(
+                    outpost,
+                    mount,
+                    weapon,
+                    muzzle,
+                    forward,
+                    enemies,
+                    gimbal_limit,
+                )
+                if target:
+                    self.fire_mount(outpost, mount, target)
 
     @staticmethod
     def _weapon_muzzle_position(

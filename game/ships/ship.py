@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass, field, replace
+import random
 from typing import Dict, Iterable, List, Optional, TYPE_CHECKING
 
 from pygame.math import Vector3
@@ -134,6 +135,12 @@ class WeaponMount:
     cooldown: float = 0.0
     lock_progress: float = 0.0
     level: int = 1
+    effect_timer: float = 0.0
+    effect_duration: float = 0.0
+    effect_range: float = 0.0
+    effect_gimbal: float = 0.0
+    effect_type: str = ""
+    effect_seed: int = field(default_factory=lambda: random.randrange(0, 1 << 30))
 
 
 class Ship:
@@ -248,6 +255,11 @@ class Ship:
         for mount in self.mounts:
             mount.cooldown = 0.0
             mount.lock_progress = 0.0
+            mount.effect_timer = 0.0
+            mount.effect_duration = 0.0
+            mount.effect_range = 0.0
+            mount.effect_gimbal = 0.0
+            mount.effect_type = ""
         self.countermeasure_cooldown = 0.0
         self.auto_throttle_enabled = False
         self.auto_throttle_ratio = 0.0
@@ -259,6 +271,13 @@ class Ship:
         for mount in self.mounts:
             if mount.cooldown > 0.0:
                 mount.cooldown = max(0.0, mount.cooldown - dt)
+            if mount.effect_timer > 0.0:
+                mount.effect_timer = max(0.0, mount.effect_timer - dt)
+                if mount.effect_timer == 0.0:
+                    mount.effect_duration = 0.0
+                    mount.effect_range = 0.0
+                    mount.effect_gimbal = 0.0
+                    mount.effect_type = ""
         if self.countermeasure_cooldown > 0.0:
             self.countermeasure_cooldown = max(0.0, self.countermeasure_cooldown - dt)
 
