@@ -211,8 +211,7 @@ class SandboxScene(Scene):
         aspect = surface.get_width() / surface.get_height()
         self.camera = ChaseCamera(70.0, aspect)
         self.renderer = VectorRenderer(surface)
-        self.hud = HUD()
-        self.hud.set_surface(surface)
+        self.hud = HUD(surface)
         self.ship_info_panel = ShipInfoPanel(surface, self.content)
         self.ship_info_open = False
         self._ship_button_hovered = False
@@ -281,7 +280,7 @@ class SandboxScene(Scene):
             and self.cursor_indicator_visible
             and self.hud
         ):
-            width, height = self.hud.surface_size
+            width, height = self.hud.surface.get_size()
             delta_x = 0.0
             delta_y = 0.0
             if mouse_pos is not None:
@@ -664,6 +663,7 @@ class SandboxScene(Scene):
         if not self.renderer or not self.camera or not self.player or not self.hud or not self.world:
             return
         self.renderer.surface = surface
+        self.hud.surface = surface
         self.renderer.clear()
         self.renderer.draw_grid(self.camera, self.player.kinematics.position)
         asteroids = self.world.asteroids_in_current_system()
@@ -723,7 +723,6 @@ class SandboxScene(Scene):
 
         if self.dradis and not self.hangar_open:
             self.hud.draw(
-                surface,
                 self.camera,
                 self.player,
                 target,
@@ -755,7 +754,6 @@ class SandboxScene(Scene):
         if self.combat_feedback_timer > 0.0:
             self._blit_feedback(surface, self.combat_feedback, offset=40)
         if self.hud:
-            self.hud.set_surface(surface)
             self.hud.draw_cursor_indicator(self.cursor_pos, self.cursor_indicator_visible)
 
     def _update_flank_slider_from_mouse(self, mouse_pos: tuple[int, int]) -> None:
@@ -820,7 +818,7 @@ class SandboxScene(Scene):
             return None
         if radius <= 0.0:
             return None
-        screen_size = self.hud.surface_size
+        screen_size = self.hud.surface.get_size()
         center, visible = self.camera.project(position, screen_size)
         if not visible:
             return None
@@ -862,7 +860,7 @@ class SandboxScene(Scene):
             return None
         best: Ship | Asteroid | None = None
         best_depth = float("inf")
-        surface_size = self.hud.surface_size
+        surface_size = self.hud.surface.get_size()
         if surface_size[0] <= 0 or surface_size[1] <= 0:
             return None
 
