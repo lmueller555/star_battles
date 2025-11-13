@@ -1,14 +1,13 @@
 """Vector renderer accelerated by OpenGL."""
 from __future__ import annotations
 
-from array import array
 from dataclasses import dataclass
 from math import ceil, floor
 import ctypes
 import logging
 import math
 import random
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 import pygame
 from pygame.math import Vector3
@@ -46,6 +45,17 @@ def _require_gl() -> None:
         if _GL_IMPORT_ERROR is not None:
             raise RuntimeError(message) from _GL_IMPORT_ERROR
         raise RuntimeError(message)
+
+
+def _as_float32_buffer(values: Sequence[float]) -> tuple[Optional[Any], int, int]:
+    """Convert a sequence of floats into a ctypes float buffer for OpenGL."""
+
+    data = list(values)
+    count = len(data)
+    if count == 0:
+        return None, 0, 0
+    buffer = (ctypes.c_float * count)(*data)
+    return buffer, ctypes.sizeof(buffer), count
 
 
 # Engine layout presets by ship size. These are expressed using the same
@@ -2198,7 +2208,8 @@ class _LineMesh:
     def from_segments(cls, vertices: Sequence[float], usage: Optional[int] = None) -> "_LineMesh":
         _require_gl()
         usage = gl.GL_STATIC_DRAW if usage is None else usage
-        if not vertices:
+        vertex_values = list(vertices)
+        if not vertex_values:
             vao = gl.glGenVertexArrays(1)
             vbo = gl.glGenBuffers(1)
             gl.glBindVertexArray(vao)
@@ -2208,16 +2219,16 @@ class _LineMesh:
             gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, False, 12, ctypes.c_void_p(0))
             gl.glBindVertexArray(0)
             return cls(vao, vbo, 0)
-        arr = array('f', vertices)
         vao = gl.glGenVertexArrays(1)
         vbo = gl.glGenBuffers(1)
         gl.glBindVertexArray(vao)
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo)
-        gl.glBufferData(gl.GL_ARRAY_BUFFER, len(arr) * arr.itemsize, arr, usage)
+        buffer, size, count = _as_float32_buffer(vertex_values)
+        gl.glBufferData(gl.GL_ARRAY_BUFFER, size, buffer, usage)
         gl.glEnableVertexAttribArray(0)
         gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, False, 12, ctypes.c_void_p(0))
         gl.glBindVertexArray(0)
-        return cls(vao, vbo, len(vertices) // 3)
+        return cls(vao, vbo, count // 3)
 
 
 class _DynamicLineMesh:
@@ -2235,11 +2246,12 @@ class _DynamicLineMesh:
 
     def update(self, vertices: Sequence[float]) -> None:
         _require_gl()
-        arr = array('f', vertices)
+        vertex_values = list(vertices)
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo)
-        if arr:
-            gl.glBufferData(gl.GL_ARRAY_BUFFER, len(arr) * arr.itemsize, arr, gl.GL_DYNAMIC_DRAW)
-            self.vertex_count = len(arr) // 3
+        buffer, size, count = _as_float32_buffer(vertex_values)
+        if buffer is not None:
+            gl.glBufferData(gl.GL_ARRAY_BUFFER, size, buffer, gl.GL_DYNAMIC_DRAW)
+            self.vertex_count = count // 3
         else:
             gl.glBufferData(gl.GL_ARRAY_BUFFER, 0, None, gl.GL_DYNAMIC_DRAW)
             self.vertex_count = 0
@@ -2281,22 +2293,20 @@ class _QuadBlitter:
         _require_gl()
         self.program = _create_program(UI_VERTEX_SHADER, UI_FRAGMENT_SHADER)
         self._u_texture = gl.glGetUniformLocation(self.program, 'u_texture')
-        vertices = array(
-            'f',
-            [
-                -1.0, -1.0, 0.0, 0.0,
-                1.0, -1.0, 1.0, 0.0,
-                1.0, 1.0, 1.0, 1.0,
-                -1.0, -1.0, 0.0, 0.0,
-                1.0, 1.0, 1.0, 1.0,
-                -1.0, 1.0, 0.0, 1.0,
-            ],
-        )
+        vertex_values = [
+            -1.0, -1.0, 0.0, 0.0,
+            1.0, -1.0, 1.0, 0.0,
+            1.0, 1.0, 1.0, 1.0,
+            -1.0, -1.0, 0.0, 0.0,
+            1.0, 1.0, 1.0, 1.0,
+            -1.0, 1.0, 0.0, 1.0,
+        ]
         self.vao = gl.glGenVertexArrays(1)
         self.vbo = gl.glGenBuffers(1)
         gl.glBindVertexArray(self.vao)
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo)
-        gl.glBufferData(gl.GL_ARRAY_BUFFER, len(vertices) * vertices.itemsize, vertices, gl.GL_STATIC_DRAW)
+        buffer, size, _ = _as_float32_buffer(vertex_values)
+        gl.glBufferData(gl.GL_ARRAY_BUFFER, size, buffer, gl.GL_STATIC_DRAW)
         gl.glEnableVertexAttribArray(0)
         gl.glVertexAttribPointer(0, 2, gl.GL_FLOAT, False, 16, ctypes.c_void_p(0))
         gl.glEnableVertexAttribArray(1)
