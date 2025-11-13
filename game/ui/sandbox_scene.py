@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import math
+import sys
 from dataclasses import dataclass
 
 import pygame
