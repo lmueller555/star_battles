@@ -102,8 +102,8 @@ class WeaponSlotHUDState:
 
 
 class HUD:
-    def __init__(self, surface: pygame.Surface) -> None:
-        self.surface = surface
+    def __init__(self) -> None:
+        self.surface: pygame.Surface | None = None
         self.font = pygame.font.SysFont("consolas", 16)
         self.large_font = pygame.font.SysFont("consolas", 24)
         self.overlay_enabled = False
@@ -112,13 +112,33 @@ class HUD:
         self._ship_info_button_rect = pygame.Rect(0, 0, 0, 0)
         self._top_left_info_bottom = 0
 
+    def set_surface(self, surface: pygame.Surface) -> None:
+        self.surface = surface
+
+    @property
+    def surface_size(self) -> tuple[int, int]:
+        if self.surface:
+            return self.surface.get_size()
+        display = pygame.display.get_surface()
+        if display:
+            return display.get_size()
+        return 0, 0
+
+    def _active_surface(self) -> pygame.Surface | None:
+        if not self.surface:
+            display = pygame.display.get_surface()
+            if display:
+                self.surface = display
+        return self.surface
+
     def toggle_overlay(self) -> None:
         self.overlay_enabled = not self.overlay_enabled
 
     def draw_gimbal_arcs(self, camera, player: Ship, center: Vector2) -> None:
-        if not player or not camera:
+        surface = self._active_surface()
+        if not player or not camera or not surface:
             return
-        surface_size = self.surface.get_size()
+        surface_size = surface.get_size()
         gimbals: dict[str, list[float]] = {}
         for mount in getattr(player, "mounts", []):
             if not getattr(mount, "weapon_id", None):
@@ -140,7 +160,7 @@ class HUD:
                 continue
             color = palette.get(group, fallback)
             pygame.draw.circle(
-                self.surface,
+                surface,
                 color,
                 (int(center.x), int(center.y)),
                 int(radius),
@@ -151,7 +171,7 @@ class HUD:
                 inner_radius = _gimbal_radius(min_angle, camera.fov, camera.aspect, surface_size)
                 if inner_radius > 4.0:
                     pygame.draw.circle(
-                        self.surface,
+                        surface,
                         color,
                         (int(center.x), int(center.y)),
                         int(inner_radius),
@@ -163,6 +183,8 @@ class HUD:
 
     def draw_ship_wireframe(self, player: Ship, slots: Sequence[WeaponSlotHUDState]) -> None:
         if not player or not slots:
+            return
+        if not self._active_surface():
             return
         display_slots = list(slots)
         if not display_slots:
@@ -449,24 +471,33 @@ class HUD:
     def draw_cursor_indicator(self, position: Vector2 | tuple[float, float], visible: bool) -> None:
         if not visible:
             return
+        surface = self._active_surface()
+        if not surface:
+            return
         x, y = int(position[0]), int(position[1])
-        pygame.draw.circle(self.surface, (255, 255, 255), (x, y), 4, 1)
-        pygame.draw.circle(self.surface, (255, 255, 255), (x, y), 1)
+        pygame.draw.circle(surface, (255, 255, 255), (x, y), 4, 1)
+        pygame.draw.circle(surface, (255, 255, 255), (x, y), 1)
 
     def draw_lead(self, camera, player: Ship, target: Optional[Ship], projectile_speed: float) -> None:
         if not target or projectile_speed <= 0.0:
             return
+        surface = self._active_surface()
+        if not surface:
+            return
         origin = player.kinematics.position
         lead_point = compute_lead(origin, target.kinematics.position, target.kinematics.velocity, projectile_speed)
-        screen, visible = camera.project(lead_point, self.surface.get_size())
+        screen, visible = camera.project(lead_point, surface.get_size())
         if visible:
-            pygame.draw.circle(self.surface, (255, 220, 120), (int(screen.x), int(screen.y)), 8, 1)
+            pygame.draw.circle(surface, (255, 220, 120), (int(screen.x), int(screen.y)), 8, 1)
 
     def draw_target_panel(self, camera, player: Ship, target: Optional[Ship]) -> None:
+        surface = self._active_surface()
+        if not surface:
+            return
         if not target:
             text = self.font.render("NO TARGET", True, (200, 200, 200))
             position = (20, 20)
-            self.surface.blit(text, position)
+            surface.blit(text, position)
             self._top_left_info_bottom = position[1] + text.get_height()
             return
         distance = player.kinematics.position.distance_to(target.kinematics.position)
@@ -482,12 +513,15 @@ class HUD:
         for i, line in enumerate(lines):
             text = self.font.render(line, True, (200, 220, 255))
             y = top + i * 18
-            self.surface.blit(text, (20, y))
+            surface.blit(text, (20, y))
             bottom = max(bottom, y + text.get_height())
         self._top_left_info_bottom = bottom
 
     def draw_target_overlay(self, overlay: TargetOverlay | None) -> None:
         if not overlay:
+            return
+        surface = self._active_surface()
+        if not surface:
             return
 
         rect = overlay.rect
@@ -495,7 +529,7 @@ class HUD:
             return
 
         color = overlay.color
-        pygame.draw.rect(self.surface, color, rect, 1)
+        pygame.draw.rect(surface, color, rect, 1)
 
         health_text = f"{overlay.current_health:.0f}"
         if overlay.max_health is not None and overlay.max_health > 0.0:
@@ -516,6 +550,8 @@ class HUD:
         self.surface.blit(distance_text, distance_pos)
 
     def draw_meters(self, player: Ship) -> None:
+        if not self._active_surface():
+            return
         width = 220
         bar_height = 10
         x = 20
@@ -556,6 +592,8 @@ class HUD:
     def draw_lock_ring(self, camera, player: Ship, target: Optional[Ship]) -> None:
         if not target or player.lock_progress <= 0.0:
             return
+        if not self._active_surface():
+            return
         screen, visible = camera.project(target.kinematics.position, self.surface.get_size())
         if not visible:
             return
@@ -565,6 +603,8 @@ class HUD:
         self.surface.blit(progress_text, (screen.x - 30, screen.y + radius + 4))
 
     def draw_dradis(self, dradis: DradisSystem) -> None:
+        if not self._active_surface():
+            return
         surface_size = self.surface.get_size()
         map_rect = map_display_rect(surface_size)
         center = Vector2(self.surface.get_width() - 140, self.surface.get_height() - 140)
@@ -605,6 +645,8 @@ class HUD:
         target: Optional[Ship],
         performance: PerformanceSnapshot | None = None,
     ) -> None:
+        if not self._active_surface():
+            return
         if not self.overlay_enabled:
             return
         lines = [
@@ -661,6 +703,7 @@ class HUD:
 
     def draw(
         self,
+        surface: pygame.Surface,
         camera,
         player: Ship,
         target: Optional[Ship],
@@ -677,6 +720,7 @@ class HUD:
         target_overlay: TargetOverlay | None = None,
         weapon_slots: Sequence[WeaponSlotHUDState] | None = None,
     ) -> None:
+        self.set_surface(surface)
         self.draw_lead(camera, player, target, projectile_speed)
         self.draw_target_panel(camera, player, target)
         self.draw_target_overlay(target_overlay)
@@ -695,6 +739,8 @@ class HUD:
             self.draw_mining(mining_state)
 
     def draw_docking_prompt(self, name: str, distance: float, radius: float) -> None:
+        if not self._active_surface():
+            return
         header = self.large_font.render(f"Docking available: {name}", True, (255, 232, 150))
         x = self.surface.get_width() / 2 - header.get_width() / 2
         y = 54
@@ -725,6 +771,8 @@ class HUD:
         )
 
     def draw_mining(self, state: MiningHUDState) -> None:
+        if not self._active_surface():
+            return
         panel_width = 240
         panel_height = 140
         x = self.surface.get_width() - panel_width - 40
@@ -783,6 +831,8 @@ class HUD:
                 list_y += 18
 
     def draw_flank_speed_slider(self, player: Ship) -> None:
+        if not self._active_surface():
+            return
         rect = flank_slider_rect(self.surface.get_size())
         self._flank_slider_rect = rect.copy()
         if rect.width <= 0 or rect.height <= 0:
@@ -859,6 +909,8 @@ class HUD:
         )
 
     def draw_ship_info_button(self, player: Ship, open_state: bool, hovered: bool) -> None:
+        if not self._active_surface():
+            return
         rect = ship_info_button_rect(self.surface.get_size())
         self._ship_info_button_rect = rect.copy()
         background = (12, 20, 28)
