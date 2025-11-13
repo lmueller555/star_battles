@@ -87,9 +87,6 @@ class OutpostInteriorScene(Scene):
         self._interior_view: Optional[FirstPersonInteriorView] = None
         self._ship_embedder: Optional[ShipWireEmbed] = None
         self._cursor_locked = False
-        self.display_surface: pygame.Surface | None = None
-        self.ui_surface: pygame.Surface | None = None
-        self.renderer: VectorRenderer | None = None
 
     def _build_starfield(self) -> None:
         rng = random.Random(20240217)
@@ -125,14 +122,8 @@ class OutpostInteriorScene(Scene):
         self._suspended_world_state = None
         surface = pygame.display.get_surface()
         if surface:
-            self.display_surface = surface
-            self.ui_surface = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
-            self.renderer = VectorRenderer(surface)
             self.viewport_size = (float(surface.get_width()), float(surface.get_height()))
         else:
-            self.display_surface = None
-            self.ui_surface = None
-            self.renderer = None
             self.viewport_size = (1920.0, 1080.0)
         self.elapsed_time = 0.0
         self.cutscene_camera = None
@@ -244,90 +235,60 @@ class OutpostInteriorScene(Scene):
 
     def render(self, surface: pygame.Surface, alpha: float) -> None:
         width, height = surface.get_size()
-        self.display_surface = surface
-        if self.renderer:
-            self.renderer.surface = surface
-        else:
-            self.renderer = VectorRenderer(surface)
-        if not self.ui_surface or self.ui_surface.get_size() != surface.get_size():
-            self.ui_surface = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
-        if self.ui_surface:
-            self.ui_surface.fill((0, 0, 0, 0))
         self.viewport_size = (float(width), float(height))
-
         if self.state == _InteriorState.DOCKING:
-            if self.renderer:
-                self.renderer.clear()
-            self._render_docking_cutscene()
-            if self.renderer and self.ui_surface:
-                self.renderer.present_ui(self.ui_surface)
+            self._render_docking_cutscene(surface)
             return
-        if self.renderer:
-            self.renderer.clear()
         if self.state == _InteriorState.LOADING_IN:
             progress = 0.0
             if self.loading_duration > 0.0:
                 progress = max(0.0, min(1.0, self.state_timer / self.loading_duration))
-            if self.ui_surface:
-                self._render_loading_screen(
-                    self.ui_surface,
-                    "Sequencing Outpost Interior",
-                    "Despawning exterior traffic lanes",
-                    progress,
-                )
-            if self.renderer and self.ui_surface:
-                self.renderer.present_ui(self.ui_surface)
+            self._render_loading_screen(
+                surface,
+                "Sequencing Outpost Interior",
+                "Despawning exterior traffic lanes",
+                progress,
+            )
             return
         if self.state == _InteriorState.DISEMBARK:
-            if self.ui_surface:
-                self._render_disembark_cutscene(self.ui_surface)
-            if self.renderer and self.ui_surface:
-                self.renderer.present_ui(self.ui_surface)
+            self._render_disembark_cutscene(surface)
             return
         if self.state == _InteriorState.EXPLORE:
-            if self._interior_view and self.ui_surface:
-                self._interior_view.render(self.ui_surface)
-            elif self.ui_surface:
-                self.ui_surface.fill((6, 10, 18))
-            if self.renderer and self.ui_surface:
-                self.renderer.present_ui(self.ui_surface)
+            if self._interior_view:
+                self._interior_view.render(surface)
+            else:
+                surface.fill((6, 10, 18))
             return
         if self.state == _InteriorState.LOADING_OUT:
             progress = 0.0
             if self.loading_duration > 0.0:
                 progress = max(0.0, min(1.0, self.state_timer / self.loading_duration))
-            if self.ui_surface:
-                self._render_loading_screen(
-                    self.ui_surface,
-                    "Restoring Local Space",
-                    "Repopulating ships and asteroids",
-                    progress,
-                )
-            if self.renderer and self.ui_surface:
-                self.renderer.present_ui(self.ui_surface)
+            self._render_loading_screen(
+                surface,
+                "Restoring Local Space",
+                "Repopulating ships and asteroids",
+                progress,
+            )
 
-    def _render_docking_cutscene(self) -> None:
-        if not self.renderer or not self.ui_surface or not self.display_surface:
-            return
-        width, height = self.display_surface.get_size()
+    def _render_docking_cutscene(self, surface: pygame.Surface) -> None:
+        width, height = surface.get_size()
+        renderer = VectorRenderer(surface)
+        renderer.clear()
 
         if self.cutscene_camera and self.player:
             focus = self.player.kinematics.position
-            self.renderer.draw_grid(
-                self.cutscene_camera,
-                focus,
-                tile_size=280.0,
-                extent=3200.0,
-                height_offset=-40.0,
-            )
+            renderer.draw_grid(self.cutscene_camera, focus, tile_size=280.0, extent=3200.0, height_offset=-40.0)
+
             if self.world:
                 for ship in self.world.ships:
                     if ship is self.player:
                         continue
-                    self.renderer.draw_ship(self.cutscene_camera, ship)
+                    renderer.draw_ship(self.cutscene_camera, ship)
+
             if self.cutscene_station_ship and self._proxy_station_ship:
-                self.renderer.draw_ship(self.cutscene_camera, self.cutscene_station_ship)
-            self.renderer.draw_ship(self.cutscene_camera, self.player)
+                renderer.draw_ship(self.cutscene_camera, self.cutscene_station_ship)
+
+            renderer.draw_ship(self.cutscene_camera, self.player)
 
             if self._docking_sequence:
                 dock_target = self._docking_sequence.dock
@@ -336,14 +297,14 @@ class OutpostInteriorScene(Scene):
                 screen_entry, vis_entry = self.cutscene_camera.project(entry_point, (width, height))
                 if vis_entry and vis_dock:
                     pygame.draw.aaline(
-                        self.ui_surface,
+                        surface,
                         (120, 220, 255),
                         (screen_entry.x, screen_entry.y),
                         (screen_dock.x, screen_dock.y),
                         blend=1,
                     )
                     pygame.draw.circle(
-                        self.ui_surface,
+                        surface,
                         (180, 240, 255),
                         (int(screen_dock.x), int(screen_dock.y)),
                         16,
@@ -361,25 +322,22 @@ class OutpostInteriorScene(Scene):
                 130,
             )
             star_surface.fill(color, pygame.Rect(x % width, y % height, size, size))
-        self.ui_surface.blit(star_surface, (0, 0), special_flags=pygame.BLEND_ADD)
+        surface.blit(star_surface, (0, 0), special_flags=pygame.BLEND_ADD)
 
         if self.caption_font:
             caption = self.caption_font.render("Docking sequence engaged", True, (210, 232, 255))
-            self.ui_surface.blit(
-                caption,
-                (width // 2 - caption.get_width() // 2, int(height * 0.08)),
-            )
+            surface.blit(caption, (width // 2 - caption.get_width() // 2, int(height * 0.08)))
             progress = 0.0
             if self.docking_duration > 0.0:
                 progress = max(0.0, min(1.0, self.state_timer / self.docking_duration))
             bar_width = int(width * 0.32)
             bar_height = 14
             bar_rect = pygame.Rect(width // 2 - bar_width // 2, int(height * 0.88), bar_width, bar_height)
-            pygame.draw.rect(self.ui_surface, (30, 60, 90), bar_rect)
+            pygame.draw.rect(surface, (30, 60, 90), bar_rect)
             fill_rect = bar_rect.copy()
             fill_rect.width = int(bar_rect.width * progress)
-            pygame.draw.rect(self.ui_surface, (110, 200, 255), fill_rect)
-            pygame.draw.rect(self.ui_surface, (180, 220, 255), bar_rect, 2)
+            pygame.draw.rect(surface, (110, 200, 255), fill_rect)
+            pygame.draw.rect(surface, (180, 220, 255), bar_rect, 2)
 
     def _render_disembark_cutscene(self, surface: pygame.Surface) -> None:
         width, height = surface.get_size()

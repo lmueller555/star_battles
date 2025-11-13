@@ -1,3 +1,2 @@
 pygame>=2.5.0
-PyOpenGL>=3.1.6
 pytest>=7.4.0

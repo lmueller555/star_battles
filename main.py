@@ -10,14 +10,6 @@ from typing import Any, Dict
 
 import pygame
 
-try:  # pragma: no cover - optional import for environments without PyOpenGL
-    from OpenGL import GL as gl  # type: ignore
-except ImportError as _gl_error:  # pragma: no cover
-    gl = None  # type: ignore
-    _GL_IMPORT_ERROR = _gl_error
-else:  # pragma: no cover
-    _GL_IMPORT_ERROR = None
-
 from game.assets.content import ContentManager
 from game.engine.input import InputBindings, InputMapper
 from game.engine.logger import init_logger
@@ -30,14 +22,6 @@ from game.ui.ship_selection_scene import ShipSelectionScene
 
 
 SETTINGS_PATH = Path("settings.json")
-
-
-def _require_gl() -> None:
-    if gl is None:  # pragma: no cover - triggered when PyOpenGL is missing
-        message = "PyOpenGL is required to run Star Battles with GPU acceleration"
-        if _GL_IMPORT_ERROR is not None:
-            raise RuntimeError(message) from _GL_IMPORT_ERROR
-        raise RuntimeError(message)
 
 
 def load_settings() -> Dict[str, Any]:
@@ -62,25 +46,12 @@ def main() -> None:
     pygame.init()
     resolution = settings.get("resolution", [1920, 1080])
 
-    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MAJOR_VERSION, 3)
-    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MINOR_VERSION, 3)
-    pygame.display.gl_set_attribute(
-        pygame.GL_CONTEXT_PROFILE_MASK, pygame.GL_CONTEXT_PROFILE_CORE
-    )
-    pygame.display.gl_set_attribute(pygame.GL_DOUBLEBUFFER, 1)
-
-    display_flags = pygame.OPENGL | pygame.DOUBLEBUF | pygame.FULLSCREEN
+    display_flags = pygame.SCALED | pygame.FULLSCREEN
     if resolution == [0, 0] or resolution == (0, 0):
         display_info = pygame.display.Info()
         resolution = (display_info.current_w, display_info.current_h)
-    resolution = (int(resolution[0]), int(resolution[1]))
 
     screen = pygame.display.set_mode(resolution, display_flags)
-    _require_gl()
-    gl.glViewport(0, 0, int(resolution[0]), int(resolution[1]))
-    gl.glEnable(gl.GL_BLEND)
-    gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-    gl.glEnable(gl.GL_DEPTH_TEST)
     pygame.display.set_caption("Star Battles Prototype")
     clock = pygame.time.Clock()
 
