@@ -90,7 +90,6 @@ class SandboxScene(Scene):
         self.selected_object: Ship | Asteroid | None = None
         self._mouse_freelook_active: bool = False
         self._mouse_freelook_dragging: bool = False
-        self._relative_mouse_active: bool = False
 
     def _equip_ship(self, ship: Ship) -> None:
         if not self.content:
@@ -1195,37 +1194,15 @@ class SandboxScene(Scene):
 
     def _enter_game_cursor(self) -> None:
         pygame.mouse.set_visible(False)
-        relative_mode_enabled = False
-        set_relative = getattr(pygame.mouse, "set_relative_mode", None)
-        get_relative = getattr(pygame.mouse, "get_relative_mode", None)
-        if callable(set_relative) and callable(get_relative):
-            try:
-                set_relative(True)
-                relative_mode_enabled = bool(get_relative())
-            except pygame.error:
-                relative_mode_enabled = False
-        if not relative_mode_enabled:
-            pygame.event.set_grab(True)
-        self._relative_mouse_active = relative_mode_enabled
+        pygame.event.set_grab(True)
         self.cursor_indicator_visible = True
         self._reset_cursor_to_center()
-        if self._relative_mouse_active:
-            self._last_mouse_pos = Vector2(self.cursor_pos)
-        else:
-            current_pos = pygame.mouse.get_pos()
-            converted = self._surface_mouse_pos(current_pos)
-            self._last_mouse_pos = Vector2(converted)
+        current_pos = pygame.mouse.get_pos()
+        converted = self._surface_mouse_pos(current_pos)
+        self._last_mouse_pos = Vector2(converted)
 
     def _enter_ui_cursor(self) -> None:
         pygame.mouse.set_visible(True)
-        if self._relative_mouse_active:
-            set_relative = getattr(pygame.mouse, "set_relative_mode", None)
-            if callable(set_relative):
-                try:
-                    set_relative(False)
-                except pygame.error:
-                    pass
-        self._relative_mouse_active = False
         pygame.event.set_grab(False)
         self.cursor_indicator_visible = False
         self._last_mouse_pos = None
@@ -1236,11 +1213,6 @@ class SandboxScene(Scene):
             return
         width, height = surface.get_size()
         self.cursor_pos.update(width / 2, height / 2)
-        if not self._relative_mouse_active:
-            try:
-                pygame.mouse.set_pos(int(width / 2), int(height / 2))
-            except pygame.error:
-                pass
 
 
 __all__ = ["SandboxScene"]
