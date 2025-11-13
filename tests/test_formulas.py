@@ -87,7 +87,7 @@ def test_mining_yield() -> None:
 
 def test_hitscan_range_and_gimbal_modifiers() -> None:
     content = load_content()
-    weapon = content.weapons.get("light_cannon_mk1")
+    weapon = content.weapons.get("mec_a6")
     origin = Vector3(0.0, 0.0, 0.0)
     direction = Vector3(0.0, 0.0, 1.0)
     rng = random.Random(42)
