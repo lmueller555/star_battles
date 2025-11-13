@@ -60,6 +60,8 @@ class SandboxScene(Scene):
         self.dummy: Ship | None = None
         self.dradis: DradisSystem | None = None
         self.camera: ChaseCamera | None = None
+        self.display_surface: pygame.Surface | None = None
+        self.ui_surface: pygame.Surface | None = None
         self.renderer: VectorRenderer | None = None
         self.hud: HUD | None = None
         self.sim_dt = 1.0 / 60.0
@@ -208,11 +210,18 @@ class SandboxScene(Scene):
 
         self.dradis = DradisSystem(self.player)
         surface = pygame.display.get_surface()
+        if surface is None:
+            raise RuntimeError("SandboxScene requires an active display surface")
+        self.display_surface = surface
+        self.ui_surface = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
         aspect = surface.get_width() / surface.get_height()
         self.camera = ChaseCamera(70.0, aspect)
         self.renderer = VectorRenderer(surface)
-        self.hud = HUD(surface)
-        self.ship_info_panel = ShipInfoPanel(surface, self.content)
+        if self.ui_surface:
+            self.hud = HUD(self.ui_surface)
+        else:
+            self.hud = HUD(surface)
+        self.ship_info_panel = ShipInfoPanel(self.ui_surface or surface, self.content)
         self.ship_info_open = False
         self._ship_button_hovered = False
         self.map_view = SectorMapView(self.content.sector)
@@ -225,7 +234,7 @@ class SandboxScene(Scene):
         self.station_contact: tuple[DockingStation, float] | None = None
         self.selected_object = None
         self.hangar_open = False
-        self.hangar_view = HangarView(surface, self.content)
+        self.hangar_view = HangarView(self.ui_surface or surface, self.content)
         self.mining_state = None
         self.mining_feedback = ""
         self.mining_feedback_timer = 0.0
@@ -662,8 +671,22 @@ class SandboxScene(Scene):
     def render(self, surface: pygame.Surface, alpha: float) -> None:
         if not self.renderer or not self.camera or not self.player or not self.hud or not self.world:
             return
-        self.renderer.surface = surface
-        self.hud.surface = surface
+        self.display_surface = surface
+        if self.display_surface and self.ui_surface and self.ui_surface.get_size() != self.display_surface.get_size():
+            self.ui_surface = pygame.Surface(self.display_surface.get_size(), pygame.SRCALPHA)
+            self.hud.surface = self.ui_surface
+            if self.ship_info_panel:
+                self.ship_info_panel.surface = self.ui_surface
+            if self.hangar_view:
+                self.hangar_view.set_surface(self.ui_surface)
+        self.renderer.surface = self.display_surface
+        self.hud.surface = self.ui_surface
+        if self.ship_info_panel:
+            self.ship_info_panel.surface = self.ui_surface
+        if self.hangar_view:
+            self.hangar_view.set_surface(self.ui_surface)
+        if self.ui_surface:
+            self.ui_surface.fill((0, 0, 0, 0))
         self.renderer.clear()
         self.renderer.draw_grid(self.camera, self.player.kinematics.position)
         asteroids = self.world.asteroids_in_current_system()
@@ -738,23 +761,25 @@ class SandboxScene(Scene):
                 target_overlay=target_overlay,
                 weapon_slots=self._weapon_slot_hud_states(),
             )
-        if self.map_open and self.map_view:
+        if self.map_open and self.map_view and self.ui_surface:
             status = self.jump_feedback if self.jump_feedback_timer > 0.0 else None
-            self.map_view.draw(surface, self.world, self.player, status)
+            self.map_view.draw(self.ui_surface, self.world, self.player, status)
         elif self.hangar_open and self.hangar_view and self.station_contact:
             station, distance = self.station_contact
-            self.hangar_view.set_surface(surface)
-            self.hangar_view.draw(surface, self.player, station, distance)
+            self.hangar_view.set_surface(self.ui_surface)
+            self.hangar_view.draw(self.ui_surface, self.player, station, distance)
         if self.ship_info_open and self.ship_info_panel:
             self.ship_info_panel.draw()
-        if self.jump_feedback_timer > 0.0:
-            self._blit_feedback(surface, self.jump_feedback, offset=100)
-        if self.mining_feedback_timer > 0.0:
-            self._blit_feedback(surface, self.mining_feedback, offset=70)
-        if self.combat_feedback_timer > 0.0:
-            self._blit_feedback(surface, self.combat_feedback, offset=40)
+        if self.jump_feedback_timer > 0.0 and self.ui_surface:
+            self._blit_feedback(self.ui_surface, self.jump_feedback, offset=100)
+        if self.mining_feedback_timer > 0.0 and self.ui_surface:
+            self._blit_feedback(self.ui_surface, self.mining_feedback, offset=70)
+        if self.combat_feedback_timer > 0.0 and self.ui_surface:
+            self._blit_feedback(self.ui_surface, self.combat_feedback, offset=40)
         if self.hud:
             self.hud.draw_cursor_indicator(self.cursor_pos, self.cursor_indicator_visible)
+        if self.ui_surface:
+            self.renderer.present_ui(self.ui_surface)
 
     def _update_flank_slider_from_mouse(self, mouse_pos: tuple[int, int]) -> None:
         if not self.player or not self.hud:
