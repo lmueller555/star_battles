@@ -849,9 +849,15 @@ class HangarView:
             card_width = max(1, card_area_width - 2 * padding)
         else:
             card_width = available_width // columns
-        card_height = 240
         mouse_pos = pygame.mouse.get_pos()
         self._store_cards = store.list_items(self._store_filters)
+        max_highlight_lines = max(
+            (len(self._store_highlight_lines(card.item)) for card in self._store_cards),
+            default=0,
+        )
+        line_height = 16
+        base_card_height = 168
+        card_height = max(240, base_card_height + line_height * max_highlight_lines)
         self._store_card_rects = {}
         self._store_buy_rects = {}
         self._store_hover_item = None
