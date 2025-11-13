@@ -25,6 +25,11 @@ if TYPE_CHECKING:
 MAGNETISM_ANGLE = 5.5
 MAGNETISM_STRENGTH = 0.45
 
+GUIDANCE_DAMAGE_SCALE = 12.0
+GUIDANCE_POWER_SCALE = 6.0
+GUIDANCE_ACCURACY_SCALE = 400.0
+GUIDANCE_CRIT_SCALE = 1000.0
+
 
 def _range_accuracy_modifier(distance: float, optimal: float, max_range: float) -> float:
     """Return a 0-1 multiplier for accuracy based on range bands."""
@@ -88,23 +93,50 @@ class WeaponData:
 
     @classmethod
     def from_dict(cls, data: Dict) -> "WeaponData":
+        damage_min = data.get("damageMin")
+        damage_max = data.get("damageMax")
+        accuracy_rating = data.get("accuracyRating")
+        power_cost = data.get("powerCost")
+        firing_arc = data.get("firingArc")
+        crit_rating = data.get("critRating")
+
+        base_damage = float(data.get("damage", 100.0))
+        if damage_min is not None and damage_max is not None:
+            base_damage = float(damage_max) * GUIDANCE_DAMAGE_SCALE
+
+        base_accuracy = float(data.get("accuracy", 0.75))
+        if accuracy_rating is not None:
+            base_accuracy = min(1.0, float(accuracy_rating) / GUIDANCE_ACCURACY_SCALE)
+
+        power_per_shot = float(data.get("power", 10.0))
+        if power_cost is not None:
+            power_per_shot = float(power_cost) * GUIDANCE_POWER_SCALE
+
+        crit_chance = float(data.get("crit", 0.1))
+        if crit_rating is not None:
+            crit_chance = min(1.0, float(crit_rating) / GUIDANCE_CRIT_SCALE)
+
+        gimbal = float(data.get("gimbal", 20.0))
+        if firing_arc is not None:
+            gimbal = float(firing_arc)
+
         weapon = cls(
             id=data["id"],
             name=data.get("name", data["id"]),
             slot_type=data.get("slotType", "cannon"),
             wclass=data.get("class", "hitscan"),
-            base_damage=float(data.get("damage", 100.0)),
-            base_accuracy=float(data.get("accuracy", 0.75)),
-            crit_chance=float(data.get("crit", 0.1)),
+            base_damage=base_damage,
+            base_accuracy=base_accuracy,
+            crit_chance=crit_chance,
             crit_multiplier=float(data.get("critMult", 1.5)),
             rof=float(data.get("rof", 3.0)),
-            power_per_shot=float(data.get("power", 10.0)),
+            power_per_shot=power_per_shot,
             optimal_range=float(data.get("optimal", 800.0)),
             max_range=float(data.get("maxRange", 1200.0)),
             projectile_speed=float(data.get("projectileSpeed", 0.0)),
             ammo=int(data.get("ammo", 0)),
             reload=float(data.get("reload", 0.0)),
-            gimbal=float(data.get("gimbal", 20.0)),
+            gimbal=gimbal,
         )
         if weapon.wclass == "missile":
             weapon.projectile_speed = 100.0
