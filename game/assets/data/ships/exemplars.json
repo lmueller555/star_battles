@@ -159,7 +159,12 @@
     },
     "equipment": {
       "modules": {},
-      "weapons": {}
+      "weapons": {
+        "hp_viper2_port_outer": "mec_a6",
+        "hp_viper2_port_inner": "mec_a6p",
+        "hp_viper2_starboard_inner": "mec_a6p",
+        "hp_viper2_starboard_outer": "mec_a6"
+      }
     },
     "role_bonuses": [
       "Interceptor frame provides additional engine capacity."
@@ -292,7 +297,9 @@
       "modules": {},
       "weapons": {
         "hp_viper_port": "mec_a6",
-        "hp_viper_starboard": "mec_a6"
+        "hp_viper_starboard": "mec_a6p",
+        "hp_viper_center": "mec_a8",
+        "hp_viper_missile": "mel_w9"
       }
     },
     "role_bonuses": [
@@ -411,7 +418,11 @@
     },
     "equipment": {
       "modules": {},
-      "weapons": {}
+      "weapons": {
+        "hp_raptor_port": "mel_n2",
+        "hp_raptor_starboard": "mel_n2",
+        "hp_raptor_dorsal": "mec_a8p"
+      }
     },
     "role_bonuses": [
       "Command bonus reduces transponder power usage by 75."
@@ -529,7 +540,11 @@
     },
     "equipment": {
       "modules": {},
-      "weapons": {}
+      "weapons": {
+        "hp_viper3_port": "mec_a8",
+        "hp_viper3_starboard": "mec_a8p",
+        "hp_viper3_center": "mel_n2"
+      }
     },
     "role_bonuses": [],
     "traits": [
@@ -657,7 +672,12 @@
     },
     "equipment": {
       "modules": {},
-      "weapons": {}
+      "weapons": {
+        "hp_rhino_port_front": "mec_a8",
+        "hp_rhino_port_rear": "mec_a6p",
+        "hp_rhino_starboard_front": "mec_a8",
+        "hp_rhino_starboard_rear": "mec_a6p"
+      }
     },
     "role_bonuses": [
       "Assault frame grants additional hull module capacity."
@@ -763,7 +783,10 @@
     },
     "equipment": {
       "modules": {},
-      "weapons": {}
+      "weapons": {
+        "hp_raven_port": "mec_a6p",
+        "hp_raven_starboard": "mec_a8p"
+      }
     },
     "role_bonuses": [
       "Force recon chassis enjoys extremely low FTL costs."
@@ -918,7 +941,14 @@
     },
     "equipment": {
       "modules": {},
-      "weapons": {}
+      "weapons": {
+        "hp_glaive_front": "mec_e13",
+        "hp_glaive_port": "mec_e12",
+        "hp_glaive_starboard": "mec_e12",
+        "hp_glaive_dorsal": "mec_e17",
+        "hp_glaive_ventral": "mec_e17",
+        "hp_glaive_launcher": "hd_m63p"
+      }
     },
     "role_bonuses": [
       "Command bonus reduces transponder power usage by 50."
@@ -1048,7 +1078,12 @@
     },
     "equipment": {
       "modules": {},
-      "weapons": {}
+      "weapons": {
+        "hp_scythe_port_front": "mec_e13",
+        "hp_scythe_port_rear": "mec_e17",
+        "hp_scythe_starboard_front": "mec_e13",
+        "hp_scythe_starboard_rear": "mec_e17"
+      }
     },
     "role_bonuses": [
       "Interceptor frame provides additional engine capacity."
@@ -1191,7 +1226,13 @@
     },
     "equipment": {
       "modules": {},
-      "weapons": {}
+      "weapons": {
+        "hp_maul_port_forward": "mec_e12",
+        "hp_maul_starboard_forward": "mec_e12",
+        "hp_maul_port_aft": "mec_e13",
+        "hp_maul_starboard_aft": "mec_e13",
+        "hp_maul_spinal": "hd_m50p"
+      }
     },
     "role_bonuses": [
       "Assault frame provides expanded hull module capacity."
@@ -1356,12 +1397,12 @@
         ]
       },
       "weapons": {
-        "hp_vanir_fore": "heavy_cannon_mk1",
-        "hp_vanir_port": "heavy_cannon_mk1",
-        "hp_vanir_starboard": "heavy_cannon_mk1",
-        "hp_vanir_aft": "light_cannon_mk1",
-        "hp_vanir_launcher_port": "missile_launcher_mk1",
-        "hp_vanir_launcher_starboard": "missile_launcher_mk1"
+        "hp_vanir_fore": "mec_l35",
+        "hp_vanir_port": "mec_l34",
+        "hp_vanir_starboard": "mec_l34",
+        "hp_vanir_aft": "mec_l39f",
+        "hp_vanir_launcher_port": "hd_h40",
+        "hp_vanir_launcher_starboard": "hd_h48"
       }
     },
     "role_bonuses": [
@@ -1583,12 +1624,16 @@
         ]
       },
       "weapons": {
-        "hp_brimir_bow": "heavy_cannon_mk1",
-        "hp_brimir_port": "heavy_cannon_mk1",
-        "hp_brimir_starboard": "heavy_cannon_mk1",
-        "hp_brimir_dorsal": "light_cannon_mk1",
-        "hp_brimir_launcher_port": "missile_launcher_mk1",
-        "hp_brimir_launcher_starboard": "missile_launcher_mk1"
+        "hp_brimir_bow": "hag_mk16a",
+        "hp_brimir_port": "m_39f",
+        "hp_brimir_starboard": "m_39f",
+        "hp_brimir_dorsal": "m_37a",
+        "hp_brimir_launcher_port": "ram_179a",
+        "hp_brimir_launcher_starboard": "rgm_48",
+        "hp_brimir_pd_port": "pd_x30p",
+        "hp_brimir_pd_starboard": "pd_x30p",
+        "hp_brimir_pd_dorsal": "pd_x30p",
+        "hp_brimir_pd_ventral": "pd_x30p"
       }
     },
     "role_bonuses": [
@@ -1832,14 +1877,18 @@
         ]
       },
       "weapons": {
-        "hp_outpost_north": "heavy_cannon_mk1",
-        "hp_outpost_south": "heavy_cannon_mk1",
-        "hp_outpost_east": "heavy_cannon_mk1",
-        "hp_outpost_west": "heavy_cannon_mk1",
-        "hp_outpost_dorsal": "heavy_cannon_mk1",
-        "hp_outpost_ventral": "heavy_cannon_mk1",
-        "hp_outpost_launcher_port": "missile_launcher_mk1",
-        "hp_outpost_launcher_starboard": "missile_launcher_mk1"
+        "hp_outpost_north": "mec_l35",
+        "hp_outpost_south": "mec_l35",
+        "hp_outpost_east": "mec_l31",
+        "hp_outpost_west": "mec_l31",
+        "hp_outpost_dorsal": "mec_l34",
+        "hp_outpost_ventral": "mec_l34",
+        "hp_outpost_launcher_port": "ram_179a",
+        "hp_outpost_launcher_starboard": "rgm_48",
+        "hp_outpost_pd_north": "pd_x30p",
+        "hp_outpost_pd_south": "pd_x30p",
+        "hp_outpost_pd_east": "pd_x30p",
+        "hp_outpost_pd_west": "pd_x30p"
       }
     },
     "role_bonuses": [
