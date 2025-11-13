@@ -363,6 +363,22 @@ Requirements: Requires ship class: Strike
 Effect: Short-range tactical nuke launcher with very high direct damage but smaller blast radius than Cyclops. Designed for daring close-approach strikes against priority targets, trading safety and reload time for overwhelming impact.
 Upgrade Model: Power Damage, maximum Range, Reload time, and Power Cost scale with level, increasing both lethality and efficiency while leaving base kinetic damage and explosion radius constant unless later data indicate changes.
 
+HD-96 “Nova” — Light Missile Launcher (L1–L15)
+Damage: 125–250 (L1–L15, no change shown)
+Armor Piercing: 40
+Range: 200–680 m (L1) → 200–850 m (L15)
+Turn Speed: 2 deg/s
+Missile Speed: 80 m/s
+Critical Offense: 100
+Reload: 20 s (L1) → 10 s (L15)
+Power Cost: 30 (L1) → 25 (L15)
+Firing Arc: 75°
+Cost: 10,000
+Durability: 6,000 / 6,000
+Requirements: Requires ship class: Strike
+Effect: Powerful short-range missile launcher that delivers heavy armor-piercing damage in a compact engagement envelope. Best used in close attack runs or ambush scenarios where its high per-volley damage can be fully applied.
+Upgrade Model: Maximum Range increases slightly with level, while Reload time decreases and Power Cost per shot improves, boosting both burst frequency and energy efficiency. Base Damage and Critical Offense remain constant unless higher-level data indicate otherwise.
+
 Strike Hulls
 
 Hull Systems (Strike / Light Hull Slot, Passive)
