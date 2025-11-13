@@ -688,8 +688,17 @@ class SandboxScene(Scene):
             target=target,
             lock_mode=lock_mode,
         )
-        for ship in self.world.ships:
-            if ship.is_alive():
+        if self.world.ships:
+            camera_position = self.camera.position
+            camera_forward = self.camera.forward
+
+            def _ship_depth(ship: Ship) -> float:
+                rel = ship.kinematics.position - camera_position
+                return rel.dot(camera_forward)
+
+            visible_ships = [ship for ship in self.world.ships if ship.is_alive()]
+            visible_ships.sort(key=_ship_depth, reverse=True)
+            for ship in visible_ships:
                 self.renderer.draw_ship(self.camera, ship)
         self.renderer.draw_projectiles(self.camera, self.world.projectiles)
         projectile_speed = 0.0
