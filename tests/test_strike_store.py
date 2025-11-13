@@ -1,10 +1,14 @@
 from pathlib import Path
+from typing import Callable, Union
 
 import pytest
 
 from game.assets.content import ContentManager
 from game.ships.ship import Ship
 from game.ui.strike_store import StoreFilters, fitting, store
+
+
+ExpectedEngineDelta = Union[dict[str, float], Callable[[Ship], dict[str, float]]]
 
 
 def _make_ship(frame_id: str = "viper_mk_vii", *, cubits: float = 20000.0) -> Ship:
@@ -91,47 +95,86 @@ def test_hull_module_preview_deltas(item_id: str, expected: dict[str, float]) ->
 
 
 @pytest.mark.parametrize(
-    "item_id,expected",
+    "item_id,frame_id,expected",
     [
         (
             "light_drive_overcharger",
+            "viper_mk_vii",
             {"max_speed": 1.25, "boost_speed": 1.25},
         ),
         (
             "light_turbo_boosters",
+            "viper_mk_vii",
             {"acceleration": 1.0, "boost_speed": 2.5},
         ),
         (
             "light_gyro_stabilization",
+            "viper_mk_vii",
             {"turn_rate": 2.5, "turn_accel": 2.5},
         ),
         (
             "light_rcs_ducting",
+            "viper_mk_vii",
             {"avoidance_rating": 15.0},
         ),
         (
             "t8_drive_turbo_charger",
-            {"max_speed": 1.65, "boost_speed": 3.4},
+            "raven_mk_vi_r",
+            lambda ship: {
+                "max_speed": ship.stats.max_speed * 0.03,
+                "boost_speed": ship.stats.boost_speed * 0.04,
+            },
         ),
         (
             "fog_gyro_stabilization",
-            {"turn_rate": 5.0, "turn_accel": 5.5},
+            "raven_mk_vi_r",
+            lambda ship: {
+                "turn_rate": ship.stats.turn_rate * 0.10,
+                "turn_accel": ship.stats.turn_accel * 0.10,
+            },
+        ),
+        (
+            "translation_rcs_thrusters",
+            "raven_mk_vi_r",
+            lambda ship: {
+                "turn_rate": ship.stats.turn_rate * 0.10,
+                "strafe_speed": ship.stats.strafe_speed * 0.15,
+            },
         ),
         (
             "t15_pulsed_plasma_thruster",
-            {"boost_speed": 5.1, "acceleration": 2.4, "boost_cost": 0.1875},
+            "raven_mk_vi_r",
+            lambda ship: {
+                "boost_speed": ship.stats.boost_speed * 0.06,
+                "acceleration": ship.stats.acceleration * 0.20,
+                "boost_cost": ship.stats.boost_cost * 0.25,
+            },
         ),
         (
             "coupled_rcs_ducting",
-            {"avoidance_rating": 20.4, "boost_speed": -2.125},
+            "raven_mk_vi_r",
+            lambda ship: {
+                "avoidance_rating": ship.stats.avoidance_rating * 0.04,
+                "boost_speed": ship.stats.boost_speed * -0.025,
+            },
+        ),
+        (
+            "fbs_12_engine_overload",
+            "rhino_strike",
+            lambda ship: {
+                "boost_cost": ship.stats.boost_cost * 2.0,
+            },
         ),
     ],
 )
-def test_engine_module_preview_deltas(item_id: str, expected: dict[str, float]) -> None:
-    ship = _make_ship()
+def test_engine_module_preview_deltas(
+    item_id: str, frame_id: str, expected: ExpectedEngineDelta
+) -> None:
+    ship = _make_ship(frame_id)
     preview = fitting.preview_with(item_id)
     deltas = preview["deltas_by_stat"]
-    for key, value in expected.items():
+    expected_values = expected(ship) if callable(expected) else expected
+    for key, value in expected_values.items():
         assert deltas[key] == pytest.approx(value)
 
 
