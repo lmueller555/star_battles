@@ -108,7 +108,7 @@ class ChaseCamera:
         self.up = Vector3(0.0, 1.0, 0.0)
         self.right = Vector3(1.0, 0.0, 0.0)
         self.distance = 12.0
-        self.elevation_angle_deg = 30.0
+        self.elevation_angle_deg = 20.0
         self._height_auto = True
         self._height = self.distance * tan(radians(self.elevation_angle_deg))
         self.shoulder = 1.6
