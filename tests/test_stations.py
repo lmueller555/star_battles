@@ -220,3 +220,113 @@ def test_outpost_weapons_auto_fire_on_enemies():
     assert mount.cooldown > 0.0
     assert mount.effect_type == "point_defense"
     assert mount.effect_timer > 0.0
+
+
+def test_outpost_weapon_facings_match_orientation():
+    frame_data = {
+        "id": "outpost_facing_test",
+        "name": "Facing Test Outpost",
+        "role": "Outpost",
+        "size": "Outpost",
+        "stats": {},
+        "slots": {},
+        "hardpoints": [
+            {
+                "id": "hp_outpost_launcher_port",
+                "slot": "launcher",
+                "position": [-235.0, -50.0, -260.0],
+                "gimbal": 180,
+                "tracking_speed": 24,
+            },
+            {
+                "id": "hp_outpost_launcher_starboard",
+                "slot": "launcher",
+                "position": [235.0, -50.0, -260.0],
+                "gimbal": 180,
+                "tracking_speed": 24,
+            },
+            {
+                "id": "hp_outpost_west",
+                "slot": "launcher",
+                "position": [-248.0, 42.0, -40.0],
+                "gimbal": 42,
+                "tracking_speed": 32,
+            },
+            {
+                "id": "hp_outpost_pd_west",
+                "slot": "defensive",
+                "position": [-205.0, 38.0, 200.0],
+                "gimbal": 180,
+                "tracking_speed": 180,
+            },
+            {
+                "id": "hp_outpost_north",
+                "slot": "launcher",
+                "position": [-70.0, 32.0, 600.0],
+                "gimbal": 35,
+                "tracking_speed": 36,
+            },
+            {
+                "id": "hp_outpost_pd_south",
+                "slot": "launcher",
+                "position": [-220.0, -42.0, 60.0],
+                "gimbal": 180,
+                "tracking_speed": 180,
+            },
+            {
+                "id": "hp_outpost_east",
+                "slot": "launcher",
+                "position": [248.0, 42.0, -40.0],
+                "gimbal": 42,
+                "tracking_speed": 32,
+            },
+            {
+                "id": "hp_outpost_pd_east",
+                "slot": "defensive",
+                "position": [205.0, 38.0, 200.0],
+                "gimbal": 180,
+                "tracking_speed": 180,
+            },
+            {
+                "id": "hp_outpost_south",
+                "slot": "launcher",
+                "position": [70.0, 32.0, 600.0],
+                "gimbal": 35,
+                "tracking_speed": 36,
+            },
+            {
+                "id": "hp_outpost_pd_north",
+                "slot": "launcher",
+                "position": [220.0, -42.0, 60.0],
+                "gimbal": 180,
+                "tracking_speed": 180,
+            },
+        ],
+    }
+
+    frame = ShipFrame.from_dict(frame_data)
+    facing_map = {hardpoint.id: hardpoint.facing for hardpoint in frame.hardpoints}
+
+    front_ids = {
+        "hp_outpost_launcher_port",
+        "hp_outpost_launcher_starboard",
+    }
+    left_ids = {
+        "hp_outpost_west",
+        "hp_outpost_pd_west",
+        "hp_outpost_north",
+        "hp_outpost_pd_south",
+    }
+    right_ids = {
+        "hp_outpost_east",
+        "hp_outpost_pd_east",
+        "hp_outpost_south",
+        "hp_outpost_pd_north",
+    }
+
+    for hp_id in front_ids:
+        assert facing_map[hp_id] == "forward"
+    for hp_id in left_ids:
+        assert facing_map[hp_id] == "left"
+    for hp_id in right_ids:
+        assert facing_map[hp_id] == "right"
