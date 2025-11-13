@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Sequence, Tuple
 
 from game.ships.ship import Ship
+from game.ui.equipment_data import EQUIPMENT_ITEMS
 @dataclass(frozen=True)
 class StoreItem:
     """Immutable metadata describing a store inventory entry."""
@@ -83,234 +84,24 @@ class InventoryState:
 
 
 def _generate_catalog() -> Dict[str, StoreItem]:
-    items: List[StoreItem] = [
-        StoreItem(
-            id="mec_a6",
-            name="MEC-A6 'Fang'",
-            slot_family="weapon",
-            ship_class="Strike",
-            level=1,
-            durability_max=2500,
-            durability=2500,
-            price=10_000,
-            stats={
-                "damage_min": 1.0,
-                "damage_max": 10.0,
-                "armor_piercing": 5.0,
-                "range_min": 0.0,
-                "range_max": 750.0,
-                "optimal_range": 300.0,
-                "accuracy": 400.0,
-                "critical_offense": 100.0,
-                "reload": 0.5,
-                "power": 1.0,
-                "firing_arc": 75.0,
-            },
-            upgrades=("damage", "optimal_range"),
-            description="Baseline autocannon balancing reach and stability.",
-            tags=("balanced", "rapid_fire"),
-        ),
-        StoreItem(
-            id="mec_a6p",
-            name="MEC-A6P 'Fang-P'",
-            slot_family="weapon",
-            ship_class="Strike",
-            level=1,
-            durability_max=2500,
-            durability=2500,
-            price=10_000,
-            stats={
-                "damage_min": 1.0,
-                "damage_max": 10.0,
-                "armor_piercing": 5.0,
-                "range_min": 0.0,
-                "range_max": 750.0,
-                "optimal_range": 300.0,
-                "accuracy": 400.0,
-                "critical_offense": 100.0,
-                "reload": 0.5,
-                "power": 1.0,
-                "firing_arc": 75.0,
-            },
-            upgrades=("damage", "critical_offense"),
-            description="Precision variant trading future crit scaling for reach.",
-            tags=("precision", "rapid_fire"),
-        ),
-        StoreItem(
-            id="mec_a8",
-            name="MEC-A8 'Tornado'",
-            slot_family="weapon",
-            ship_class="Strike",
-            level=1,
-            durability_max=2500,
-            durability=2500,
-            price=10_000,
-            stats={
-                "damage_min": 1.0,
-                "damage_max": 10.0,
-                "armor_piercing": 5.0,
-                "range_min": 0.0,
-                "range_max": 600.0,
-                "optimal_range": 250.0,
-                "accuracy": 400.0,
-                "critical_offense": 100.0,
-                "reload": 0.4,
-                "power": 1.0,
-                "firing_arc": 75.0,
-            },
-            upgrades=("damage", "optimal_range"),
-            description="Faster cycle autocannon with tighter engagement envelope.",
-            tags=("rapid_fire", "close_quarters"),
-        ),
-        StoreItem(
-            id="mec_a8p",
-            name="MEC-A8P 'Tornado-P'",
-            slot_family="weapon",
-            ship_class="Strike",
-            level=1,
-            durability_max=2500,
-            durability=2500,
-            price=10_000,
-            stats={
-                "damage_min": 1.0,
-                "damage_max": 10.0,
-                "armor_piercing": 5.0,
-                "range_min": 0.0,
-                "range_max": 600.0,
-                "optimal_range": 250.0,
-                "accuracy": 400.0,
-                "critical_offense": 100.0,
-                "reload": 0.4,
-                "power": 1.0,
-                "firing_arc": 75.0,
-            },
-            upgrades=("damage", "critical_offense"),
-            description="Crit-focused Tornado variant that retains the quick cycle.",
-            tags=("precision", "rapid_fire"),
-        ),
-        StoreItem(
-            id="strike_composite_plating",
-            name="Strike Composite Plating",
-            slot_family="hull",
-            ship_class="Strike",
-            level=1,
-            durability_max=2500,
-            durability=2500,
-            price=8_000,
-            stats={
-                "armor": 2.25,
-                "hull_hp": 22.5,
-                "acceleration": -0.3,
-                "turn_accel": -0.75,
-            },
-            upgrades=("armor", "hull_hp"),
-            description="Balanced protection blend with mild handling penalties.",
-            tags=("balanced", "survivability"),
-        ),
-        StoreItem(
-            id="strike_hull_plating",
-            name="Strike Hull Plating",
-            slot_family="hull",
-            ship_class="Strike",
-            level=1,
-            durability_max=2500,
-            durability=2500,
-            price=8_000,
-            stats={
-                "hull_hp": 45.0,
-                "acceleration": -0.2,
-                "turn_accel": -1.0,
-            },
-            upgrades=("hull_hp",),
-            description="Additional hull buffer for pilots who can stomach inertia.",
-            tags=("survivability", "bulk"),
-        ),
-        StoreItem(
-            id="strike_armor_plating",
-            name="Strike Armor Plating",
-            slot_family="hull",
-            ship_class="Strike",
-            level=1,
-            durability_max=2500,
-            durability=2500,
-            price=8_000,
-            stats={
-                "armor": 4.5,
-                "acceleration": -0.4,
-                "turn_accel": -0.5,
-            },
-            upgrades=("armor",),
-            description="Optimised armor layering at the expense of thrust response.",
-            tags=("armor", "survivability"),
-        ),
-        StoreItem(
-            id="light_drive_overcharger",
-            name="Light Drive Overcharger",
-            slot_family="engine",
-            ship_class="Strike",
-            level=1,
-            durability_max=2500,
-            durability=2500,
-            price=5_000,
-            stats={
-                "max_speed": 1.25,
-                "boost_speed": 1.25,
-            },
-            upgrades=("max_speed", "boost_speed"),
-            description="Boosts cruise and sprint caps for straight-line pursuits.",
-            tags=("speed", "cruise"),
-        ),
-        StoreItem(
-            id="light_turbo_boosters",
-            name="Light Turbo Boosters",
-            slot_family="engine",
-            ship_class="Strike",
-            level=1,
-            durability_max=2500,
-            durability=2500,
-            price=5_000,
-            stats={
-                "acceleration": 1.0,
-                "boost_speed": 2.5,
-            },
-            upgrades=("acceleration", "boost_speed"),
-            description="Quick-start shunts that prioritise sprint response.",
-            tags=("acceleration", "boost"),
-        ),
-        StoreItem(
-            id="light_gyro_stabilization",
-            name="Light Gyro-Stabilization",
-            slot_family="engine",
-            ship_class="Strike",
-            level=1,
-            durability_max=2500,
-            durability=2500,
-            price=5_000,
-            stats={
-                "turn_rate": 2.5,
-                "turn_accel": 2.5,
-            },
-            upgrades=("turn_rate", "turn_accel"),
-            description="Gyro package that sharpens rotational control.",
-            tags=("maneuvering",),
-        ),
-        StoreItem(
-            id="light_rcs_ducting",
-            name="Light RCS Ducting",
-            slot_family="engine",
-            ship_class="Strike",
-            level=1,
-            durability_max=2500,
-            durability=2500,
-            price=5_000,
-            stats={
-                "avoidance_rating": 15.0,
-            },
-            upgrades=("avoidance_rating",),
-            description="Redirects exhaust for superior shot dodging.",
-            tags=("defensive", "agility"),
-        ),
-    ]
+    items: List[StoreItem] = []
+    for data in EQUIPMENT_ITEMS:
+        items.append(
+            StoreItem(
+                id=str(data["id"]),
+                name=str(data["name"]),
+                slot_family=str(data["slot_family"]),
+                ship_class=str(data["ship_class"]),
+                level=int(data.get("level", 1)),
+                durability_max=int(data.get("durability_max", data.get("durability", 0))),
+                durability=int(data.get("durability", data.get("durability_max", 0))),
+                price=int(data.get("price", 0)),
+                stats=dict(data.get("stats", {})),
+                upgrades=tuple(data.get("upgrades", ())),
+                description=str(data.get("description", "")),
+                tags=tuple(data.get("tags", ())),
+            )
+        )
     return {item.id: item for item in items}
 
 
@@ -366,7 +157,19 @@ class StoreService:
         currency = self._context.available_currency()
         selected = self._context.selected_item
         families = set(filters.slot_families)
-        items = [item for item in CATALOG.values() if item.slot_family in families]
+        ship_class = None
+        if ship and ship.frame:
+            ship_class = ship.frame.size.lower()
+
+        def _eligible(item: StoreItem) -> bool:
+            if item.slot_family not in families:
+                return False
+            if not ship_class:
+                return True
+            allowed = item.ship_class.lower()
+            return allowed == ship_class or allowed in {"any", "all", "universal"}
+
+        items = [item for item in CATALOG.values() if _eligible(item)]
         sort_key = filters.sort_by.lower()
         reverse = filters.descending
 
@@ -495,6 +298,8 @@ class FittingService:
                 stats["armor"] += module.stats.get("armor", 0.0)
                 stats["acceleration"] += module.stats.get("acceleration", 0.0)
                 stats["turn_accel"] += module.stats.get("turn_accel", 0.0)
+                if "avoidance_rating" in module.stats:
+                    stats["avoidance_rating"] += module.stats["avoidance_rating"]
             elif module.slot_family == "engine":
                 stats["max_speed"] += module.stats.get("max_speed", 0.0)
                 stats["boost_speed"] += module.stats.get("boost_speed", 0.0)

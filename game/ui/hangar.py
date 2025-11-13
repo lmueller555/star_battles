@@ -745,9 +745,10 @@ class HangarView:
         surface.blit(currency, (inner.x + 12, y))
         amount = self.font.render(f"{ship.resources.cubits:,.0f}", True, (220, 238, 255))
         surface.blit(amount, (inner.x + 12, y + 22))
+        ship_class = ship.frame.size if ship else "Ship"
         info_lines = [
             "Hold SHIFT for max preview",
-            "(Strike upgrades not captured)",
+            f"({ship_class} upgrades not captured)",
         ]
         for idx, line in enumerate(info_lines):
             text = self.mini_font.render(line, True, (150, 178, 200))
@@ -859,7 +860,7 @@ class HangarView:
         name_color = (220, 240, 255)
         title = self.small_font.render(card.item.name, True, name_color)
         surface.blit(title, (rect.x + 16, rect.y + 12))
-        slot_label = f"{card.item.slot_family.title()} • Strike only"
+        slot_label = f"{card.item.slot_family.title()} • {card.item.ship_class} only"
         subtitle = self.mini_font.render(slot_label, True, (172, 198, 220))
         surface.blit(subtitle, (rect.x + 16, rect.y + 32))
         if icon:
@@ -920,20 +921,31 @@ class HangarView:
         data = item.item if isinstance(item, ItemCardData) else item
         stats = data.stats
         if data.slot_family == "weapon":
-            damage = f"Damage {stats['damage_min']:.0f}–{stats['damage_max']:.0f}"
-            if "critical_offense" in data.upgrades:
-                special = f"Critical Offense {stats['critical_offense']:.0f}"
+            lines: List[str] = []
+            if "burst_count" in stats:
+                lines.append(f"Damage {stats['damage_min']:.0f} ×{int(stats['burst_count'])}")
+            elif stats.get("damage_min") != stats.get("damage_max"):
+                lines.append(f"Damage {stats['damage_min']:.0f}–{stats['damage_max']:.0f}")
             else:
-                special = f"Optimal Range {stats['optimal_range']:.0f} m"
-            return [
-                damage,
-                special,
-                f"Reload {stats['reload']:.2f} s",
-                f"AP {stats['armor_piercing']:.0f}",
-                f"Accuracy {stats['accuracy']:.0f}",
-                f"Firing Arc {stats['firing_arc']:.0f}°",
-                f"Power {stats['power']:.0f}",
-            ]
+                lines.append(f"Damage {stats.get('damage_max', 0.0):.0f}")
+            lines.append(f"AP {stats.get('armor_piercing', 0.0):.0f}")
+            lines.append(f"Optimal {stats.get('optimal_range', 0.0):.0f} m")
+            if "range_min" in stats and "range_max" in stats:
+                lines.append(
+                    f"Range {stats['range_min']:.0f}–{stats['range_max']:.0f} m"
+                )
+            lines.append(f"Reload {stats.get('reload', 0.0):.2f} s")
+            lines.append(f"Power {stats.get('power', 0.0):.0f}")
+            lines.append(f"Accuracy {stats.get('accuracy', 0.0):.0f}")
+            lines.append(f"Crit Offense {stats.get('critical_offense', 0.0):.0f}")
+            lines.append(f"Firing Arc {stats.get('firing_arc', 0.0):.0f}°")
+            if "turn_speed" in stats:
+                lines.append(f"Turn {stats['turn_speed']:.0f}°/s")
+            if "projectile_speed" in stats:
+                lines.append(f"Speed {stats['projectile_speed']:.0f} m/s")
+            if "damage_per_second" in stats:
+                lines.append(f"DPS {stats['damage_per_second']:.1f}")
+            return lines
         if data.slot_family == "hull":
             lines = []
             if "armor" in stats:
@@ -944,6 +956,8 @@ class HangarView:
                 lines.append(f"Accel {stats['acceleration']:+.1f}")
             if "turn_accel" in stats:
                 lines.append(f"Turn Accel {stats['turn_accel']:+.2f}")
+            if "avoidance_rating" in stats:
+                lines.append(f"Avoidance +{stats['avoidance_rating']:.0f}")
             return lines
         if data.slot_family == "engine":
             lines = []
@@ -971,7 +985,12 @@ class HangarView:
         self._blit_panel(surface, inner, (12, 20, 28, 210), (60, 92, 130))
         selected = store.selected_item()
         if not selected:
-            message = self.small_font.render("Select a Strike item to preview", True, (176, 204, 222))
+            ship_class = ship.frame.size if ship else "Ship"
+            message = self.small_font.render(
+                f"Select a {ship_class} item to preview",
+                True,
+                (176, 204, 222),
+            )
             surface.blit(message, (inner.x + 12, inner.y + 12))
             return
         if not self._store_preview_data:
@@ -1029,9 +1048,20 @@ class HangarView:
                     ("Damage Min", stats.get("damage_min", 0.0), stats.get("damage_min", 0.0)),
                     ("Damage Max", stats.get("damage_max", 0.0), stats.get("damage_max", 0.0)),
                     ("Optimal Range", stats.get("optimal_range", 0.0), stats.get("optimal_range", 0.0)),
+                    ("Range Min", stats.get("range_min", 0.0), stats.get("range_min", 0.0)),
+                    ("Range Max", stats.get("range_max", 0.0), stats.get("range_max", 0.0)),
                     ("Crit Offense", stats.get("critical_offense", 0.0), stats.get("critical_offense", 0.0)),
+                    ("Armor Piercing", stats.get("armor_piercing", 0.0), stats.get("armor_piercing", 0.0)),
+                    ("Reload", stats.get("reload", 0.0), stats.get("reload", 0.0)),
+                    ("Power", stats.get("power", 0.0), stats.get("power", 0.0)),
                 ]
             )
+            if "turn_speed" in stats:
+                lines.append(("Turn Speed", stats["turn_speed"], stats["turn_speed"]))
+            if "projectile_speed" in stats:
+                lines.append(("Projectile Speed", stats["projectile_speed"], stats["projectile_speed"]))
+            if "damage_per_second" in stats:
+                lines.append(("Damage / s", stats["damage_per_second"], stats["damage_per_second"]))
         return lines
 
     def _draw_hold_panel(self, surface: pygame.Surface, rect: pygame.Rect, ship: Ship) -> None:
