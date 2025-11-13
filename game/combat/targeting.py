@@ -32,7 +32,7 @@ def pick_nearest_target(origin: Ship, candidates: Iterable[Ship]) -> Optional[Sh
 
 
 def _angle_to_target(mount: WeaponMount, ship: Ship, target: Ship) -> float:
-    forward = ship.kinematics.basis.forward
+    forward = ship.hardpoint_direction(getattr(mount, "hardpoint", None))
     to_target = (target.kinematics.position - ship.kinematics.position).normalize()
     return forward.angle_to(to_target)
 

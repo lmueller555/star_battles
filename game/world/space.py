@@ -502,6 +502,7 @@ class SpaceWorld:
         forward = basis.forward
         right = basis.right
         up = basis.up
+        mount_forward = ship.hardpoint_direction(getattr(mount, "hardpoint", None))
         muzzle = self._weapon_muzzle_position(ship, mount, forward, right, up)
         target_ship: Ship | None = None
         target_asteroid: Asteroid | None = None
@@ -524,7 +525,7 @@ class SpaceWorld:
             target_position = target_asteroid.position
         distance = 0.0
         angle_error = 0.0
-        aim_direction = forward
+        aim_direction = mount_forward
         effective_gimbal = weapon.gimbal
         if mount.hardpoint:
             effective_gimbal = min(effective_gimbal, mount.hardpoint.gimbal)
@@ -533,7 +534,7 @@ class SpaceWorld:
             distance = to_target.length()
             if distance > 0.0:
                 aim_direction = to_target.normalize()
-                angle_error = forward.angle_to(aim_direction)
+                angle_error = mount_forward.angle_to(aim_direction)
             if angle_error > effective_gimbal:
                 return None
         if weapon.wclass == "hitscan" and target_position is not None:
@@ -546,7 +547,7 @@ class SpaceWorld:
                 armor = target_ship.stats.armor + target_ship.module_stat_total("armor")
             result = resolve_hitscan(
                 muzzle,
-                forward,
+                mount_forward,
                 weapon,
                 target_position,
                 target_velocity,
@@ -662,7 +663,7 @@ class SpaceWorld:
         mount: WeaponMount,
         weapon: WeaponData,
         muzzle: Vector3,
-        forward: Vector3,
+        mount_direction: Vector3,
         enemies: Iterable[Ship],
         gimbal_limit: float,
     ) -> Ship | None:
@@ -679,7 +680,7 @@ class SpaceWorld:
             if distance <= 0.0 or (max_range > 0.0 and distance > max_range):
                 continue
             direction = offset.normalize()
-            angle = forward.angle_to(direction)
+            angle = mount_direction.angle_to(direction)
             if gimbal_limit > 0.0 and angle > gimbal_limit:
                 continue
             if distance < best_distance:
@@ -712,6 +713,7 @@ class SpaceWorld:
                 if weapon.max_range <= 0.0:
                     continue
                 muzzle = self._weapon_muzzle_position(outpost, mount, forward, right, up)
+                mount_direction = outpost.hardpoint_direction(getattr(mount, "hardpoint", None))
                 gimbal_limit = weapon.gimbal
                 if mount.hardpoint:
                     gimbal_limit = min(gimbal_limit, mount.hardpoint.gimbal)
@@ -720,7 +722,7 @@ class SpaceWorld:
                     mount,
                     weapon,
                     muzzle,
-                    forward,
+                    mount_direction,
                     enemies,
                     gimbal_limit,
                 )
