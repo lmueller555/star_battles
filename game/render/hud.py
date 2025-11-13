@@ -16,6 +16,7 @@ from game.ui.sector_map import map_display_rect
 from game.world.mining import MiningHUDState
 from game.ships.ship import Ship
 from game.ships.flight import effective_thruster_speed
+from game.render.ship_miniatures import get_ship_miniature
 
 
 FLANK_SLIDER_WIDTH = 18
@@ -159,8 +160,8 @@ class HUD:
                 # Avoid overcrowding the reticle if many auxiliary groups exist.
                 break
 
-    def draw_ship_wireframe(self, slots: Sequence[WeaponSlotHUDState]) -> None:
-        if not slots:
+    def draw_ship_wireframe(self, player: Ship | None, slots: Sequence[WeaponSlotHUDState]) -> None:
+        if not player or not slots:
             return
         display_slots = list(slots)[:6]
         if not display_slots:
@@ -171,8 +172,10 @@ class HUD:
         x = max(20, surface_width - panel_size - 20)
         y = max(12, surface_height - panel_size - bottom_margin)
         rect = pygame.Rect(x, y, panel_size, panel_size)
-        pygame.draw.rect(self.surface, (12, 20, 28), rect)
-        pygame.draw.rect(self.surface, (70, 110, 150), rect, 1)
+        panel_background = (12, 20, 28)
+        panel_border = (70, 110, 150)
+        pygame.draw.rect(self.surface, panel_background, rect)
+        pygame.draw.rect(self.surface, panel_border, rect, 1)
 
         title = self.font.render("Weapons", True, (170, 210, 240))
         title_pos = (
@@ -181,27 +184,69 @@ class HUD:
         )
         self.surface.blit(title, title_pos)
 
-        nose = (rect.centerx, rect.top + 10)
-        left_wing = (rect.left + 16, rect.top + rect.height * 0.48)
-        right_wing = (rect.right - 16, rect.top + rect.height * 0.48)
-        tail_left = (rect.left + rect.width * 0.32, rect.bottom - 18)
-        tail_right = (rect.right - rect.width * 0.32, rect.bottom - 18)
-        tail = (rect.centerx, rect.bottom - 6)
-        outline = [nose, left_wing, tail_left, tail, tail_right, right_wing, nose]
-        pygame.draw.lines(self.surface, (100, 150, 190), False, outline, 2)
-        pygame.draw.line(
-            self.surface,
-            (80, 120, 160),
-            (rect.centerx, rect.top + 14),
-            (rect.centerx, rect.bottom - 18),
-            1,
+        miniature = get_ship_miniature(getattr(getattr(player, "frame", None), "id", ""))
+        size_key = str(getattr(getattr(player, "frame", None), "size", "")).lower()
+        palette = {
+            "strike": {
+                "fill": (22, 32, 46),
+                "edge": (140, 190, 240),
+                "detail": (90, 130, 170),
+                "engine": (255, 210, 140),
+            },
+            "escort": {
+                "fill": (24, 34, 48),
+                "edge": (150, 206, 252),
+                "detail": (98, 140, 184),
+                "engine": (255, 214, 150),
+            },
+            "line": {
+                "fill": (26, 36, 50),
+                "edge": (170, 220, 255),
+                "detail": (110, 150, 188),
+                "engine": (255, 216, 160),
+            },
+            "capital": {
+                "fill": (28, 38, 52),
+                "edge": (186, 226, 255),
+                "detail": (126, 166, 204),
+                "engine": (255, 220, 170),
+            },
+            "outpost": {
+                "fill": (30, 32, 42),
+                "edge": (200, 220, 240),
+                "detail": (150, 160, 190),
+                "engine": (210, 210, 230),
+            },
+        }
+        colors = palette.get(
+            size_key,
+            {"fill": (24, 32, 44), "edge": (150, 200, 240), "detail": (96, 132, 172), "engine": (255, 214, 150)},
         )
 
-        usable_height = rect.height - 64
-        base_y = rect.top + 28
-        half_height = usable_height * 0.5
-        max_radius = rect.width * 0.32
-        body_center = Vector2(rect.centerx, base_y + half_height)
+        usable_width = rect.width - 36
+        usable_height = rect.height - 70
+        half_width = max(usable_width * 0.5, 36.0)
+        half_height = max(usable_height * 0.5, 32.0)
+        body_center = Vector2(rect.centerx, rect.top + 32 + half_height)
+
+        def _transform(point: tuple[float, float]) -> tuple[int, int]:
+            px = rect.centerx + point[0] * half_width
+            py = body_center.y - point[1] * half_height
+            return int(px), int(py)
+
+        outline_points = [_transform(point) for point in miniature.outline]
+        if len(outline_points) >= 3:
+            pygame.draw.polygon(self.surface, colors["fill"], outline_points)
+            pygame.draw.lines(self.surface, colors["edge"], True, outline_points, 2)
+
+        for line in miniature.detail_lines:
+            start = _transform(line[0])
+            end = _transform(line[1])
+            pygame.draw.line(self.surface, colors["detail"], start, end, 1)
+
+        for engine_point in miniature.engine_points:
+            center = _transform(engine_point)
+            pygame.draw.circle(self.surface, colors["engine"], center, 3)
         circle_radius = 11
         active_fill = (255, 210, 120)
         inactive_fill = (26, 36, 52)
@@ -267,7 +312,7 @@ class HUD:
 
         for slot in display_slots:
             offset_x, offset_z = slot.relative_position
-            px = rect.centerx + offset_x * max_radius
+            px = rect.centerx + offset_x * half_width
             py = body_center.y - offset_z * half_height
             anchor = Vector2(px, py)
             direction = anchor - body_center
@@ -551,7 +596,7 @@ class HUD:
         self.draw_target_panel(camera, player, target)
         self.draw_target_overlay(target_overlay)
         if weapon_slots:
-            self.draw_ship_wireframe(weapon_slots)
+            self.draw_ship_wireframe(player, weapon_slots)
         self.draw_meters(player)
         self.draw_lock_ring(camera, player, target)
         self.draw_dradis(dradis)
