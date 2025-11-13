@@ -2068,22 +2068,37 @@ class VectorRenderer:
         if gimbal <= 0.0:
             gimbal = getattr(getattr(mount, "hardpoint", None), "gimbal", 45.0)
         base_dir = muzzle_world - base_world
+        origin_point = muzzle_world
         if base_dir.length_squared() <= 1e-6:
+            origin_point = base_world
             base_dir = base_world - origin
         if base_dir.length_squared() <= 1e-6:
             base_dir = ship.hardpoint_direction(getattr(mount, "hardpoint", None))
         base_dir = base_dir.normalize()
         rng = self._mount_rng(mount)
         particle_count = max(6, int(18 + 26 * intensity))
-        steps = 3
+        steps = 6
+
+        def _travel_fraction(t: float) -> float:
+            if t <= 0.0:
+                return 0.0
+            if t >= 1.0:
+                return 1.0
+            if t <= 0.75:
+                return t
+            tail = (t - 0.75) / 0.25
+            tail = max(0.0, min(1.0, tail))
+            eased = 1.0 - (1.0 - tail) ** 3
+            return 0.75 + 0.25 * eased
+
         for _ in range(particle_count):
             direction = self._sample_direction_in_cone(base_dir, gimbal, rng)
-            distance = effect_range * rng.uniform(0.5, 1.0)
-            jitter = rng.uniform(0.0, 0.08)
-            lateral = self._sample_direction_in_cone(base_dir, gimbal, rng) * (effect_range * 0.05 * jitter)
+            distance = effect_range * rng.uniform(0.4, 0.85)
             for step in range(1, steps + 1):
-                fraction = step / steps
-                position = base_world + direction * (distance * fraction) + lateral
+                time_fraction = step / steps
+                travel = _travel_fraction(time_fraction)
+                fraction = travel
+                position = origin_point + direction * (distance * travel)
                 screen, visible = frame.project_point(position)
                 if not visible:
                     continue
