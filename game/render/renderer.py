@@ -13,7 +13,6 @@ from pygame.math import Vector3
 
 from game.combat.weapons import Projectile
 from game.render.camera import CameraFrameData, ChaseCamera, DEFAULT_SHIP_LENGTHS
-from game.render.moderngl_renderer import ModernGLShipRenderer
 from game.ships.ship import Ship
 from game.world.asteroids import Asteroid
 
@@ -2039,7 +2038,6 @@ class VectorRenderer:
         self._last_report_ms = pygame.time.get_ticks()
         self._telemetry_interval_ms = 2500
         self._current_camera_frame: CameraFrameData | None = None
-        self._gpu_renderer = ModernGLShipRenderer()
 
     def _flush_frame_counters(self) -> None:
         if (
@@ -2736,35 +2734,6 @@ class VectorRenderer:
                         1,
                     )
 
-    def _draw_ship_wireframe_cpu(
-        self,
-        geometry: ShipGeometry,
-        projected: Sequence[tuple[float, float]],
-        visibility: Sequence[bool],
-        color: tuple[int, int, int],
-        line_mode: str,
-    ) -> bool:
-        drawn_edges = False
-        for idx_a, idx_b in geometry.edges:
-            if idx_a >= len(visibility) or idx_b >= len(visibility):
-                continue
-            if not (visibility[idx_a] and visibility[idx_b]):
-                continue
-            ax, ay = projected[idx_a]
-            bx, by = projected[idx_b]
-            if line_mode == "line":
-                pygame.draw.line(
-                    self.surface,
-                    color,
-                    (int(round(ax)), int(round(ay))),
-                    (int(round(bx)), int(round(by))),
-                    1,
-                )
-            else:
-                pygame.draw.aaline(self.surface, color, (ax, ay), (bx, by), blend=1)
-            drawn_edges = True
-        return drawn_edges
-
     def draw_ship(self, camera: ChaseCamera, ship: Ship) -> None:
         frame = self._get_camera_frame(camera)
         geometry = self._ship_geometry_cache.get(
@@ -2797,37 +2766,29 @@ class VectorRenderer:
         )
         color = SHIP_COLOR if ship.team == "player" else ENEMY_COLOR
         line_mode = "line" if distance > 7500.0 else "aaline"
-        used_gpu = False
-        if self._gpu_renderer and self._gpu_renderer.is_supported():
-            used_gpu = self._gpu_renderer.render_ship(
-                self.surface,
-                frame,
-                geometry,
-                origin,
-                (right, up, forward),
-                scale=scale,
-                color=color,
-                line_mode=line_mode,
-            )
+        drawn_edges = False
+        for idx_a, idx_b in geometry.edges:
+            if not (visibility[idx_a] and visibility[idx_b]):
+                continue
+            ax, ay = projected[idx_a]
+            bx, by = projected[idx_b]
+            if line_mode == "line":
+                pygame.draw.line(
+                    self.surface,
+                    color,
+                    (int(round(ax)), int(round(ay))),
+                    (int(round(bx)), int(round(by))),
+                    1,
+                )
+            else:
+                pygame.draw.aaline(self.surface, color, (ax, ay), (bx, by), blend=1)
+            drawn_edges = True
 
-        if used_gpu:
+        if drawn_edges:
             if line_mode == "line":
                 self._frame_counters.objects_drawn_line += 1
             else:
                 self._frame_counters.objects_drawn_aaline += 1
-        else:
-            drawn_edges = self._draw_ship_wireframe_cpu(
-                geometry,
-                projected,
-                visibility,
-                color,
-                line_mode,
-            )
-            if drawn_edges:
-                if line_mode == "line":
-                    self._frame_counters.objects_drawn_line += 1
-                else:
-                    self._frame_counters.objects_drawn_aaline += 1
 
         speed = ship.kinematics.velocity.length()
         speed_intensity = 0.0
