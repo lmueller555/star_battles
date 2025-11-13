@@ -17,6 +17,7 @@ AUTO_LEVEL_RATE = 90.0
 AUTO_INPUT_DEADZONE = 0.05
 THRUSTER_SPEED_MULTIPLIER = 1.5
 THRUSTER_TYLIUM_DRAIN = 0.35
+WORLD_UP = Vector3(0.0, 1.0, 0.0)
 
 
 def _approach(current: float, target: float, rate: float) -> float:
@@ -61,7 +62,7 @@ def update_ship_flight(ship: Ship, dt: float, logger=None) -> None:
 
     forward = kin.forward()
     right = kin.right()
-    up = forward.cross(right)
+    up = kin.up()
 
     current_speed = kin.velocity.dot(forward)
     manual_input = ctrl.throttle
@@ -123,6 +124,8 @@ def update_ship_flight(ship: Ship, dt: float, logger=None) -> None:
 
     # Orientation updates from mouse deltas.
     desired_yaw_rate = ctrl.look_delta.x * LOOK_SENSITIVITY * stats.yaw_speed
+    if up.dot(WORLD_UP) < 0.0:
+        desired_yaw_rate = -desired_yaw_rate
     desired_pitch_rate = -ctrl.look_delta.y * LOOK_SENSITIVITY * stats.pitch_speed
     desired_roll_rate = ctrl.roll_input * stats.roll_speed * 0.5
 
