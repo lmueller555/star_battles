@@ -6,6 +6,15 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 from game.ships.ship import Ship
 from game.ui.equipment_data import EQUIPMENT_ITEMS
+
+
+_WEAPON_SLOT_NAMES = {"gun", "guns", "cannon", "launcher", "defensive", "special"}
+
+
+def _weapon_capacity(ship: Ship) -> int:
+    """Count weapon mounts that can accept store-listed weapons."""
+
+    return sum(1 for mount in ship.mounts if mount.hardpoint.slot.lower() in _WEAPON_SLOT_NAMES)
 @dataclass(frozen=True)
 class StoreItem:
     """Immutable metadata describing a store inventory entry."""
@@ -222,7 +231,7 @@ class StoreService:
         elif item.slot_family == "engine":
             capacity = int(ship.frame.slots.engine)
         elif item.slot_family == "weapon":
-            capacity = len([mount for mount in ship.mounts if mount.hardpoint.slot.lower() in {"gun", "guns", "cannon"}])
+            capacity = _weapon_capacity(ship)
         if capacity > 0:
             self._context.inventory.equip(item, capacity)
         self._context.selected_item = item_id
@@ -275,7 +284,7 @@ class FittingService:
         elif item.slot_family == "engine":
             capacity = int(ship.frame.slots.engine)
         elif item.slot_family == "weapon":
-            capacity = len([mount for mount in ship.mounts if mount.hardpoint.slot.lower() in {"gun", "guns", "cannon"}])
+            capacity = _weapon_capacity(ship)
         if capacity <= 0:
             return False
         return inventory.equip(item, capacity)
