@@ -2007,6 +2007,207 @@ class VectorRenderer:
                     blend=1,
                 )
 
+            self._draw_weapon_effect(
+                frame,
+                origin,
+                ship,
+                mount,
+                base_world,
+                muzzle_world,
+            )
+
+    def _draw_weapon_effect(
+        self,
+        frame: CameraFrameData,
+        origin: Vector3,
+        ship: Ship,
+        mount,
+        base_world: Vector3,
+        muzzle_world: Vector3,
+    ) -> None:
+        effect_type = getattr(mount, "effect_type", "")
+        timer = getattr(mount, "effect_timer", 0.0)
+        if not effect_type or timer <= 0.0:
+            return
+        if effect_type == "point_defense":
+            self._draw_point_defense_effect(
+                frame,
+                origin,
+                ship,
+                mount,
+                base_world,
+                muzzle_world,
+            )
+        elif effect_type == "flak":
+            self._draw_flak_effect(
+                frame,
+                origin,
+                ship,
+                mount,
+                base_world,
+            )
+
+    def _draw_point_defense_effect(
+        self,
+        frame: CameraFrameData,
+        origin: Vector3,
+        ship: Ship,
+        mount,
+        base_world: Vector3,
+        muzzle_world: Vector3,
+    ) -> None:
+        duration = getattr(mount, "effect_duration", 0.0) or 0.3
+        timer = getattr(mount, "effect_timer", 0.0)
+        intensity = max(0.0, min(1.0, timer / max(0.001, duration)))
+        if intensity <= 0.0:
+            return
+        effect_range = getattr(mount, "effect_range", 0.0)
+        if effect_range <= 0.0:
+            effect_range = 360.0
+        gimbal = getattr(mount, "effect_gimbal", 0.0)
+        if gimbal <= 0.0:
+            gimbal = getattr(getattr(mount, "hardpoint", None), "gimbal", 45.0)
+        base_dir = muzzle_world - base_world
+        if base_dir.length_squared() <= 1e-6:
+            base_dir = base_world - origin
+        if base_dir.length_squared() <= 1e-6:
+            base_dir = ship.kinematics.basis.forward
+        base_dir = base_dir.normalize()
+        rng = self._mount_rng(mount)
+        particle_count = max(6, int(18 + 26 * intensity))
+        steps = 3
+        for _ in range(particle_count):
+            direction = self._sample_direction_in_cone(base_dir, gimbal, rng)
+            distance = effect_range * rng.uniform(0.5, 1.0)
+            jitter = rng.uniform(0.0, 0.08)
+            lateral = self._sample_direction_in_cone(base_dir, gimbal, rng) * (effect_range * 0.05 * jitter)
+            for step in range(1, steps + 1):
+                fraction = step / steps
+                position = base_world + direction * (distance * fraction) + lateral
+                screen, visible = frame.project_point(position)
+                if not visible:
+                    continue
+                fade = intensity * (1.0 - (fraction - 0.5) * 0.35)
+                brightness = 0.6 + 0.4 * rng.random()
+                red = int(180 + 70 * brightness)
+                green = int(30 + 40 * fade)
+                blue = int(30 * fade)
+                radius = 1 if step < steps else 2
+                pygame.draw.circle(
+                    self.surface,
+                    (min(255, red), min(120, green), min(100, blue)),
+                    (int(round(screen.x)), int(round(screen.y))),
+                    radius,
+                    0,
+                )
+
+    def _draw_flak_effect(
+        self,
+        frame: CameraFrameData,
+        origin: Vector3,
+        ship: Ship,
+        mount,
+        base_world: Vector3,
+    ) -> None:
+        duration = getattr(mount, "effect_duration", 0.0) or 0.5
+        timer = getattr(mount, "effect_timer", 0.0)
+        intensity = max(0.0, min(1.0, timer / max(0.001, duration)))
+        if intensity <= 0.0:
+            return
+        effect_range = getattr(mount, "effect_range", 0.0)
+        if effect_range <= 0.0:
+            effect_range = 600.0
+        gimbal = getattr(mount, "effect_gimbal", 0.0)
+        if gimbal <= 0.0:
+            gimbal = getattr(getattr(mount, "hardpoint", None), "gimbal", 55.0)
+        base_dir = base_world - origin
+        if base_dir.length_squared() <= 1e-6:
+            base_dir = ship.kinematics.basis.forward
+        base_dir = base_dir.normalize()
+        rng = self._mount_rng(mount)
+        burst_count = max(4, int(10 + 24 * intensity))
+        for _ in range(burst_count):
+            direction = self._sample_direction_in_cone(base_dir, gimbal, rng)
+            distance = effect_range * rng.uniform(0.2, 1.0)
+            position = base_world + direction * distance
+            screen, visible = frame.project_point(position)
+            if not visible:
+                continue
+            radius = max(2, int(round(2 + 3 * rng.random() * (0.6 + intensity))))
+            core_color = _blend((255, 170, 90), (255, 220, 180), rng.random() * 0.5 + 0.2)
+            halo_color = _blend(core_color, (255, 255, 255), 0.45)
+            pygame.draw.circle(
+                self.surface,
+                core_color,
+                (int(round(screen.x)), int(round(screen.y))),
+                radius,
+                0,
+            )
+            pygame.draw.circle(
+                self.surface,
+                halo_color,
+                (int(round(screen.x)), int(round(screen.y))),
+                radius + 1,
+                1,
+            )
+            spark_count = 3 + rng.randint(0, 2)
+            for _ in range(spark_count):
+                spark_dir = self._sample_direction_in_cone(base_dir, gimbal * 0.5, rng)
+                spark_length = effect_range * 0.05 * rng.uniform(0.2, 1.0)
+                spark_start = position
+                spark_end = spark_start + spark_dir * spark_length
+                start_screen, vis_start = frame.project_point(spark_start)
+                end_screen, vis_end = frame.project_point(spark_end)
+                if vis_start and vis_end:
+                    pygame.draw.aaline(
+                        self.surface,
+                        _blend(core_color, (255, 255, 255), 0.25),
+                        (start_screen.x, start_screen.y),
+                        (end_screen.x, end_screen.y),
+                        blend=1,
+                    )
+
+    @staticmethod
+    def _sample_direction_in_cone(base_direction: Vector3, gimbal: float, rng: random.Random) -> Vector3:
+        axis = Vector3(base_direction)
+        if axis.length_squared() <= 1e-6:
+            return Vector3(axis)
+        axis = axis.normalize()
+        angle = math.radians(max(0.0, min(180.0, gimbal)))
+        if angle <= 0.0:
+            return axis
+        cos_max = math.cos(angle)
+        cos_theta = rng.uniform(cos_max, 1.0)
+        sin_theta = math.sqrt(max(0.0, 1.0 - cos_theta * cos_theta))
+        phi = rng.uniform(0.0, 2.0 * math.pi)
+        up = Vector3(0.0, 1.0, 0.0)
+        if abs(axis.dot(up)) > 0.98:
+            up = Vector3(1.0, 0.0, 0.0)
+        tangent = axis.cross(up)
+        if tangent.length_squared() <= 1e-6:
+            tangent = axis.cross(Vector3(0.0, 0.0, 1.0))
+        tangent = tangent.normalize()
+        bitangent = tangent.cross(axis)
+        if bitangent.length_squared() <= 1e-6:
+            bitangent = axis.cross(tangent)
+        bitangent = bitangent.normalize()
+        direction = (
+            axis * cos_theta
+            + tangent * (sin_theta * math.cos(phi))
+            + bitangent * (sin_theta * math.sin(phi))
+        )
+        if direction.length_squared() <= 1e-6:
+            return axis
+        return direction.normalize()
+
+    @staticmethod
+    def _mount_rng(mount) -> random.Random:
+        tick_ms = pygame.time.get_ticks()
+        phase = tick_ms // 33
+        seed_base = getattr(mount, "effect_seed", 0)
+        seed = (seed_base ^ (phase & 0xFFFFFFFF)) & 0xFFFFFFFF
+        return random.Random(seed)
+
     def _draw_engines(
         self,
         frame: CameraFrameData,

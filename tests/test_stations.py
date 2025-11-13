@@ -2,9 +2,9 @@ import json
 
 from pygame.math import Vector3
 
-from game.combat.weapons import WeaponDatabase
+from game.combat.weapons import WeaponData, WeaponDatabase
 from game.engine.logger import GameLogger, LoggerConfig
-from game.ships.data import ShipFrame
+from game.ships.data import Hardpoint, ShipFrame
 from game.ships.ship import Ship
 from game.ships.stats import ShipSlotLayout, ShipStats
 from game.world.sector import SectorMap
@@ -153,3 +153,70 @@ def test_space_world_places_player_near_outpost(tmp_path):
     assert placed
     distance = player_ship.kinematics.position.distance_to(outpost_ship.kinematics.position)
     assert 800.0 <= distance <= 1000.0
+
+
+def test_outpost_weapons_auto_fire_on_enemies():
+    weapons = WeaponDatabase()
+    pd_weapon = WeaponData.from_dict(
+        {
+            "id": "pd_x30p",
+            "slotType": "cannon",
+            "class": "hitscan",
+            "damage": 120.0,
+            "accuracy": 1.0,
+            "crit": 0.0,
+            "critMult": 1.0,
+            "rof": 2.0,
+            "power": 0.0,
+            "optimal": 400.0,
+            "maxRange": 600.0,
+            "gimbal": 90.0,
+        }
+    )
+    weapons.weapons[pd_weapon.id] = pd_weapon
+
+    logger = make_logger()
+    world = SpaceWorld(
+        weapons=weapons,
+        sector=SectorMap(),
+        stations=StationDatabase(),
+        mining=MiningDatabase(),
+        logger=logger,
+    )
+
+    hardpoint = Hardpoint(
+        id="hp_outpost_test",
+        slot="gun",
+        position=Vector3(0.0, 0.0, 40.0),
+        gimbal=90.0,
+        tracking_speed=180.0,
+    )
+    outpost_frame = ShipFrame(
+        id="test_outpost",
+        name="Test Outpost",
+        role="Outpost",
+        size="Outpost",
+        stats=ShipStats.from_dict({"power_points": 500.0, "power_recovery_per_sec": 50.0}),
+        slots=ShipSlotLayout.from_dict({"weapons": {"guns": 1}}),
+        hardpoints=[hardpoint],
+    )
+    outpost = Ship(outpost_frame, team="player")
+    outpost.mounts[0].weapon_id = pd_weapon.id
+
+    enemy = Ship(make_frame("enemy_ship"), team="cylon")
+
+    outpost.kinematics.position = Vector3(0.0, 0.0, 0.0)
+    enemy.kinematics.position = Vector3(0.0, 0.0, 400.0)
+
+    world.add_ship(outpost)
+    world.add_ship(enemy)
+
+    initial_hull = enemy.hull
+
+    world.update(0.1)
+
+    mount = outpost.mounts[0]
+    assert enemy.hull < initial_hull
+    assert mount.cooldown > 0.0
+    assert mount.effect_type == "point_defense"
+    assert mount.effect_timer > 0.0
