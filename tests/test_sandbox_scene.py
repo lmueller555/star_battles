@@ -31,27 +31,6 @@ def _make_scene() -> SandboxScene:
     return SandboxScene(None)
 
 
-class _StubHUD:
-    def __init__(self) -> None:
-        self._surface_size = (0, 0)
-
-    def set_surface(self, surface) -> None:  # pragma: no cover - simple stub
-        if surface:
-            self._surface_size = surface.get_size()
-        else:
-            self._surface_size = (0, 0)
-
-    def draw(self, *args, **kwargs) -> None:  # pragma: no cover - simple stub
-        pass
-
-    def draw_cursor_indicator(self, *args, **kwargs) -> None:  # pragma: no cover - simple stub
-        pass
-
-    @property
-    def surface_size(self) -> tuple[int, int]:
-        return self._surface_size
-
-
 def test_surface_mouse_pos_handles_scaled_display(monkeypatch):
     scene = _make_scene()
     surface = _DummySurface((1280, 720), pygame.SCALED)
@@ -84,7 +63,7 @@ def test_sandbox_scene_initializes_strike_npcs(monkeypatch):
     monkeypatch.setattr(pygame.mouse, "set_visible", lambda *_: None)
     monkeypatch.setattr(pygame.mouse, "get_pos", lambda: (0, 0))
     monkeypatch.setattr(pygame.event, "set_grab", lambda *_: None)
-    monkeypatch.setattr(sandbox_module, "HUD", lambda *_: _StubHUD())
+    monkeypatch.setattr(sandbox_module, "HUD", lambda *_: object())
     monkeypatch.setattr(sandbox_module, "VectorRenderer", lambda *_: object())
     monkeypatch.setattr(sandbox_module, "SectorMapView", lambda *_: object())
     monkeypatch.setattr(sandbox_module, "ShipInfoPanel", lambda *_: object())
@@ -121,7 +100,7 @@ def test_strike_npcs_mirror_player_loadout(monkeypatch):
     monkeypatch.setattr(pygame.mouse, "set_visible", lambda *_: None)
     monkeypatch.setattr(pygame.mouse, "get_pos", lambda: (0, 0))
     monkeypatch.setattr(pygame.event, "set_grab", lambda *_: None)
-    monkeypatch.setattr(sandbox_module, "HUD", lambda *_: _StubHUD())
+    monkeypatch.setattr(sandbox_module, "HUD", lambda *_: object())
     monkeypatch.setattr(sandbox_module, "VectorRenderer", lambda *_: object())
     monkeypatch.setattr(sandbox_module, "SectorMapView", lambda *_: object())
     monkeypatch.setattr(sandbox_module, "ShipInfoPanel", lambda *_: object())
