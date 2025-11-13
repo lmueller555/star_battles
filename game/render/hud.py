@@ -93,6 +93,10 @@ class WeaponSlotHUDState:
     label: str
     active: bool
     ready: bool
+    slot_type: str
+    weapon_class: str
+    facing: str
+    relative_position: tuple[float, float]
 
 
 class HUD:
@@ -162,7 +166,7 @@ class HUD:
         if not display_slots:
             return
         surface_width, surface_height = self.surface.get_size()
-        panel_size = 140
+        panel_size = 150
         bottom_margin = 180
         x = max(20, surface_width - panel_size - 20)
         y = max(12, surface_height - panel_size - bottom_margin)
@@ -193,43 +197,95 @@ class HUD:
             1,
         )
 
-        def layout(count: int) -> list[tuple[float, float]]:
-            offsets: list[tuple[float, float]] = []
-            if count <= 0:
-                return offsets
-            front_y = 0.18
-            row_spacing = 0.2
-            remaining = count
-            if count % 2 == 1:
-                offsets.append((0.0, front_y))
-                remaining -= 1
-            row_index = 0
-            while remaining > 0:
-                y_offset = front_y + row_index * row_spacing
-                x_offset = 0.3 + 0.06 * row_index
-                offsets.append((-x_offset, y_offset))
-                if len(offsets) >= count:
-                    break
-                offsets.append((x_offset, y_offset))
-                remaining -= 2
-                row_index += 1
-            return offsets[:count]
-
-        offsets = layout(len(display_slots))
         usable_height = rect.height - 64
         base_y = rect.top + 28
+        half_height = usable_height * 0.5
         max_radius = rect.width * 0.32
-        circle_radius = 9
+        body_center = Vector2(rect.centerx, base_y + half_height)
+        circle_radius = 11
         active_fill = (255, 210, 120)
         inactive_fill = (26, 36, 52)
         active_border = (255, 220, 160)
         ready_border = (150, 210, 240)
         cooldown_border = (110, 120, 140)
+        icon_palette = {
+            "hitscan": (220, 230, 250),
+            "projectile": (255, 210, 150),
+            "missile": (170, 240, 220),
+            "beam": (210, 190, 255),
+        }
+        facing_vectors = {
+            "forward": Vector2(0.0, -1.0),
+            "front": Vector2(0.0, -1.0),
+            "rear": Vector2(0.0, 1.0),
+            "back": Vector2(0.0, 1.0),
+            "left": Vector2(-1.0, 0.0),
+            "right": Vector2(1.0, 0.0),
+        }
 
-        for slot, (offset_x, offset_y) in zip(display_slots, offsets):
+        def _scale_color(color: tuple[int, int, int], factor: float) -> tuple[int, int, int]:
+            return tuple(max(0, min(255, int(channel * factor))) for channel in color)
+
+        def _draw_icon(center: tuple[int, int], slot: WeaponSlotHUDState) -> None:
+            base_color = icon_palette.get(slot.weapon_class, (210, 220, 235))
+            if slot.active:
+                icon_color = tuple(min(255, int(c * 1.1 + 20)) for c in base_color)
+            elif not slot.ready:
+                icon_color = _scale_color(base_color, 0.6)
+            else:
+                icon_color = base_color
+            accent = _scale_color(icon_color, 0.55)
+            r = circle_radius - 3
+            if r <= 1:
+                return
+            cx, cy = center
+            if slot.weapon_class == "missile" or slot.slot_type in {"launcher", "missile"}:
+                top = (cx, cy - r + 2)
+                left = (cx - r + 3, cy + r - 2)
+                right = (cx + r - 3, cy + r - 2)
+                pygame.draw.polygon(self.surface, icon_color, [top, left, right])
+                pygame.draw.polygon(self.surface, accent, [top, left, right], 2)
+                fin_left = (cx - r + 4, cy + r - 6)
+                fin_right = (cx + r - 4, cy + r - 6)
+                pygame.draw.line(self.surface, accent, fin_left, (fin_left[0], fin_left[1] + 4), 2)
+                pygame.draw.line(self.surface, accent, fin_right, (fin_right[0], fin_right[1] + 4), 2)
+            elif slot.weapon_class == "beam":
+                start = (cx, cy - r)
+                end = (cx, cy + r)
+                pygame.draw.line(self.surface, icon_color, start, end, 4)
+                pygame.draw.line(self.surface, accent, (cx - 4, cy), (cx + 4, cy), 2)
+            elif slot.weapon_class == "projectile":
+                pygame.draw.circle(self.surface, icon_color, (cx, cy), r)
+                pygame.draw.circle(self.surface, accent, (cx, cy), r, 2)
+            else:
+                for offset in (-4, 0, 4):
+                    start = (cx + offset, cy - r)
+                    end = (cx + offset, cy + r)
+                    pygame.draw.line(self.surface, icon_color, start, end, 2)
+                muzzle = (cx, cy + r)
+                pygame.draw.circle(self.surface, accent, muzzle, 2)
+
+        for slot in display_slots:
+            offset_x, offset_z = slot.relative_position
             px = rect.centerx + offset_x * max_radius
-            py = base_y + offset_y * usable_height
-            center = (int(px), int(py))
+            py = body_center.y - offset_z * half_height
+            anchor = Vector2(px, py)
+            direction = anchor - body_center
+            facing = facing_vectors.get(slot.facing)
+            if facing is not None:
+                direction += facing * 0.4
+            if direction.length_squared() <= 1e-4:
+                direction = facing or Vector2(0.0, -1.0)
+            try:
+                direction = direction.normalize()
+            except ValueError:
+                direction = Vector2(0.0, -1.0)
+            indicator_offset = circle_radius + 6
+            indicator = anchor + direction * indicator_offset
+            center = (
+                int(max(rect.left + circle_radius + 1, min(rect.right - circle_radius - 1, indicator.x))),
+                int(max(rect.top + circle_radius + 1, min(rect.bottom - circle_radius - 1, indicator.y))),
+            )
             if slot.active:
                 pygame.draw.circle(self.surface, active_fill, center, circle_radius)
                 pygame.draw.circle(self.surface, active_border, center, circle_radius, 2)
@@ -237,6 +293,7 @@ class HUD:
                 pygame.draw.circle(self.surface, inactive_fill, center, circle_radius)
                 border_color = ready_border if slot.ready else cooldown_border
                 pygame.draw.circle(self.surface, border_color, center, circle_radius, 2)
+            _draw_icon(center, slot)
             if slot.active:
                 label_color = (255, 225, 170)
             elif slot.ready:
@@ -245,7 +302,18 @@ class HUD:
                 label_color = (140, 160, 180)
             label = self.font.render(slot.label, True, label_color)
             label_rect = label.get_rect()
-            label_rect.center = (center[0], center[1] + circle_radius + 12)
+            dx = direction.x
+            dy = direction.y
+            if abs(dy) >= abs(dx):
+                if dy < 0.0:
+                    label_rect.midtop = (center[0], center[1] + circle_radius + 6)
+                else:
+                    label_rect.midbottom = (center[0], center[1] - circle_radius - 6)
+            else:
+                if dx < 0.0:
+                    label_rect.midleft = (center[0] + circle_radius + 6, center[1])
+                else:
+                    label_rect.midright = (center[0] - circle_radius - 6, center[1])
             self.surface.blit(label, label_rect)
 
     def draw_cursor_indicator(self, position: Vector2 | tuple[float, float], visible: bool) -> None:

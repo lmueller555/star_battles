@@ -1109,10 +1109,28 @@ class SandboxScene(Scene):
         if not self.player or not self.content or not self.input:
             return []
         self._refresh_weapon_slots_if_needed()
+        mounts_with_weapons: list[WeaponMount] = []
+        for slot in self.weapon_slots:
+            mount = slot.mount
+            if mount.weapon_id and getattr(mount, "hardpoint", None):
+                mounts_with_weapons.append(mount)
+        if not mounts_with_weapons:
+            return []
+        xs = [float(mount.hardpoint.position.x) for mount in mounts_with_weapons]
+        zs = [float(mount.hardpoint.position.z) for mount in mounts_with_weapons]
+        min_x = min(xs)
+        max_x = max(xs)
+        min_z = min(zs)
+        max_z = max(zs)
+        center_x = (min_x + max_x) * 0.5
+        center_z = (min_z + max_z) * 0.5
+        half_width = max((max_x - min_x) * 0.5, 0.5)
+        half_depth = max((max_z - min_z) * 0.5, 0.5)
         states: list[WeaponSlotHUDState] = []
         for slot in self.weapon_slots:
             mount = slot.mount
-            if not mount.weapon_id:
+            hardpoint = getattr(mount, "hardpoint", None)
+            if not mount.weapon_id or not hardpoint:
                 continue
             try:
                 weapon = self.content.weapons.get(mount.weapon_id)
@@ -1120,11 +1138,20 @@ class SandboxScene(Scene):
                 continue
             active = slot.active
             ready = mount.cooldown <= 0.0 and self.player.power >= weapon.power_cost
+            pos = hardpoint.position
+            x_norm = (float(pos.x) - center_x) / half_width if half_width > 1e-3 else 0.0
+            z_norm = (float(pos.z) - center_z) / half_depth if half_depth > 1e-3 else 0.0
+            x_norm = max(-1.0, min(1.0, x_norm))
+            z_norm = max(-1.0, min(1.0, z_norm))
             states.append(
                 WeaponSlotHUDState(
                     label=slot.label,
                     active=active,
                     ready=ready,
+                    slot_type=str(weapon.slot_type),
+                    weapon_class=str(weapon.wclass),
+                    facing=str(getattr(hardpoint, "facing", "forward")),
+                    relative_position=(x_norm, z_norm),
                 )
             )
         return states
