@@ -24,7 +24,8 @@ GRID_MAJOR_COLOR = (34, 52, 72)
 SHIP_COLOR = (120, 220, 255)
 ENEMY_COLOR = (255, 80, 100)
 PROJECTILE_COLOR = (255, 200, 80)
-MISSILE_COLOR = (255, 140, 60)
+MISSILE_COLOR = (255, 255, 255)
+MISSILE_SMOKE_COLOR = (200, 200, 200)
 PROJECTILE_RENDER_DISTANCE = 3000.0
 PROJECTILE_RENDER_DISTANCE_SQR = PROJECTILE_RENDER_DISTANCE * PROJECTILE_RENDER_DISTANCE
 
@@ -2302,10 +2303,36 @@ class VectorRenderer:
                 projectile.position - camera.position
             ).length_squared() > PROJECTILE_RENDER_DISTANCE_SQR:
                 continue
-            color = MISSILE_COLOR if projectile.weapon.wclass == "missile" else PROJECTILE_COLOR
+            is_missile = projectile.weapon.wclass == "missile"
+            color = MISSILE_COLOR if is_missile else PROJECTILE_COLOR
             screen_pos, visible = camera.project(projectile.position, self.surface.get_size())
-            if visible:
-                pygame.draw.circle(self.surface, color, (int(screen_pos.x), int(screen_pos.y)), 3, 1)
+            if not visible:
+                continue
+            if is_missile:
+                trail_points = list(projectile.trail_positions)
+                trail_length = len(trail_points)
+                if trail_length:
+                    for index, point in enumerate(trail_points):
+                        smoke_pos, smoke_visible = camera.project(point, self.surface.get_size())
+                        if not smoke_visible:
+                            continue
+                        age = index / max(1, trail_length - 1)
+                        shade = int(round(180 + (MISSILE_SMOKE_COLOR[0] - 180) * (1.0 - age)))
+                        radius = max(1, int(round(4 - age * 3)))
+                        pygame.draw.circle(
+                            self.surface,
+                            (shade, shade, shade),
+                            (int(smoke_pos.x), int(smoke_pos.y)),
+                            radius,
+                            0,
+                        )
+            pygame.draw.circle(
+                self.surface,
+                color,
+                (int(screen_pos.x), int(screen_pos.y)),
+                3,
+                0 if is_missile else 1,
+            )
 
 
 __all__ = ["VectorRenderer"]

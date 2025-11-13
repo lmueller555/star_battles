@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import json
+from collections import deque
 from dataclasses import dataclass
 from math import radians
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, TYPE_CHECKING
+from typing import Deque, Dict, Iterable, List, Optional, TYPE_CHECKING
 
 from pygame.math import Vector3
 
@@ -87,7 +88,7 @@ class WeaponData:
 
     @classmethod
     def from_dict(cls, data: Dict) -> "WeaponData":
-        return cls(
+        weapon = cls(
             id=data["id"],
             name=data.get("name", data["id"]),
             slot_type=data.get("slotType", "cannon"),
@@ -105,6 +106,9 @@ class WeaponData:
             reload=float(data.get("reload", 0.0)),
             gimbal=float(data.get("gimbal", 20.0)),
         )
+        if weapon.wclass == "missile":
+            weapon.projectile_speed = 130.0
+        return weapon
 
     @property
     def cooldown(self) -> float:
@@ -206,10 +210,19 @@ class Projectile:
         self.lock_strength = 1.0
         self.visual_only = visual_only
         self.source_ship = source_ship
+        self._trail_positions: Deque[Vector3] = deque(maxlen=60)
+        self._trail_timer = 0.0
+        if self.weapon.wclass == "missile":
+            self._trail_positions.append(self.position.copy())
 
     def update(self, dt: float, logger: Optional[ChannelLogger] = None) -> None:
         self.position += self.velocity * dt
         self.ttl -= dt
+        if self.weapon.wclass == "missile":
+            self._trail_timer += dt
+            if self._trail_timer >= 0.03:
+                self._trail_timer = 0.0
+                self._trail_positions.append(self.position.copy())
         if logger and logger.enabled:
             logger.debug(
                 "Projectile update pos=%s vel=%s ttl=%.2f",
@@ -220,6 +233,10 @@ class Projectile:
 
     def alive(self) -> bool:
         return self.ttl > 0.0
+
+    @property
+    def trail_positions(self) -> Iterable[Vector3]:
+        return self._trail_positions
 
 
 __all__ = [
