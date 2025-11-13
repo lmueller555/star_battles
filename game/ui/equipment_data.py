@@ -730,7 +730,10 @@ EQUIPMENT_ITEMS: List[EquipmentDefinition] = [
             "boost_speed": 1.25,
         },
         upgrades=("max_speed", "boost_speed"),
-        description="Baseline speed booster enhancing cruise and sprint caps.",
+        description=(
+            "Baseline Strike-class engine upgrade granting flat cruise and boost "
+            "speed bonuses for better mobility without affecting handling."
+        ),
         tags=("speed", "cruise"),
     ),
     _module(
@@ -745,7 +748,10 @@ EQUIPMENT_ITEMS: List[EquipmentDefinition] = [
             "boost_speed": 2.5,
         },
         upgrades=("acceleration", "boost_speed"),
-        description="Acceleration shunts for rapid hit-and-run manoeuvres.",
+        description=(
+            "Strike-class engine module boosting acceleration and boost speed, "
+            "ideal for hit-and-run bursts and quick disengages."
+        ),
         tags=("acceleration", "boost"),
     ),
     _module(
@@ -760,7 +766,10 @@ EQUIPMENT_ITEMS: List[EquipmentDefinition] = [
             "turn_accel": 2.5,
         },
         upgrades=("turn_rate", "turn_accel"),
-        description="Gyro package sharpening rotational response for dogfights.",
+        description=(
+            "Strike maneuvering gyro that raises turn speed and turn acceleration "
+            "to sharpen agility in close engagements."
+        ),
         tags=("maneuvering",),
     ),
     _module(
@@ -774,7 +783,10 @@ EQUIPMENT_ITEMS: List[EquipmentDefinition] = [
             "avoidance_rating": 15.0,
         },
         upgrades=("avoidance_rating",),
-        description="RCS redirectors boosting raw avoidance against incoming fire.",
+        description=(
+            "Strike RCS ducting focused on avoidance so the ship shrugs off "
+            "direct-fire attacks without changing its speed profile."
+        ),
         tags=("defensive", "agility"),
     ),
     _module(
@@ -789,7 +801,10 @@ EQUIPMENT_ITEMS: List[EquipmentDefinition] = [
             "boost_speed_percent": 4.0,
         },
         upgrades=("max_speed_percent", "boost_speed_percent"),
-        description="Raven-only turbo charger granting percentage speed boosts.",
+        description=(
+            "Raven Mk VI-R exclusive turbo charger increasing base and boost "
+            "speeds by percentage for markedly quicker flanking runs."
+        ),
         tags=("speed", "exclusive:raven_mk_vi_r"),
     ),
     _module(
@@ -804,7 +819,10 @@ EQUIPMENT_ITEMS: List[EquipmentDefinition] = [
             "turn_accel_percent": 10.0,
         },
         upgrades=("turn_rate_percent", "turn_accel_percent"),
-        description="Raven-exclusive gyro suite multiplying turn performance.",
+        description=(
+            "Advanced Raven gyro system multiplying turn speed and turn "
+            "acceleration for razor-sharp tracking."
+        ),
         tags=("maneuvering", "exclusive:raven_mk_vi_r"),
     ),
     _module(
@@ -819,7 +837,10 @@ EQUIPMENT_ITEMS: List[EquipmentDefinition] = [
             "strafe_speed_percent": 15.0,
         },
         upgrades=("turn_rate_percent", "strafe_speed_percent"),
-        description="Raven-only thruster kit adding turn rate and strafe authority.",
+        description=(
+            "Specialized Raven RCS thrusters boosting turn rate and lateral "
+            "strafe capability for aggressive maneuvering."
+        ),
         tags=("maneuvering", "exclusive:raven_mk_vi_r"),
     ),
     _module(
@@ -835,7 +856,10 @@ EQUIPMENT_ITEMS: List[EquipmentDefinition] = [
             "boost_cost_percent": 25.0,
         },
         upgrades=("boost_speed_percent", "acceleration_percent"),
-        description="High-end Raven booster trading efficiency for raw burst acceleration.",
+        description=(
+            "High-end Raven booster trading efficiency for substantially higher "
+            "acceleration and boost speed."
+        ),
         tags=("boost", "exclusive:raven_mk_vi_r"),
     ),
     _module(
@@ -850,7 +874,10 @@ EQUIPMENT_ITEMS: List[EquipmentDefinition] = [
             "boost_speed_percent": -2.5,
         },
         upgrades=("avoidance_percent",),
-        description="Raven-only defensive kit trading sprint speed for avoidance.",
+        description=(
+            "Raven defensive RCS package raising avoidance at the cost of raw "
+            "boost speed, suiting evasive builds."
+        ),
         tags=("defensive", "exclusive:raven_mk_vi_r"),
     ),
     _module(
@@ -869,7 +896,10 @@ EQUIPMENT_ITEMS: List[EquipmentDefinition] = [
             "power": 60.0,
         },
         upgrades=("duration",),
-        description="Rhino-exclusive active overdrive massively increasing boost output.",
+        description=(
+            "Rhino-exclusive active overdrive that floods the engines for a short "
+            "boost surge while greatly increasing energy cost."
+        ),
         tags=("active", "exclusive:rhino"),
     ),
     # Escort-class weapons -------------------------------------------------
