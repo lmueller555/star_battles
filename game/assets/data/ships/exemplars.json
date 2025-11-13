@@ -546,7 +546,7 @@
       "weapons": {
         "hp_viper3_port": "mec_a8",
         "hp_viper3_starboard": "mec_a8p",
-        "hp_viper3_center": "mel_v1"
+        "hp_viper3_center": "mel_w9"
       }
     },
     "role_bonuses": [],
@@ -803,7 +803,7 @@
       "weapons": {
         "hp_raven_port": "mec_a6p",
         "hp_raven_starboard": "mec_a8p",
-        "hp_raven_missile": "mel_v1"
+        "hp_raven_missile": "mel_w9"
       }
     },
     "role_bonuses": [
