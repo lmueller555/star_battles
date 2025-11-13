@@ -1504,7 +1504,7 @@
           0.5,
           14.0
         ],
-        "gimbal": 25,
+        "gimbal": 35,
         "tracking_speed": 120,
         "group": "primary"
       },
@@ -1516,7 +1516,7 @@
           0.3,
           6.0
         ],
-        "gimbal": 35,
+        "gimbal": 180,
         "tracking_speed": 110,
         "group": "primary"
       },
@@ -1528,7 +1528,7 @@
           0.3,
           6.0
         ],
-        "gimbal": 35,
+        "gimbal": 180,
         "tracking_speed": 110,
         "group": "primary"
       },
@@ -1552,7 +1552,7 @@
           -0.8,
           3.0
         ],
-        "gimbal": 32,
+        "gimbal": 180,
         "tracking_speed": 120,
         "group": "aux"
       },
@@ -1564,7 +1564,7 @@
           -0.8,
           3.0
         ],
-        "gimbal": 32,
+        "gimbal": 120,
         "tracking_speed": 120,
         "group": "aux"
       },
@@ -1576,7 +1576,7 @@
           1.2,
           -1.0
         ],
-        "gimbal": 60,
+        "gimbal": 180,
         "tracking_speed": 200,
         "group": "defense"
       },
@@ -1588,7 +1588,7 @@
           1.2,
           -1.0
         ],
-        "gimbal": 60,
+        "gimbal": 180,
         "tracking_speed": 200,
         "group": "defense"
       },
@@ -1600,7 +1600,7 @@
           2.6,
           -1.5
         ],
-        "gimbal": 75,
+        "gimbal": 180,
         "tracking_speed": 220,
         "group": "defense"
       },
@@ -1612,7 +1612,7 @@
           -2.6,
           -1.5
         ],
-        "gimbal": 75,
+        "gimbal": 180,
         "tracking_speed": 220,
         "group": "defense"
       }
@@ -1783,7 +1783,7 @@
           -50.0,
           -260.0
         ],
-        "gimbal": 30,
+        "gimbal": 180,
         "tracking_speed": 24,
         "group": "aux"
       },
@@ -1795,7 +1795,7 @@
           -50.0,
           -260.0
         ],
-        "gimbal": 30,
+        "gimbal": 180,
         "tracking_speed": 24,
         "group": "aux"
       },
@@ -1807,7 +1807,7 @@
           -42.0,
           60.0
         ],
-        "gimbal": 70,
+        "gimbal": 180,
         "tracking_speed": 180,
         "group": "aux"
       },
@@ -1819,7 +1819,7 @@
           -42.0,
           60.0
         ],
-        "gimbal": 70,
+        "gimbal": 180,
         "tracking_speed": 180,
         "group": "aux"
       },
@@ -1831,7 +1831,7 @@
           38.0,
           200.0
         ],
-        "gimbal": 75,
+        "gimbal": 180,
         "tracking_speed": 180,
         "group": "defense"
       },
@@ -1843,7 +1843,7 @@
           38.0,
           200.0
         ],
-        "gimbal": 75,
+        "gimbal": 180,
         "tracking_speed": 180,
         "group": "defense"
       }
