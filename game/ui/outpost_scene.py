@@ -87,8 +87,6 @@ class OutpostInteriorScene(Scene):
         self._interior_view: Optional[FirstPersonInteriorView] = None
         self._ship_embedder: Optional[ShipWireEmbed] = None
         self._cursor_locked = False
-        self._gl_context = None
-        self._vector_renderer: Optional[VectorRenderer] = None
 
     def _build_starfield(self) -> None:
         rng = random.Random(20240217)
@@ -122,8 +120,6 @@ class OutpostInteriorScene(Scene):
         self._loading_in_started = False
         self._loading_out_started = False
         self._suspended_world_state = None
-        self._gl_context = kwargs.get("gl_context")
-        self._vector_renderer = None
         surface = pygame.display.get_surface()
         if surface:
             self.viewport_size = (float(surface.get_width()), float(surface.get_height()))
@@ -276,11 +272,7 @@ class OutpostInteriorScene(Scene):
 
     def _render_docking_cutscene(self, surface: pygame.Surface) -> None:
         width, height = surface.get_size()
-        if self._vector_renderer is None:
-            self._vector_renderer = VectorRenderer(surface, self._gl_context)
-        else:
-            self._vector_renderer.surface = surface
-        renderer = self._vector_renderer
+        renderer = VectorRenderer(surface)
         renderer.clear()
 
         if self.cutscene_camera and self.player:
