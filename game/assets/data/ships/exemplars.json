@@ -1486,7 +1486,7 @@
     },
     "slots": {
       "weapons": {
-        "guns": 4,
+        "guns": 9,
         "launcher": 2,
         "defensive": 4,
         "special": 4
@@ -1498,52 +1498,121 @@
     },
     "hardpoints": [
       {
-        "id": "hp_brimir_bow",
+        "id": "hp_brimir_forward_center",
         "slot": "gun",
         "position": [
           0.0,
-          0.5,
-          14.0
+          0.6,
+          13.5
         ],
         "gimbal": 35,
         "tracking_speed": 120,
-        "group": "primary"
+        "group": "primary",
+        "facing": "forward"
       },
       {
-        "id": "hp_brimir_port",
+        "id": "hp_brimir_forward_port",
         "slot": "gun",
         "position": [
-          -4.8,
-          0.3,
-          6.0
+          -2.8,
+          0.5,
+          12.8
         ],
-        "gimbal": 180,
+        "gimbal": 32,
+        "tracking_speed": 115,
+        "group": "primary",
+        "facing": "forward"
+      },
+      {
+        "id": "hp_brimir_forward_starboard",
+        "slot": "gun",
+        "position": [
+          2.8,
+          0.5,
+          12.8
+        ],
+        "gimbal": 32,
+        "tracking_speed": 115,
+        "group": "primary",
+        "facing": "forward"
+      },
+      {
+        "id": "hp_brimir_port_fore",
+        "slot": "gun",
+        "position": [
+          -5.4,
+          0.4,
+          8.5
+        ],
+        "gimbal": 55,
         "tracking_speed": 110,
-        "group": "primary"
+        "group": "primary",
+        "facing": "left"
       },
       {
-        "id": "hp_brimir_starboard",
+        "id": "hp_brimir_port_mid",
         "slot": "gun",
         "position": [
-          4.8,
+          -5.8,
           0.3,
-          6.0
+          4.2
         ],
-        "gimbal": 180,
-        "tracking_speed": 110,
-        "group": "primary"
+        "gimbal": 55,
+        "tracking_speed": 105,
+        "group": "primary",
+        "facing": "left"
       },
       {
-        "id": "hp_brimir_dorsal",
+        "id": "hp_brimir_port_aft",
         "slot": "gun",
         "position": [
-          0.0,
-          2.2,
-          4.0
+          -5.2,
+          0.2,
+          0.2
         ],
-        "gimbal": 45,
-        "tracking_speed": 100,
-        "group": "primary"
+        "gimbal": 55,
+        "tracking_speed": 105,
+        "group": "primary",
+        "facing": "left"
+      },
+      {
+        "id": "hp_brimir_starboard_fore",
+        "slot": "gun",
+        "position": [
+          5.4,
+          0.4,
+          8.5
+        ],
+        "gimbal": 55,
+        "tracking_speed": 110,
+        "group": "primary",
+        "facing": "right"
+      },
+      {
+        "id": "hp_brimir_starboard_mid",
+        "slot": "gun",
+        "position": [
+          5.8,
+          0.3,
+          4.2
+        ],
+        "gimbal": 55,
+        "tracking_speed": 105,
+        "group": "primary",
+        "facing": "right"
+      },
+      {
+        "id": "hp_brimir_starboard_aft",
+        "slot": "gun",
+        "position": [
+          5.2,
+          0.2,
+          0.2
+        ],
+        "gimbal": 55,
+        "tracking_speed": 105,
+        "group": "primary",
+        "facing": "right"
       },
       {
         "id": "hp_brimir_launcher_port",
@@ -1688,10 +1757,15 @@
         ]
       },
       "weapons": {
-        "hp_brimir_bow": "hag_mk16a",
-        "hp_brimir_port": "m_39f",
-        "hp_brimir_starboard": "m_39f",
-        "hp_brimir_dorsal": "m_37a",
+        "hp_brimir_forward_center": "hag_mk16a",
+        "hp_brimir_forward_port": "m_37a",
+        "hp_brimir_forward_starboard": "m_37a",
+        "hp_brimir_port_fore": "m_39f",
+        "hp_brimir_port_mid": "m_39f",
+        "hp_brimir_port_aft": "m_39f",
+        "hp_brimir_starboard_fore": "m_39f",
+        "hp_brimir_starboard_mid": "m_39f",
+        "hp_brimir_starboard_aft": "m_39f",
         "hp_brimir_launcher_port": "ram_179a",
         "hp_brimir_launcher_starboard": "rgm_48",
         "hp_brimir_pd_port": "pd_x30p",
