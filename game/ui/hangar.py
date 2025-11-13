@@ -939,7 +939,8 @@ class HangarView:
         fill = (34, 52, 70, 230) if selected or hovered else (22, 34, 46, 210)
         border = (140, 210, 255) if selected else (72, 110, 148)
         self._blit_panel(surface, rect, fill, border, 1)
-        icon = self._slot_icons.get(card.item.slot_family)
+        icon_key = self._store_icon_key(card.item)
+        icon = self._slot_icons.get(icon_key) or self._slot_icons.get(card.item.slot_family)
         name_color = (220, 240, 255)
         title = self.small_font.render(card.item.name, True, name_color)
         surface.blit(title, (rect.x + 16, rect.y + 12))
@@ -1396,7 +1397,7 @@ class HangarView:
                 continue
             store_item = CATALOG.get(item_id)
             if store_item:
-                icon_key = store_item.slot_family
+                icon_key = self._store_icon_key(store_item)
                 items.append(
                     _HoldItem(
                         key=item_id,
@@ -1577,7 +1578,7 @@ class HangarView:
         store_item = self._store_item_for_slot(widget)
         if not store_item:
             return
-        icon_key = store_item.slot_family.lower()
+        icon_key = self._store_icon_key(store_item)
         if icon_key not in self._hold_icons:
             icon_key = "module"
         location = "module"
@@ -2784,12 +2785,23 @@ class HangarView:
         pygame.draw.polygon(engine, (70, 110, 160), [(16, 10), (32, 18), (28, 30), (12, 22)], 2)
         icons["engine"] = engine
 
-        weapon = surface()
-        pygame.draw.circle(weapon, (200, 210, 220), (24, 24), 14)
-        pygame.draw.circle(weapon, (90, 110, 140), (24, 24), 14, 3)
-        pygame.draw.line(weapon, (220, 90, 90), (12, 24), (36, 24), 3)
-        pygame.draw.line(weapon, (220, 90, 90), (24, 12), (24, 36), 3)
-        icons["weapon"] = weapon
+        cannon = surface()
+        pygame.draw.rect(cannon, (196, 208, 220), pygame.Rect(10, 20, 28, 12))
+        pygame.draw.rect(cannon, (82, 104, 132), pygame.Rect(10, 20, 28, 12), 3)
+        pygame.draw.circle(cannon, (82, 104, 132), (36, 26), 6)
+        pygame.draw.line(cannon, (220, 124, 96), (12, 16), (30, 16), 3)
+        icons["weapon_cannon"] = cannon
+
+        missile = surface()
+        body = [(24, 10), (34, 20), (34, 28), (24, 38), (14, 28), (14, 20)]
+        pygame.draw.polygon(missile, (204, 224, 244), body)
+        pygame.draw.polygon(missile, (92, 120, 150), body, 3)
+        fins = [(14, 24), (8, 30), (14, 32)]
+        pygame.draw.polygon(missile, (220, 124, 96), fins)
+        pygame.draw.polygon(missile, (220, 124, 96), [(34, 24), (40, 30), (34, 32)])
+        icons["weapon_missile"] = missile
+
+        icons["weapon"] = cannon
 
         utility = surface()
         pygame.draw.circle(utility, (220, 180, 90), (20, 20), 6)
@@ -2824,6 +2836,15 @@ class HangarView:
 
         return icons
 
+    def _store_icon_key(self, store_item: StoreItem) -> str:
+        base_key = store_item.slot_family.lower()
+        if base_key == "weapon":
+            tags = {tag.lower() for tag in store_item.tags}
+            if any(("missile" in tag) or ("rocket" in tag) or ("launcher" in tag) for tag in tags):
+                return "weapon_missile"
+            return "weapon_cannon"
+        return base_key
+
     def _create_slot_icons(self) -> Dict[str, pygame.Surface]:
         def base_surface() -> pygame.Surface:
             surf = pygame.Surface((32, 32), pygame.SRCALPHA)
@@ -2833,22 +2854,31 @@ class HangarView:
 
         icons: Dict[str, pygame.Surface] = {}
 
-        weapon = base_surface()
-        pygame.draw.circle(weapon, (220, 90, 90), (16, 16), 7)
-        pygame.draw.circle(weapon, (60, 16, 16), (16, 16), 7, 2)
-        pygame.draw.line(weapon, (220, 200, 200), (16, 4), (16, 28), 2)
-        pygame.draw.line(weapon, (220, 200, 200), (4, 16), (28, 16), 2)
-        icons["weapon"] = weapon
+        cannon = base_surface()
+        pygame.draw.rect(cannon, (212, 222, 234), pygame.Rect(8, 12, 16, 8))
+        pygame.draw.rect(cannon, (90, 116, 148), pygame.Rect(8, 12, 16, 8), 2)
+        pygame.draw.circle(cannon, (90, 116, 148), (22, 16), 4)
+        pygame.draw.line(cannon, (220, 140, 108), (10, 10), (18, 10), 2)
+        icons["weapon_cannon"] = cannon
+        icons["weapon"] = cannon
+
+        missile = base_surface()
+        body = [(16, 6), (22, 12), (22, 20), (16, 26), (10, 20), (10, 12)]
+        pygame.draw.polygon(missile, (210, 228, 246), body)
+        pygame.draw.polygon(missile, (88, 112, 142), body, 2)
+        pygame.draw.polygon(missile, (220, 140, 108), [(10, 14), (6, 18), (10, 20)])
+        pygame.draw.polygon(missile, (220, 140, 108), [(22, 14), (26, 18), (22, 20)])
+        icons["weapon_missile"] = missile
 
         hull = base_surface()
         pygame.draw.polygon(
             hull,
-            (210, 190, 120),
+            (168, 176, 186),
             [(16, 4), (26, 10), (26, 22), (16, 28), (6, 22), (6, 10)],
         )
         pygame.draw.polygon(
             hull,
-            (80, 70, 40),
+            (82, 90, 104),
             [(16, 6), (24, 11), (24, 21), (16, 26), (8, 21), (8, 11)],
             2,
         )
