@@ -4,7 +4,7 @@ from __future__ import annotations
 import math
 import random
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 import pygame
 from pygame.math import Vector2
@@ -1943,6 +1943,8 @@ class HangarView:
         return "Chance varies per step"
 
     def _format_stat_value(self, row: _StatRowDef, values: List[float]) -> str:
+        if len(values) > 1 and all(abs(v - values[0]) < 1e-4 for v in values[1:]):
+            values = [values[0]]
         if len(values) == 1:
             text = self._format_number(values[0], row.precision)
         else:
@@ -2491,6 +2493,40 @@ class HangarView:
             return slot in {"guns", "gun"}
         return False
 
+    def _wrap_text(self, text: str, font: pygame.font.Font, max_width: int) -> List[str]:
+        if not text:
+            return []
+        words = text.split()
+        if not words:
+            return []
+        lines: List[str] = []
+        current = words[0]
+        for word in words[1:]:
+            candidate = f"{current} {word}"
+            if font.size(candidate)[0] <= max_width or not current:
+                current = candidate
+            else:
+                lines.append(current)
+                current = word
+        if current:
+            lines.append(current)
+        return lines
+
+    def _compute_weapon_dps(self, stats: Dict[str, float]) -> Optional[float]:
+        if "damage_per_second" in stats:
+            return float(stats["damage_per_second"])
+        if "reload" not in stats or stats["reload"] <= 0.0:
+            return None
+        if "damage_min" not in stats and "damage_max" not in stats:
+            return None
+        damage_min = float(stats.get("damage_min", stats.get("damage_max", 0.0)))
+        damage_max = float(stats.get("damage_max", damage_min))
+        burst = float(stats.get("burst_count", 1.0))
+        burst = max(burst, 1.0)
+        average_damage = (damage_min + damage_max) / 2.0
+        reload_time = max(float(stats.get("reload", 0.0)), 1e-6)
+        return (average_damage * burst) / reload_time
+
     def _weapon_detail(self, mount: WeaponMount) -> str:
         if not mount.weapon_id:
             return "Empty"
@@ -2719,39 +2755,159 @@ class HangarView:
     def _draw_tooltip(self, surface: pygame.Surface, widget: _SlotDisplay, mouse_pos: tuple[int, int]) -> None:
         self._tooltip_buttons = []
 
-        text_lines: List[str] = []
-        header = widget.label
-        if header:
-            text_lines.append(header)
-        if widget.filled and widget.detail:
-            text_lines.append(widget.detail)
-        else:
-            text_lines.append("Empty")
-
-        font = self.small_font
-        padding = 12
-        spacing = 6
+        padding = 16
+        line_spacing = 4
+        section_spacing = 10
+        label_value_spacing = 12
         button_height = 28
-        button_padding_top = 10
+        button_padding_top = 14
         button_spacing = 6
-        text_surfaces = [font.render(line, True, (220, 236, 250)) for line in text_lines]
-        text_width = max((surf.get_width() for surf in text_surfaces), default=0)
-        width = max(120, text_width + padding * 2)
+
+        primary_color = (236, 244, 255)
+        subheader_color = (186, 210, 232)
+        info_color = (178, 202, 226)
+        text_color = (210, 230, 244)
+        upgrade_label_color = (136, 196, 255)
+        upgrade_value_color = (196, 224, 255)
+
+        sections: List[tuple[str, List]] = []
+        header_surfaces: List[pygame.Surface] = []
+        info_surfaces: List[pygame.Surface] = []
+        description_surfaces: List[pygame.Surface] = []
+        stats_surfaces: List[tuple[pygame.Surface, pygame.Surface]] = []
+        stats_label_width = 0
+
+        store_item = self._store_item_for_slot(widget) if widget.filled else None
+        upgrade_axes: Set[str] = set(store_item.upgrades) if store_item else set()
+
+        if store_item:
+            slot_label = widget.slot_type.replace("_", " ").upper()
+            family_label = store_item.slot_family.upper()
+            header_surfaces.append(self.small_font.render(store_item.name, True, primary_color))
+            header_surfaces.append(
+                self.mini_font.render(f"{family_label} • {slot_label} SLOT", True, subheader_color)
+            )
+            class_text = f"SHIP CLASS: {store_item.ship_class.upper()}    LEVEL: {store_item.level}"
+            header_surfaces.append(self.mini_font.render(class_text, True, subheader_color))
+            dps = self._compute_weapon_dps(store_item.stats) if store_item.slot_family == "weapon" else None
+            if dps is not None:
+                header_surfaces.append(
+                    self.mini_font.render(f"DPS: {dps:.1f}", True, upgrade_value_color)
+                )
+        else:
+            header_text = widget.label or "Slot"
+            header_surfaces.append(self.small_font.render(header_text, True, primary_color))
+            detail_text = widget.detail if widget.detail else "Empty"
+            header_surfaces.append(self.small_font.render(detail_text, True, subheader_color))
+
+        if header_surfaces:
+            sections.append(("lines", header_surfaces))
+
+        if store_item:
+            rows = self._stat_rows_for_slot(store_item.slot_family)
+            stats = store_item.stats
+            for row in rows:
+                values: List[float] = []
+                for key in row.keys:
+                    if key == "durability":
+                        values.append(float(store_item.durability))
+                    elif key in stats:
+                        values.append(float(stats[key]))
+                if not values:
+                    continue
+                value_text = self._format_stat_value(row, values)
+                if row.label == "Damage" and "burst_count" in stats and stats["burst_count"] > 1.0:
+                    burst = int(stats["burst_count"])
+                    value_text = f"{value_text} (×{burst} burst)"
+                label_is_upgrade = False
+                if row.axis and row.axis in upgrade_axes:
+                    label_is_upgrade = True
+                elif any(key in upgrade_axes for key in row.keys):
+                    label_is_upgrade = True
+                label_text = f"{row.label}{' ▲' if label_is_upgrade else ''}:"
+                label_color = upgrade_label_color if label_is_upgrade else text_color
+                value_color = upgrade_value_color if label_is_upgrade else primary_color
+                label_surface = self.mini_font.render(label_text, True, label_color)
+                value_surface = self.mini_font.render(value_text, True, value_color)
+                stats_surfaces.append((label_surface, value_surface))
+            if stats_surfaces:
+                stats_label_width = max((surf.get_width() for surf, _ in stats_surfaces), default=0)
+                sections.append(("stats", stats_surfaces))
+
+            if widget.label:
+                info_surfaces.append(
+                    self.mini_font.render(f"Slot: {widget.label}", True, info_color)
+                )
+            info_surfaces.append(
+                self.mini_font.render(f"Cost: {store_item.price:,.0f} cubits", True, info_color)
+            )
+            durability_text = f"Durability: {store_item.durability:,}/{store_item.durability_max:,}"
+            info_surfaces.append(self.mini_font.render(durability_text, True, info_color))
+            if store_item.upgrades:
+                upgrade_labels: List[str] = []
+                for axis in store_item.upgrades:
+                    label = None
+                    for row in rows:
+                        if row.axis == axis or axis in row.keys:
+                            label = row.label
+                            break
+                    if not label:
+                        label = axis.replace("_", " ").title()
+                    upgrade_labels.append(label)
+                upgrade_line = "Upgrades: " + ", ".join(dict.fromkeys(upgrade_labels))
+                info_surfaces.append(self.mini_font.render(upgrade_line, True, upgrade_value_color))
+            if store_item.tags:
+                traits = ", ".join(tag.replace("_", " ").title() for tag in store_item.tags)
+                info_surfaces.append(self.mini_font.render(f"Traits: {traits}", True, info_color))
+            if info_surfaces:
+                sections.append(("lines", info_surfaces))
+
+            wrapped = self._wrap_text(store_item.description, self.mini_font, 360)
+            if wrapped:
+                description_surfaces.append(self.mini_font.render("Effect:", True, subheader_color))
+                for line in wrapped:
+                    description_surfaces.append(self.mini_font.render(line, True, primary_color))
+                sections.append(("lines", description_surfaces))
+
+        width = 220
+        height = padding * 2
+
+        for index, (section_type, items) in enumerate(sections):
+            if not items:
+                continue
+            if index > 0:
+                height += section_spacing
+            if section_type == "lines":
+                max_width = 0
+                for i, surf in enumerate(items):
+                    max_width = max(max_width, surf.get_width())
+                    height += surf.get_height()
+                    if i < len(items) - 1:
+                        height += line_spacing
+                width = max(width, max_width + padding * 2)
+            elif section_type == "stats":
+                value_max_width = max((surf.get_width() for _, surf in items), default=0)
+                stats_width = stats_label_width + label_value_spacing + value_max_width
+                width = max(width, stats_width + padding * 2)
+                for i, (label_surf, value_surf) in enumerate(items):
+                    row_height = max(label_surf.get_height(), value_surf.get_height())
+                    height += row_height
+                    if i < len(items) - 1:
+                        height += line_spacing
 
         buttons: List[tuple[str, bool, str]] = []
         upgrade_enabled = False
         if widget.filled:
-            store_item = self._store_item_for_slot(widget)
             if store_item:
                 upgrade_enabled = bool(EQUIPMENT_UPGRADE_SPECS.get(store_item.id))
             buttons.append(("Upgrade", upgrade_enabled, "upgrade"))
         can_unequip = bool(widget.filled and self._current_ship and self._current_ship.can_store_in_hold())
         buttons.append(("Unequip", can_unequip, "unequip"))
 
-        height = padding * 2 + sum(surf.get_height() for surf in text_surfaces)
-        height += spacing * (len(text_surfaces) - 1 if text_surfaces else 0)
+        if sections and buttons:
+            height += button_padding_top
         if buttons:
-            height += button_padding_top + button_height * len(buttons)
+            height += button_height * len(buttons)
             if len(buttons) > 1:
                 height += button_spacing * (len(buttons) - 1)
 
@@ -2769,10 +2925,33 @@ class HangarView:
         self._blit_panel(surface, tooltip_rect, (16, 24, 32, 230), (90, 140, 180))
 
         cursor_y = tooltip_rect.y + padding
-        for surf in text_surfaces:
-            surface.blit(surf, (tooltip_rect.x + padding, cursor_y))
-            cursor_y += surf.get_height() + spacing
-        cursor_y -= spacing
+        for index, (section_type, items) in enumerate(sections):
+            if not items:
+                continue
+            if index > 0:
+                cursor_y += section_spacing
+            if section_type == "lines":
+                for i, surf in enumerate(items):
+                    surface.blit(surf, (tooltip_rect.x + padding, cursor_y))
+                    cursor_y += surf.get_height()
+                    if i < len(items) - 1:
+                        cursor_y += line_spacing
+            elif section_type == "stats":
+                for i, (label_surf, value_surf) in enumerate(items):
+                    row_height = max(label_surf.get_height(), value_surf.get_height())
+                    label_y = cursor_y + (row_height - label_surf.get_height()) // 2
+                    value_y = cursor_y + (row_height - value_surf.get_height()) // 2
+                    surface.blit(label_surf, (tooltip_rect.x + padding, label_y))
+                    surface.blit(
+                        value_surf,
+                        (
+                            tooltip_rect.x + padding + stats_label_width + label_value_spacing,
+                            value_y,
+                        ),
+                    )
+                    cursor_y += row_height
+                    if i < len(items) - 1:
+                        cursor_y += line_spacing
 
         last_button_rect: Optional[pygame.Rect] = None
         for index, (label, enabled, action) in enumerate(buttons):
