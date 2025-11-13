@@ -61,7 +61,7 @@ def _ship_length(ship: Ship) -> float:
 def _ship_follow_distance(ship: Ship) -> float:
     """Calculate the desired chase distance for the provided ship."""
 
-    return max(12.0, _ship_length(ship) * 2.0 + 12.0)
+    return max(12.0, _ship_length(ship) * 1.5 + 16.0)
 
 
 @dataclass
