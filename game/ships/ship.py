@@ -16,6 +16,18 @@ from game.engine.frame_clock import current_frame
 from game.engine.telemetry import record_basis_hit, record_basis_miss
 
 
+_PERCENT_STAT_TARGETS = {
+    "max_speed_percent": "max_speed",
+    "boost_speed_percent": "boost_speed",
+    "acceleration_percent": "acceleration",
+    "turn_rate_percent": "turn_rate",
+    "turn_accel_percent": "turn_accel",
+    "strafe_speed_percent": "strafe_speed",
+    "boost_cost_percent": "boost_cost",
+    "avoidance_percent": "avoidance_rating",
+}
+
+
 if TYPE_CHECKING:
     from game.assets.content import ContentManager
 
@@ -215,6 +227,14 @@ class Ship:
                 continue
             if hasattr(stats, key):
                 setattr(stats, key, getattr(stats, key) + bonus)
+
+        for percent_key, target in _PERCENT_STAT_TARGETS.items():
+            percent = self._module_stat_cache.get(percent_key, 0.0)
+            if abs(percent) <= 1e-6:
+                continue
+            base_value = float(getattr(self.base_stats, target, 0.0))
+            current_value = float(getattr(stats, target, base_value))
+            setattr(stats, target, current_value + base_value * (percent / 100.0))
 
         # Avoidance is expressed both as a raw rating and a normalised 0-1 value.
         rating_bonus = self._module_stat_cache.get("avoidance_rating", 0.0)

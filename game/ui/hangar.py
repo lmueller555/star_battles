@@ -110,6 +110,32 @@ class _UpgradeDialog:
     flash_timer: float = 0.0
     flash_axes: Tuple[str, ...] = ()
     row_rects: List[Tuple[pygame.Rect, _StatRowDef]] = field(default_factory=list)
+    active_axes: Set[str] = field(default_factory=set)
+
+
+PERCENT_KEY_ALIASES: Dict[str, Tuple[str, str]] = {
+    "max_speed": ("max_speed_percent", "%"),
+    "boost_speed": ("boost_speed_percent", "%"),
+    "acceleration": ("acceleration_percent", "%"),
+    "turn_rate": ("turn_rate_percent", "%"),
+    "turn_accel": ("turn_accel_percent", "%"),
+    "strafe_speed": ("strafe_speed_percent", "%"),
+    "avoidance_rating": ("avoidance_percent", "%"),
+    "boost_cost": ("boost_cost_percent", "%"),
+}
+
+PERCENT_AXIS_ALIASES: Dict[str, str] = {
+    "max_speed": "max_speed_percent",
+    "boost_speed": "boost_speed_percent",
+    "acceleration": "acceleration_percent",
+    "turn_rate": "turn_rate_percent",
+    "turn_accel": "turn_accel_percent",
+    "strafe_speed": "strafe_speed_percent",
+    "boost_cost": "boost_cost_percent",
+    "avoidance": "avoidance_percent",
+}
+
+PERCENT_AXIS_REVERSE: Dict[str, str] = {alias: axis for axis, alias in PERCENT_AXIS_ALIASES.items()}
 
 
 STAT_TOOLTIPS: Dict[str, str] = {
@@ -131,6 +157,8 @@ STAT_TOOLTIPS: Dict[str, str] = {
     "max_speed": "Increase to sustained cruise speed.",
     "boost_speed": "Increase to boosted top speed.",
     "avoidance": "Improves chance to avoid incoming fire.",
+    "strafe_speed": "Increase to lateral thruster speed for strafing maneuvers.",
+    "boost_cost": "Energy consumed per second while boosting.",
 }
 
 
@@ -146,6 +174,16 @@ AXIS_KEYS: Dict[str, Tuple[str, ...]] = {
     "max_speed": ("max_speed",),
     "boost_speed": ("boost_speed",),
     "avoidance": ("avoidance_rating",),
+    "max_speed_percent": ("max_speed_percent",),
+    "boost_speed_percent": ("boost_speed_percent",),
+    "acceleration_percent": ("acceleration_percent",),
+    "turn_rate_percent": ("turn_rate_percent",),
+    "turn_accel_percent": ("turn_accel_percent",),
+    "strafe_speed": ("strafe_speed",),
+    "strafe_speed_percent": ("strafe_speed_percent",),
+    "boost_cost": ("boost_cost",),
+    "boost_cost_percent": ("boost_cost_percent",),
+    "avoidance_percent": ("avoidance_percent",),
 }
 
 
@@ -196,8 +234,10 @@ ENGINE_ROWS: Tuple[_StatRowDef, ...] = (
     _StatRowDef("Speed", ("max_speed",), "m/s", 2, axis="max_speed", tooltip=STAT_TOOLTIPS["max_speed"]),
     _StatRowDef("Boost Speed", ("boost_speed",), "m/s", 2, axis="boost_speed", tooltip=STAT_TOOLTIPS["boost_speed"]),
     _StatRowDef("Acceleration", ("acceleration",), "m/s²", 2, axis="acceleration", tooltip=STAT_TOOLTIPS["acceleration"]),
+    _StatRowDef("Strafe Speed", ("strafe_speed",), "m/s", 2, axis="strafe_speed", tooltip=STAT_TOOLTIPS["strafe_speed"]),
     _StatRowDef("Turn Speed", ("turn_rate",), "deg/s", 2, axis="turn_rate", tooltip=STAT_TOOLTIPS["turn_rate"]),
     _StatRowDef("Turn Accel", ("turn_accel",), "deg/s²", 2, axis="turn_accel", tooltip=STAT_TOOLTIPS["turn_accel"]),
+    _StatRowDef("Boost Cost", ("boost_cost",), "power", 1, axis="boost_cost", tooltip=STAT_TOOLTIPS["boost_cost"]),
     _StatRowDef("Avoidance", ("avoidance_rating",), "points", 1, axis="avoidance", tooltip=STAT_TOOLTIPS["avoidance"]),
     _StatRowDef("Durability", ("durability",), "points", 0, tooltip=STAT_TOOLTIPS["durability"]),
 )
@@ -372,6 +412,43 @@ class HangarView:
         """Update the target surface when the display size changes."""
 
         self.surface = surface
+
+    def _resolve_upgrade_key(
+        self, spec: EquipmentUpgradeSpec, key: str
+    ) -> Tuple[str, Optional[str]]:
+        alias = PERCENT_KEY_ALIASES.get(key)
+        if alias:
+            alias_key, units = alias
+            if alias_key in spec.curves:
+                return alias_key, units
+        return key, None
+
+    def _resolve_stat_key_from_mapping(
+        self, mapping: Dict[str, object], key: str
+    ) -> Tuple[str, Optional[str]]:
+        alias = PERCENT_KEY_ALIASES.get(key)
+        if alias:
+            alias_key, units = alias
+            if alias_key in mapping:
+                return alias_key, units
+        return key, None
+
+    def _expanded_axes(self, axes: Iterable[str]) -> Set[str]:
+        expanded: Set[str] = set(axes)
+        for base, alias in PERCENT_AXIS_ALIASES.items():
+            if alias in axes:
+                expanded.add(base)
+            if base in axes:
+                expanded.add(alias)
+        return expanded
+
+    def _axis_is_active(self, axis: Optional[str], active_axes: Set[str]) -> bool:
+        if not axis:
+            return False
+        return axis in active_axes
+
+    def _axis_for_display(self, axis: str) -> str:
+        return PERCENT_AXIS_REVERSE.get(axis, axis)
 
     def handle_event(self, event: pygame.event.Event) -> bool:
         """Allow ribbon selection via mouse input."""
@@ -1771,17 +1848,23 @@ class HangarView:
             current_values: List[float] = []
             preview_values: List[float] = []
             preview_known = True
+            units_override: Optional[str] = None
             for key in row.keys:
-                current_value, _ = model.stat_value(key, model.current_level)
-                preview_value, known = model.stat_value(key, model.preview_level)
+                actual_key, alias_units = self._resolve_upgrade_key(dialog.spec, key)
+                if alias_units:
+                    units_override = alias_units
+                current_value, _ = model.stat_value(actual_key, model.current_level)
+                preview_value, known = model.stat_value(actual_key, model.preview_level)
                 current_values.append(current_value)
                 preview_values.append(preview_value)
                 preview_known = preview_known and known
             differences = [pv - cv for pv, cv in zip(preview_values, current_values)]
-            axis_active = bool(row.axis and row.axis in dialog.spec.upgrade_axes)
-            current_text = self._format_stat_value(row, current_values)
-            preview_text = self._format_stat_value(row, preview_values)
-            delta_text, delta_color = self._format_delta_text(row, differences, preview_known, axis_active)
+            axis_active = self._axis_is_active(row.axis, dialog.active_axes)
+            current_text = self._format_stat_value(row, current_values, units_override)
+            preview_text = self._format_stat_value(row, preview_values, units_override)
+            delta_text, delta_color = self._format_delta_text(
+                row, differences, preview_known, axis_active, units_override
+            )
             if not preview_known and axis_active:
                 preview_text += " ?"
 
@@ -2003,7 +2086,9 @@ class HangarView:
             return f"Chance: {chance:.0f}% per step"
         return "Chance varies per step"
 
-    def _format_stat_value(self, row: _StatRowDef, values: List[float]) -> str:
+    def _format_stat_value(
+        self, row: _StatRowDef, values: List[float], units_override: Optional[str] = None
+    ) -> str:
         if len(values) > 1 and all(abs(v - values[0]) < 1e-4 for v in values[1:]):
             values = [values[0]]
         if len(values) == 1:
@@ -2011,7 +2096,8 @@ class HangarView:
         else:
             formatted = [self._format_number(v, row.precision) for v in values]
             text = "–".join(formatted)
-        return f"{text} {row.units}"
+        units = units_override if units_override is not None else row.units
+        return f"{text} {units}"
 
     def _format_delta_text(
         self,
@@ -2019,6 +2105,7 @@ class HangarView:
         differences: List[float],
         preview_known: bool,
         axis_active: bool,
+        units_override: Optional[str] = None,
     ) -> Tuple[str, Tuple[int, int, int]]:
         if not axis_active:
             return "—", (120, 140, 160)
@@ -2036,7 +2123,8 @@ class HangarView:
             color = (130, 210, 160)
         else:
             color = (220, 140, 140)
-        return f"{text} {row.units}", color
+        units = units_override if units_override is not None else row.units
+        return f"{text} {units}", color
 
     def _format_number(self, value: float, precision: int) -> str:
         fmt = f"{{:,.{precision}f}}"
@@ -2063,13 +2151,20 @@ class HangarView:
         rows = self._stat_rows_for_slot(dialog.spec.slot)
         labels: List[str] = []
         for row in rows:
-            if not row.axis or row.axis not in dialog.spec.upgrade_axes:
+            if not row.axis:
                 continue
-            keys = AXIS_KEYS.get(row.axis, row.keys)
+            target_axis = row.axis
+            if target_axis not in dialog.spec.upgrade_axes:
+                alias_axis = PERCENT_AXIS_ALIASES.get(target_axis)
+                if not alias_axis or alias_axis not in dialog.spec.upgrade_axes:
+                    continue
+                target_axis = alias_axis
+            keys = AXIS_KEYS.get(target_axis, AXIS_KEYS.get(row.axis, row.keys))
             diffs: List[str] = []
             for key in keys:
-                prev_value, prev_known = dialog.model.stat_value(key, previous)
-                new_value, new_known = dialog.model.stat_value(key, new_level)
+                actual_key, _ = self._resolve_upgrade_key(dialog.spec, key)
+                prev_value, prev_known = dialog.model.stat_value(actual_key, previous)
+                new_value, new_known = dialog.model.stat_value(actual_key, new_level)
                 if prev_known and new_known:
                     diffs.append(self._format_delta(new_value - prev_value, row.precision))
             if diffs:
@@ -2207,12 +2302,14 @@ class HangarView:
             player_resources=self._resource_snapshot(ship),
             player_skills=dict(self._player_skills),
         )
+        active_axes = self._expanded_axes(spec.upgrade_axes)
         dialog = _UpgradeDialog(
             item=item,
             store_item=item.store_item,
             spec=spec,
             model=model,
-            flash_axes=spec.upgrade_axes,
+            flash_axes=tuple(active_axes),
+            active_axes=active_axes,
         )
         self._upgrade_dialog = dialog
         self._sell_dialog = None
@@ -2869,21 +2966,30 @@ class HangarView:
             stats = store_item.stats
             for row in rows:
                 values: List[float] = []
+                resolved_keys: List[str] = []
+                units_override: Optional[str] = None
                 for key in row.keys:
                     if key == "durability":
                         values.append(float(store_item.durability))
-                    elif key in stats:
-                        values.append(float(stats[key]))
+                        resolved_keys.append(key)
+                        continue
+                    actual_key, alias_units = self._resolve_stat_key_from_mapping(stats, key)
+                    if alias_units:
+                        units_override = alias_units
+                    if actual_key in stats:
+                        values.append(float(stats[actual_key]))
+                        resolved_keys.append(actual_key)
                 if not values:
                     continue
-                value_text = self._format_stat_value(row, values)
+                value_text = self._format_stat_value(row, values, units_override)
                 if row.label == "Damage" and "burst_count" in stats and stats["burst_count"] > 1.0:
                     burst = int(stats["burst_count"])
                     value_text = f"{value_text} (×{burst} burst)"
                 label_is_upgrade = False
-                if row.axis and row.axis in upgrade_axes:
+                axis_alias = PERCENT_AXIS_ALIASES.get(row.axis) if row.axis else None
+                if row.axis and (row.axis in upgrade_axes or (axis_alias and axis_alias in upgrade_axes)):
                     label_is_upgrade = True
-                elif any(key in upgrade_axes for key in row.keys):
+                elif any(key in upgrade_axes for key in resolved_keys):
                     label_is_upgrade = True
                 label_text = f"{row.label}{' ▲' if label_is_upgrade else ''}:"
                 label_color = upgrade_label_color if label_is_upgrade else text_color
@@ -2907,13 +3013,21 @@ class HangarView:
             if store_item.upgrades:
                 upgrade_labels: List[str] = []
                 for axis in store_item.upgrades:
+                    lookup_axis = self._axis_for_display(axis)
                     label = None
                     for row in rows:
-                        if row.axis == axis or axis in row.keys:
+                        axis_alias = PERCENT_AXIS_ALIASES.get(row.axis) if row.axis else None
+                        if row.axis == axis or row.axis == lookup_axis:
+                            label = row.label
+                            break
+                        if axis in row.keys or lookup_axis in row.keys:
+                            label = row.label
+                            break
+                        if axis_alias and axis_alias == axis:
                             label = row.label
                             break
                     if not label:
-                        label = axis.replace("_", " ").title()
+                        label = lookup_axis.replace("_", " ").title()
                     upgrade_labels.append(label)
                 upgrade_line = "Upgrades: " + ", ".join(dict.fromkeys(upgrade_labels))
                 info_surfaces.append(self.mini_font.render(upgrade_line, True, upgrade_value_color))
