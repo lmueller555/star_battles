@@ -1,15 +1,25 @@
-"""Vector renderer built on pygame."""
+"""Vector renderer accelerated by OpenGL."""
 from __future__ import annotations
 
+from array import array
 from dataclasses import dataclass
 from math import ceil, floor
+import ctypes
 import logging
 import math
 import random
-from typing import Dict, Iterable, List, Sequence, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 import pygame
 from pygame.math import Vector3
+
+try:  # pragma: no cover - import guard for optional dependency
+    from OpenGL import GL as gl  # type: ignore
+except ImportError as _gl_error:  # pragma: no cover
+    gl = None  # type: ignore
+    _GL_IMPORT_ERROR = _gl_error
+else:  # pragma: no cover
+    _GL_IMPORT_ERROR = None
 
 from game.combat.weapons import Projectile
 from game.render.camera import CameraFrameData, ChaseCamera, DEFAULT_SHIP_LENGTHS
@@ -28,6 +38,15 @@ MISSILE_COLOR = (255, 255, 255)
 MISSILE_SMOKE_COLOR = (200, 200, 200)
 PROJECTILE_RENDER_DISTANCE = 3000.0
 PROJECTILE_RENDER_DISTANCE_SQR = PROJECTILE_RENDER_DISTANCE * PROJECTILE_RENDER_DISTANCE
+
+
+def _require_gl() -> None:
+    if gl is None:  # pragma: no cover - exercised when dependency missing
+        message = "PyOpenGL is required to use the GPU renderer"
+        if _GL_IMPORT_ERROR is not None:
+            raise RuntimeError(message) from _GL_IMPORT_ERROR
+        raise RuntimeError(message)
+
 
 # Engine layout presets by ship size. These are expressed using the same
 # lightweight local-space units as the wireframe definitions and roughly align
@@ -2026,544 +2045,379 @@ WIREFRAMES = {
 SHIP_GEOMETRY_CACHE = _build_ship_geometry_cache()
 
 
-class VectorRenderer:
-    def __init__(self, surface: pygame.Surface) -> None:
-        self.surface = surface
-        self._rng = random.Random()
-        self._ship_geometry_cache: Dict[str, ShipGeometry] = dict(SHIP_GEOMETRY_CACHE)
-        self._vertex_cache: Dict[int, ProjectedVertexCache] = {}
-        self._frame_counters = TelemetryCounters()
-        self._telemetry_accum = TelemetryCounters()
-        self._frame_active = False
-        self._last_report_ms = pygame.time.get_ticks()
-        self._telemetry_interval_ms = 2500
-        self._current_camera_frame: CameraFrameData | None = None
 
-    def _flush_frame_counters(self) -> None:
-        if (
-            self._frame_counters.objects_total
-            or self._frame_counters.vertices_projected_total
-        ):
-            self._telemetry_accum.accumulate(self._frame_counters)
-        now = pygame.time.get_ticks()
-        if (
-            now - self._last_report_ms >= self._telemetry_interval_ms
-            and (
-                self._telemetry_accum.objects_total
-                or self._telemetry_accum.vertices_projected_total
-            )
-        ):
-            avg_vertices = self._telemetry_accum.average_vertices()
-            LOGGER.info(
-                "Render telemetry: total=%d culled_frustum=%d culled_viewport=%d "
-                "drawn_line=%d drawn_aaline=%d avg_vertices=%.2f",
-                self._telemetry_accum.objects_total,
-                self._telemetry_accum.objects_culled_frustum,
-                self._telemetry_accum.objects_culled_viewport,
-                self._telemetry_accum.objects_drawn_line,
-                self._telemetry_accum.objects_drawn_aaline,
-                avg_vertices,
-            )
-            self._telemetry_accum.reset()
-            self._last_report_ms = now
-        self._frame_counters.reset()
+LINE_VERTEX_SHADER = """
+#version 330 core
+layout(location = 0) in vec3 a_position;
+uniform mat4 u_projection;
+uniform mat4 u_view;
+uniform mat4 u_model;
+void main() {
+    gl_Position = u_projection * u_view * u_model * vec4(a_position, 1.0);
+}
+"""
 
-    def _start_frame(self) -> None:
-        if self._frame_active:
-            self._flush_frame_counters()
+LINE_FRAGMENT_SHADER = """
+#version 330 core
+uniform vec4 u_color;
+out vec4 fragColor;
+void main() {
+    fragColor = u_color;
+}
+"""
+
+UI_VERTEX_SHADER = """
+#version 330 core
+layout(location = 0) in vec2 a_position;
+layout(location = 1) in vec2 a_texcoord;
+out vec2 v_texcoord;
+void main() {
+    v_texcoord = a_texcoord;
+    gl_Position = vec4(a_position, 0.0, 1.0);
+}
+"""
+
+UI_FRAGMENT_SHADER = """
+#version 330 core
+in vec2 v_texcoord;
+uniform sampler2D u_texture;
+out vec4 fragColor;
+void main() {
+    fragColor = texture(u_texture, v_texcoord);
+}
+"""
+
+
+def _compile_shader(source: str, shader_type: int) -> int:
+    _require_gl()
+    shader = gl.glCreateShader(shader_type)
+    gl.glShaderSource(shader, source)
+    gl.glCompileShader(shader)
+    status = gl.glGetShaderiv(shader, gl.GL_COMPILE_STATUS)
+    if not status:
+        info = gl.glGetShaderInfoLog(shader).decode('utf-8', errors='ignore')
+        gl.glDeleteShader(shader)
+        raise RuntimeError(f'Failed to compile shader: {info}')
+    return shader
+
+
+def _create_program(vertex_source: str, fragment_source: str) -> int:
+    _require_gl()
+    program = gl.glCreateProgram()
+    vertex = _compile_shader(vertex_source, gl.GL_VERTEX_SHADER)
+    fragment = _compile_shader(fragment_source, gl.GL_FRAGMENT_SHADER)
+    gl.glAttachShader(program, vertex)
+    gl.glAttachShader(program, fragment)
+    gl.glLinkProgram(program)
+    status = gl.glGetProgramiv(program, gl.GL_LINK_STATUS)
+    if not status:
+        info = gl.glGetProgramInfoLog(program).decode('utf-8', errors='ignore')
+        gl.glDeleteProgram(program)
+        raise RuntimeError(f'Failed to link program: {info}')
+    gl.glDeleteShader(vertex)
+    gl.glDeleteShader(fragment)
+    return program
+
+
+def _color_to_vec4(color: tuple[int, int, int], alpha: float = 1.0) -> list[float]:
+    return [color[0] / 255.0, color[1] / 255.0, color[2] / 255.0, alpha]
+
+
+def _flatten_matrix(rows: Sequence[Sequence[float]]) -> list[float]:
+    return [
+        rows[0][0], rows[1][0], rows[2][0], rows[3][0],
+        rows[0][1], rows[1][1], rows[2][1], rows[3][1],
+        rows[0][2], rows[1][2], rows[2][2], rows[3][2],
+        rows[0][3], rows[1][3], rows[2][3], rows[3][3],
+    ]
+
+
+def _projection_matrix(frame: CameraFrameData) -> list[float]:
+    aspect = frame.aspect if frame.aspect > 0 else 1.0
+    tan_half = frame.tan_half_fov if frame.tan_half_fov > 0 else 1.0
+    f = 1.0 / tan_half
+    near = frame.near if frame.near > 0 else 0.1
+    far = frame.far if frame.far > near else near + 1.0
+    rows = [
+        [f / aspect, 0.0, 0.0, 0.0],
+        [0.0, f, 0.0, 0.0],
+        [0.0, 0.0, (far + near) / (near - far), (2.0 * far * near) / (near - far)],
+        [0.0, 0.0, -1.0, 0.0],
+    ]
+    return _flatten_matrix(rows)
+
+
+def _view_matrix(frame: CameraFrameData) -> list[float]:
+    position = frame.position
+    right = Vector3(frame.right)
+    up = Vector3(frame.up)
+    forward = Vector3(frame.forward)
+    if right.length() > 1e-6:
+        right = right.normalize()
+    if up.length() > 1e-6:
+        up = up.normalize()
+    if forward.length() > 1e-6:
+        forward = forward.normalize()
+    rows = [
+        [right.x, right.y, right.z, -right.dot(position)],
+        [up.x, up.y, up.z, -up.dot(position)],
+        [-forward.x, -forward.y, -forward.z, forward.dot(position)],
+        [0.0, 0.0, 0.0, 1.0],
+    ]
+    return _flatten_matrix(rows)
+
+
+def _model_matrix(origin: Vector3, axes: tuple[Vector3, Vector3, Vector3], scale: float) -> list[float]:
+    right, up, forward = axes
+    rows = [
+        [right.x * scale, right.y * scale, right.z * scale, 0.0],
+        [up.x * scale, up.y * scale, up.z * scale, 0.0],
+        [forward.x * scale, forward.y * scale, forward.z * scale, 0.0],
+        [origin.x, origin.y, origin.z, 1.0],
+    ]
+    return _flatten_matrix(rows)
+
+
+def _identity_matrix() -> list[float]:
+    rows = [
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0],
+    ]
+    return _flatten_matrix(rows)
+
+
+@dataclass
+class _LineMesh:
+    vao: int
+    vbo: int
+    vertex_count: int
+
+    @classmethod
+    def from_segments(cls, vertices: Sequence[float], usage: Optional[int] = None) -> "_LineMesh":
+        _require_gl()
+        usage = gl.GL_STATIC_DRAW if usage is None else usage
+        if not vertices:
+            vao = gl.glGenVertexArrays(1)
+            vbo = gl.glGenBuffers(1)
+            gl.glBindVertexArray(vao)
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo)
+            gl.glBufferData(gl.GL_ARRAY_BUFFER, 0, None, usage)
+            gl.glEnableVertexAttribArray(0)
+            gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, False, 12, ctypes.c_void_p(0))
+            gl.glBindVertexArray(0)
+            return cls(vao, vbo, 0)
+        arr = array('f', vertices)
+        vao = gl.glGenVertexArrays(1)
+        vbo = gl.glGenBuffers(1)
+        gl.glBindVertexArray(vao)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo)
+        gl.glBufferData(gl.GL_ARRAY_BUFFER, len(arr) * arr.itemsize, arr, usage)
+        gl.glEnableVertexAttribArray(0)
+        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, False, 12, ctypes.c_void_p(0))
+        gl.glBindVertexArray(0)
+        return cls(vao, vbo, len(vertices) // 3)
+
+
+class _DynamicLineMesh:
+    def __init__(self) -> None:
+        _require_gl()
+        self.vao = gl.glGenVertexArrays(1)
+        self.vbo = gl.glGenBuffers(1)
+        gl.glBindVertexArray(self.vao)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo)
+        gl.glBufferData(gl.GL_ARRAY_BUFFER, 0, None, gl.GL_DYNAMIC_DRAW)
+        gl.glEnableVertexAttribArray(0)
+        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, False, 12, ctypes.c_void_p(0))
+        gl.glBindVertexArray(0)
+        self.vertex_count = 0
+
+    def update(self, vertices: Sequence[float]) -> None:
+        _require_gl()
+        arr = array('f', vertices)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo)
+        if arr:
+            gl.glBufferData(gl.GL_ARRAY_BUFFER, len(arr) * arr.itemsize, arr, gl.GL_DYNAMIC_DRAW)
+            self.vertex_count = len(arr) // 3
         else:
-            self._frame_counters.reset()
-        self._frame_active = True
-        self._current_camera_frame = None
+            gl.glBufferData(gl.GL_ARRAY_BUFFER, 0, None, gl.GL_DYNAMIC_DRAW)
+            self.vertex_count = 0
 
-    def _get_camera_frame(self, camera: ChaseCamera) -> CameraFrameData:
-        size = self.surface.get_size()
-        frame = camera.prepare_frame(size)
-        if (
-            self._current_camera_frame
-            and self._current_camera_frame.revision == frame.revision
-            and self._current_camera_frame.screen_size == frame.screen_size
-        ):
-            return self._current_camera_frame
-        self._current_camera_frame = frame
+
+class _LineProgram:
+    def __init__(self) -> None:
+        _require_gl()
+        self.program = _create_program(LINE_VERTEX_SHADER, LINE_FRAGMENT_SHADER)
+        self._u_projection = gl.glGetUniformLocation(self.program, 'u_projection')
+        self._u_view = gl.glGetUniformLocation(self.program, 'u_view')
+        self._u_model = gl.glGetUniformLocation(self.program, 'u_model')
+        self._u_color = gl.glGetUniformLocation(self.program, 'u_color')
+
+    def use(self) -> None:
+        _require_gl()
+        gl.glUseProgram(self.program)
+
+    def set_projection(self, matrix: Sequence[float]) -> None:
+        _require_gl()
+        gl.glUniformMatrix4fv(self._u_projection, 1, False, matrix)
+
+    def set_view(self, matrix: Sequence[float]) -> None:
+        _require_gl()
+        gl.glUniformMatrix4fv(self._u_view, 1, False, matrix)
+
+    def set_model(self, matrix: Sequence[float]) -> None:
+        _require_gl()
+        gl.glUniformMatrix4fv(self._u_model, 1, False, matrix)
+
+    def set_color(self, color: tuple[int, int, int], alpha: float = 1.0) -> None:
+        _require_gl()
+        vec = _color_to_vec4(color, alpha)
+        gl.glUniform4fv(self._u_color, 1, vec)
+
+
+class _QuadBlitter:
+    def __init__(self) -> None:
+        _require_gl()
+        self.program = _create_program(UI_VERTEX_SHADER, UI_FRAGMENT_SHADER)
+        self._u_texture = gl.glGetUniformLocation(self.program, 'u_texture')
+        vertices = array(
+            'f',
+            [
+                -1.0, -1.0, 0.0, 0.0,
+                1.0, -1.0, 1.0, 0.0,
+                1.0, 1.0, 1.0, 1.0,
+                -1.0, -1.0, 0.0, 0.0,
+                1.0, 1.0, 1.0, 1.0,
+                -1.0, 1.0, 0.0, 1.0,
+            ],
+        )
+        self.vao = gl.glGenVertexArrays(1)
+        self.vbo = gl.glGenBuffers(1)
+        gl.glBindVertexArray(self.vao)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo)
+        gl.glBufferData(gl.GL_ARRAY_BUFFER, len(vertices) * vertices.itemsize, vertices, gl.GL_STATIC_DRAW)
+        gl.glEnableVertexAttribArray(0)
+        gl.glVertexAttribPointer(0, 2, gl.GL_FLOAT, False, 16, ctypes.c_void_p(0))
+        gl.glEnableVertexAttribArray(1)
+        gl.glVertexAttribPointer(1, 2, gl.GL_FLOAT, False, 16, ctypes.c_void_p(8))
+        gl.glBindVertexArray(0)
+
+    def draw(self, texture: int) -> None:
+        _require_gl()
+        gl.glUseProgram(self.program)
+        gl.glUniform1i(self._u_texture, 0)
+        gl.glActiveTexture(gl.GL_TEXTURE0)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, texture)
+        gl.glBindVertexArray(self.vao)
+        gl.glDrawArrays(gl.GL_TRIANGLES, 0, 6)
+        gl.glBindVertexArray(0)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
+
+
+class VectorRenderer:
+    def __init__(self, surface: Optional[pygame.Surface]) -> None:
+        _require_gl()
+        self._surface: Optional[pygame.Surface] = None
+        self.surface = surface
+        self._line_program = _LineProgram()
+        self._quad_blitter = _QuadBlitter()
+        self._ui_texture = gl.glGenTextures(1)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, self._ui_texture)
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, gl.GL_CLAMP_TO_EDGE)
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_CLAMP_TO_EDGE)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
+        self._ui_size: tuple[int, int] = (0, 0)
+        self._ship_geometry_cache = dict(SHIP_GEOMETRY_CACHE)
+        self._ship_meshes: Dict[str, _LineMesh] = self._build_ship_meshes()
+        self._grid_mesh = _DynamicLineMesh()
+        self._temp_mesh = _DynamicLineMesh()
+        self._projectile_mesh = _DynamicLineMesh()
+        self._identity = _identity_matrix()
+        self._viewport_size: tuple[int, int] = (0, 0)
+
+    @property
+    def surface(self) -> Optional[pygame.Surface]:
+        return self._surface
+
+    @surface.setter
+    def surface(self, value: Optional[pygame.Surface]) -> None:
+        self._surface = value
+        if value is not None:
+            _require_gl()
+            width, height = value.get_size()
+            self._viewport_size = (int(width), int(height))
+            gl.glViewport(0, 0, self._viewport_size[0], self._viewport_size[1])
+
+    def _prepare_frame(self, camera: ChaseCamera) -> Optional[CameraFrameData]:
+        if not self._surface:
+            return None
+        _require_gl()
+        frame = camera.prepare_frame(self._surface.get_size())
+        projection = _projection_matrix(frame)
+        view = _view_matrix(frame)
+        self._line_program.use()
+        self._line_program.set_projection(projection)
+        self._line_program.set_view(view)
         return frame
 
-    def _evaluate_visibility(
+    def _draw_mesh(
         self,
-        state: RenderSpatialState,
-        frame: CameraFrameData,
-    ) -> tuple[bool, float, float]:
-        self._frame_counters.objects_total += 1
-        radius = max(0.0, state.radius)
-        rel = state.center - frame.position
-        distance = rel.length()
-        if not math.isfinite(distance):
-            distance = float("inf")
-        if distance - radius > frame.far:
-            self._frame_counters.objects_culled_frustum += 1
-            return False, distance, 0.0
-        z = rel.dot(frame.forward)
-        if z + radius < frame.near or z - radius > frame.far:
-            self._frame_counters.objects_culled_frustum += 1
-            return False, distance, z
-        x = rel.dot(frame.right)
-        y = rel.dot(frame.up)
-        horizontal_limit = z * frame.tan_half_fov * frame.aspect + radius
-        vertical_limit = z * frame.tan_half_fov + radius
-        if abs(x) > horizontal_limit + radius or abs(y) > vertical_limit + radius:
-            self._frame_counters.objects_culled_frustum += 1
-            return False, distance, z
-        if (
-            state.cached_camera_revision == frame.revision
-            and state.cached_screen_rect is not None
-        ):
-            width, height = frame.screen_size
-            if not _rect_intersects(state.cached_screen_rect, width, height):
-                self._frame_counters.objects_culled_viewport += 1
-                return False, distance, z
-        return True, distance, z
-
-    def _project_ship_vertices(
-        self,
-        ship: Ship,
-        geometry: ShipGeometry,
-        frame: CameraFrameData,
-        state: RenderSpatialState,
-        origin: Vector3,
-        basis: tuple[Vector3, Vector3, Vector3],
-        *,
-        scale: float,
-    ) -> tuple[List[tuple[float, float]], List[bool]]:
-        cache = self._vertex_cache.setdefault(id(ship), ProjectedVertexCache())
-        if (
-            cache.camera_revision == frame.revision
-            and cache.world_revision == state.world_revision
-        ):
-            return cache.vertices, cache.visibility
-        right, up, forward = basis
-        vertices_2d: List[tuple[float, float]] = []
-        visibility: List[bool] = []
-        min_x = float("inf")
-        max_x = float("-inf")
-        min_y = float("inf")
-        max_y = float("-inf")
-        for local in geometry.vertices:
-            scaled = Vector3(local) * scale
-            world = origin + right * scaled.x + up * scaled.y + forward * scaled.z
-            screen, visible = frame.project_point(world)
-            vertices_2d.append((screen.x, screen.y))
-            visibility.append(visible)
-            if visible:
-                min_x = min(min_x, screen.x)
-                max_x = max(max_x, screen.x)
-                min_y = min(min_y, screen.y)
-                max_y = max(max_y, screen.y)
-        cache.update(frame.revision, state.world_revision, vertices_2d, visibility)
-        if min_x <= max_x and min_y <= max_y:
-            state.cached_screen_rect = (min_x, min_y, max_x, max_y)
-            state.cached_camera_revision = frame.revision
-        else:
-            state.clear_cached_projection()
-        self._frame_counters.vertices_projected_total += len(geometry.vertices)
-        self._frame_counters.objects_projected += 1
-        return vertices_2d, visibility
-
-    @staticmethod
-    def _local_to_world(
-        origin: Vector3,
-        right: Vector3,
-        up: Vector3,
-        forward: Vector3,
-        local: Vector3,
-    ) -> Vector3:
-        return origin + right * local.x + up * local.y + forward * local.z
-
-    def _draw_speed_streaks(
-        self,
-        frame: CameraFrameData,
-        origin: Vector3,
-        right: Vector3,
-        up: Vector3,
-        forward: Vector3,
-        ship: Ship,
-        intensity: float,
-    ) -> None:
-        if intensity <= 0.0:
-            return
-
-        tick = pygame.time.get_ticks() * 0.001
-        velocity = ship.kinematics.velocity
-        direction = velocity.normalize() if velocity.length_squared() > 1e-3 else forward
-
-        streak_count = 6 + int(24 * intensity)
-        base_length = 1.6 + 2.4 * intensity
-        seed_phase = (ship.render_state.random_seed & 0xFFFF) * 0.001
-        for index in range(streak_count):
-            lateral = (
-                frame.right * self._rng.uniform(-6.0, 6.0)
-                + frame.up * self._rng.uniform(-3.5, 3.5)
-            )
-            forward_offset = direction * self._rng.uniform(-3.0, 6.0)
-            start_world = origin + lateral + forward_offset
-            end_world = start_world - direction * (
-                base_length + self._rng.uniform(0.0, base_length * 0.8)
-            )
-
-            start_screen, vis_start = frame.project_point(start_world)
-            end_screen, vis_end = frame.project_point(end_world)
-            if not (vis_start and vis_end):
-                continue
-
-            phase = tick * 3.0 + index * 0.37 + seed_phase
-            brightness = max(
-                0.0,
-                min(1.0, 0.18 + intensity * 0.6 + math.sin(phase) * 0.12),
-            )
-            streak_color = _blend(BACKGROUND, (210, 240, 255), brightness)
-            width = 1 if intensity < 0.55 else 2
-            pygame.draw.line(
-                self.surface,
-                streak_color,
-                (int(start_screen.x), int(start_screen.y)),
-                (int(end_screen.x), int(end_screen.y)),
-                width,
-            )
-
-    def _draw_hardpoints(
-        self,
-        frame: CameraFrameData,
-        origin: Vector3,
-        right: Vector3,
-        up: Vector3,
-        forward: Vector3,
-        ship: Ship,
+        mesh: _LineMesh,
         color: tuple[int, int, int],
-        *,
-        scale: float,
+        model: Sequence[float],
     ) -> None:
-        if not ship.mounts:
+        if mesh.vertex_count <= 0:
             return
+        _require_gl()
+        self._line_program.use()
+        self._line_program.set_model(model)
+        self._line_program.set_color(color)
+        gl.glBindVertexArray(mesh.vao)
+        gl.glDrawArrays(gl.GL_LINES, 0, mesh.vertex_count)
+        gl.glBindVertexArray(0)
 
-        for mount in ship.mounts:
-            local = Vector3(mount.hardpoint.position) * scale
-            base_world = self._local_to_world(origin, right, up, forward, local)
-            muzzle_world = base_world + forward * (0.9 * scale)
-            direction = ship.hardpoint_direction(mount.hardpoint)
-            debug_length = 12.0 * scale
-            debug_tip_world = base_world + direction * debug_length
-
-            base_screen, vis_base = frame.project_point(base_world)
-            muzzle_screen, vis_muzzle = frame.project_point(muzzle_world)
-            debug_screen, vis_debug = frame.project_point(debug_tip_world)
-            if not vis_base:
-                continue
-
-            armed = bool(mount.weapon_id)
-            base_color = _lighten(color, 0.25) if armed else _darken(color, 0.35)
-            muzzle_color = _lighten(color, 0.55) if armed else _darken(color, 0.15)
-            debug_color = _lighten(muzzle_color, 0.35)
-            radius = 3 if ship.frame.size == "Strike" else 4
-            pygame.draw.circle(
-                self.surface,
-                base_color,
-                (int(round(base_screen.x)), int(round(base_screen.y))),
-                radius,
-                0,
-            )
-            pygame.draw.circle(
-                self.surface,
-                _darken(base_color, 0.35),
-                (int(round(base_screen.x)), int(round(base_screen.y))),
-                max(1, radius - 2),
-                0,
-            )
-            if vis_muzzle:
-                pygame.draw.aaline(
-                    self.surface,
-                    muzzle_color,
-                    (base_screen.x, base_screen.y),
-                    (muzzle_screen.x, muzzle_screen.y),
-                    blend=1,
-                )
-            if vis_debug:
-                pygame.draw.aaline(
-                    self.surface,
-                    debug_color,
-                    (base_screen.x, base_screen.y),
-                    (debug_screen.x, debug_screen.y),
-                    blend=1,
-                )
-
-            self._draw_weapon_effect(
-                frame,
-                origin,
-                ship,
-                mount,
-                base_world,
-                muzzle_world,
-            )
-
-    def _draw_weapon_effect(
+    def _draw_dynamic(
         self,
-        frame: CameraFrameData,
-        origin: Vector3,
-        ship: Ship,
-        mount,
-        base_world: Vector3,
-        muzzle_world: Vector3,
-    ) -> None:
-        effect_type = getattr(mount, "effect_type", "")
-        timer = getattr(mount, "effect_timer", 0.0)
-        if not effect_type or timer <= 0.0:
-            return
-        if effect_type == "point_defense":
-            self._draw_point_defense_effect(
-                frame,
-                origin,
-                ship,
-                mount,
-                base_world,
-                muzzle_world,
-            )
-        elif effect_type == "flak":
-            self._draw_flak_effect(
-                frame,
-                origin,
-                ship,
-                mount,
-                base_world,
-            )
-
-    def _draw_point_defense_effect(
-        self,
-        frame: CameraFrameData,
-        origin: Vector3,
-        ship: Ship,
-        mount,
-        base_world: Vector3,
-        muzzle_world: Vector3,
-    ) -> None:
-        duration = getattr(mount, "effect_duration", 0.0) or 0.3
-        timer = getattr(mount, "effect_timer", 0.0)
-        intensity = max(0.0, min(1.0, timer / max(0.001, duration)))
-        if intensity <= 0.0:
-            return
-        effect_range = getattr(mount, "effect_range", 0.0)
-        if effect_range <= 0.0:
-            effect_range = 360.0
-        gimbal = getattr(mount, "effect_gimbal", 0.0)
-        if gimbal <= 0.0:
-            gimbal = getattr(getattr(mount, "hardpoint", None), "gimbal", 45.0)
-        base_dir = muzzle_world - base_world
-        origin_point = muzzle_world
-        if base_dir.length_squared() <= 1e-6:
-            origin_point = base_world
-            base_dir = base_world - origin
-        if base_dir.length_squared() <= 1e-6:
-            base_dir = ship.hardpoint_direction(getattr(mount, "hardpoint", None))
-        base_dir = base_dir.normalize()
-        rng = self._mount_rng(mount)
-        particle_count = max(6, int(18 + 26 * intensity))
-        steps = 6
-
-        def _travel_fraction(t: float) -> float:
-            if t <= 0.0:
-                return 0.0
-            if t >= 1.0:
-                return 1.0
-            if t <= 0.75:
-                return t
-            tail = (t - 0.75) / 0.25
-            tail = max(0.0, min(1.0, tail))
-            eased = 1.0 - (1.0 - tail) ** 3
-            return 0.75 + 0.25 * eased
-
-        for _ in range(particle_count):
-            direction = self._sample_direction_in_cone(base_dir, gimbal, rng)
-            distance = effect_range * rng.uniform(0.4, 0.85)
-            for step in range(1, steps + 1):
-                time_fraction = step / steps
-                travel = _travel_fraction(time_fraction)
-                fraction = travel
-                position = origin_point + direction * (distance * travel)
-                screen, visible = frame.project_point(position)
-                if not visible:
-                    continue
-                fade = intensity * (1.0 - (fraction - 0.5) * 0.35)
-                brightness = 0.6 + 0.4 * rng.random()
-                red = int(180 + 70 * brightness)
-                green = int(30 + 40 * fade)
-                blue = int(30 * fade)
-                radius = 1 if step < steps else 2
-                pygame.draw.circle(
-                    self.surface,
-                    (min(255, red), min(120, green), min(100, blue)),
-                    (int(round(screen.x)), int(round(screen.y))),
-                    radius,
-                    0,
-                )
-
-    def _draw_flak_effect(
-        self,
-        frame: CameraFrameData,
-        origin: Vector3,
-        ship: Ship,
-        mount,
-        base_world: Vector3,
-    ) -> None:
-        duration = getattr(mount, "effect_duration", 0.0) or 0.5
-        timer = getattr(mount, "effect_timer", 0.0)
-        intensity = max(0.0, min(1.0, timer / max(0.001, duration)))
-        if intensity <= 0.0:
-            return
-        effect_range = getattr(mount, "effect_range", 0.0)
-        if effect_range <= 0.0:
-            effect_range = 600.0
-        gimbal = getattr(mount, "effect_gimbal", 0.0)
-        if gimbal <= 0.0:
-            gimbal = getattr(getattr(mount, "hardpoint", None), "gimbal", 55.0)
-        base_dir = base_world - origin
-        if base_dir.length_squared() <= 1e-6:
-            base_dir = ship.hardpoint_direction(getattr(mount, "hardpoint", None))
-        base_dir = base_dir.normalize()
-        rng = self._mount_rng(mount)
-        burst_count = max(4, int(10 + 24 * intensity))
-        for _ in range(burst_count):
-            direction = self._sample_direction_in_cone(base_dir, gimbal, rng)
-            distance = effect_range * rng.uniform(0.2, 1.0)
-            position = base_world + direction * distance
-            screen, visible = frame.project_point(position)
-            if not visible:
-                continue
-            radius = max(2, int(round(2 + 3 * rng.random() * (0.6 + intensity))))
-            core_color = _blend((255, 170, 90), (255, 220, 180), rng.random() * 0.5 + 0.2)
-            halo_color = _blend(core_color, (255, 255, 255), 0.45)
-            pygame.draw.circle(
-                self.surface,
-                core_color,
-                (int(round(screen.x)), int(round(screen.y))),
-                radius,
-                0,
-            )
-            pygame.draw.circle(
-                self.surface,
-                halo_color,
-                (int(round(screen.x)), int(round(screen.y))),
-                radius + 1,
-                1,
-            )
-            spark_count = 3 + rng.randint(0, 2)
-            for _ in range(spark_count):
-                spark_dir = self._sample_direction_in_cone(base_dir, gimbal * 0.5, rng)
-                spark_length = effect_range * 0.05 * rng.uniform(0.2, 1.0)
-                spark_start = position
-                spark_end = spark_start + spark_dir * spark_length
-                start_screen, vis_start = frame.project_point(spark_start)
-                end_screen, vis_end = frame.project_point(spark_end)
-                if vis_start and vis_end:
-                    pygame.draw.aaline(
-                        self.surface,
-                        _blend(core_color, (255, 255, 255), 0.25),
-                        (start_screen.x, start_screen.y),
-                        (end_screen.x, end_screen.y),
-                        blend=1,
-                    )
-
-    @staticmethod
-    def _sample_direction_in_cone(base_direction: Vector3, gimbal: float, rng: random.Random) -> Vector3:
-        axis = Vector3(base_direction)
-        if axis.length_squared() <= 1e-6:
-            return Vector3(axis)
-        axis = axis.normalize()
-        angle = math.radians(max(0.0, min(180.0, gimbal)))
-        if angle <= 0.0:
-            return axis
-        cos_max = math.cos(angle)
-        cos_theta = rng.uniform(cos_max, 1.0)
-        sin_theta = math.sqrt(max(0.0, 1.0 - cos_theta * cos_theta))
-        phi = rng.uniform(0.0, 2.0 * math.pi)
-        up = Vector3(0.0, 1.0, 0.0)
-        if abs(axis.dot(up)) > 0.98:
-            up = Vector3(1.0, 0.0, 0.0)
-        tangent = axis.cross(up)
-        if tangent.length_squared() <= 1e-6:
-            tangent = axis.cross(Vector3(0.0, 0.0, 1.0))
-        tangent = tangent.normalize()
-        bitangent = tangent.cross(axis)
-        if bitangent.length_squared() <= 1e-6:
-            bitangent = axis.cross(tangent)
-        bitangent = bitangent.normalize()
-        direction = (
-            axis * cos_theta
-            + tangent * (sin_theta * math.cos(phi))
-            + bitangent * (sin_theta * math.sin(phi))
-        )
-        if direction.length_squared() <= 1e-6:
-            return axis
-        return direction.normalize()
-
-    @staticmethod
-    def _mount_rng(mount) -> random.Random:
-        tick_ms = pygame.time.get_ticks()
-        phase = tick_ms // 33
-        seed_base = getattr(mount, "effect_seed", 0)
-        seed = (seed_base ^ (phase & 0xFFFFFFFF)) & 0xFFFFFFFF
-        return random.Random(seed)
-
-    def _draw_engines(
-        self,
-        frame: CameraFrameData,
-        origin: Vector3,
-        right: Vector3,
-        up: Vector3,
-        forward: Vector3,
-        ship: Ship,
+        mesh: _DynamicLineMesh,
         color: tuple[int, int, int],
-        *,
-        scale: float,
+        model: Optional[Sequence[float]] = None,
     ) -> None:
-        layout = ENGINE_LAYOUTS.get(ship.frame.size, ENGINE_LAYOUTS.get("Strike", []))
-        if not layout:
+        if mesh.vertex_count <= 0:
             return
+        _require_gl()
+        self._line_program.use()
+        self._line_program.set_model(model if model is not None else self._identity)
+        self._line_program.set_color(color)
+        gl.glBindVertexArray(mesh.vao)
+        gl.glDrawArrays(gl.GL_LINES, 0, mesh.vertex_count)
+        gl.glBindVertexArray(0)
 
-        tick = pygame.time.get_ticks() * 0.001
-        for index, local in enumerate(layout):
-            base_world = self._local_to_world(origin, right, up, forward, local)
-            nozzle_world = base_world - forward * (0.35 * scale)
-            base_screen, vis_base = frame.project_point(base_world)
-            nozzle_screen, vis_nozzle = frame.project_point(nozzle_world)
-            if not vis_base:
-                continue
-
-            base_pos = (int(round(base_screen.x)), int(round(base_screen.y)))
-            radius = 4 if ship.frame.size == "Strike" else 5
-            pygame.draw.circle(self.surface, _darken(color, 0.45), base_pos, radius, 1)
-            pygame.draw.circle(self.surface, _lighten(color, 0.15), base_pos, max(1, radius - 2), 0)
-
-            if ship.thrusters_active and vis_nozzle:
-                flicker = 0.6 + 0.4 * math.sin(tick * 12.0 + index * 1.3)
-                flame_length = (1.6 + 1.2 * flicker) * scale
-                flame_base = base_world - forward * (0.2 * scale)
-                flame_tip = flame_base - forward * flame_length
-                flame_base_screen, vis_base_flame = frame.project_point(flame_base)
-                flame_tip_screen, vis_tip_flame = frame.project_point(flame_tip)
-                if vis_base_flame and vis_tip_flame:
-                    flame_color = _blend((130, 200, 255), (255, 190, 140), flicker * 0.6)
-                    width = 2 + int(round(flicker * 2.0))
-                    pygame.draw.line(
-                        self.surface,
-                        flame_color,
-                        (int(round(flame_base_screen.x)), int(round(flame_base_screen.y))),
-                        (int(round(flame_tip_screen.x)), int(round(flame_tip_screen.y))),
-                        width,
-                    )
-                    glow_radius = max(2, radius - 1)
-                    glow_color = _blend((60, 120, 220), (255, 220, 160), flicker * 0.5)
-                    pygame.draw.circle(self.surface, glow_color, base_pos, glow_radius, 0)
+    def _build_ship_meshes(self) -> Dict[str, _LineMesh]:
+        meshes: Dict[str, _LineMesh] = {}
+        for key, geometry in self._ship_geometry_cache.items():
+            segments: list[float] = []
+            for idx_a, idx_b in geometry.edges:
+                start = geometry.vertices[idx_a]
+                end = geometry.vertices[idx_b]
+                segments.extend([start.x, start.y, start.z, end.x, end.y, end.z])
+            meshes[key] = _LineMesh.from_segments(segments)
+        return meshes
 
     def clear(self) -> None:
-        self._start_frame()
-        self.surface.fill(BACKGROUND)
+        if self._viewport_size == (0, 0) and self._surface:
+            self._viewport_size = self._surface.get_size()
+        _require_gl()
+        gl.glViewport(0, 0, self._viewport_size[0], self._viewport_size[1])
+        gl.glClearColor(
+            BACKGROUND[0] / 255.0,
+            BACKGROUND[1] / 255.0,
+            BACKGROUND[2] / 255.0,
+            1.0,
+        )
+        gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
 
     def draw_grid(
         self,
@@ -2574,268 +2428,139 @@ class VectorRenderer:
         extent: float = 3600.0,
         height_offset: float = -18.0,
     ) -> None:
-        """Render a tiled reference grid beneath the focus point."""
-
-        if tile_size <= 0.0 or extent <= 0.0:
+        frame = self._prepare_frame(camera)
+        if not frame or tile_size <= 0.0 or extent <= 0.0:
             return
-
         half_extent = extent * 0.5
         grid_y = focus.y + height_offset
-        screen_size = self.surface.get_size()
-
         start_x = int(floor((focus.x - half_extent) / tile_size))
         end_x = int(ceil((focus.x + half_extent) / tile_size))
         start_z = int(floor((focus.z - half_extent) / tile_size))
         end_z = int(ceil((focus.z + half_extent) / tile_size))
-
-        def _draw_segment(a: Vector3, b: Vector3, color: tuple[int, int, int]) -> None:
-            a_screen, vis_a = camera.project(a, screen_size)
-            b_screen, vis_b = camera.project(b, screen_size)
-            if vis_a and vis_b:
-                pygame.draw.aaline(
-                    self.surface,
-                    color,
-                    (a_screen.x, a_screen.y),
-                    (b_screen.x, b_screen.y),
-                    blend=1,
-                )
-
+        minor_vertices: list[float] = []
+        major_vertices: list[float] = []
         for xi in range(start_x, end_x + 1):
             x_world = xi * tile_size
-            color = GRID_MAJOR_COLOR if xi % 5 == 0 else GRID_MINOR_COLOR
             a = Vector3(x_world, grid_y, start_z * tile_size)
             b = Vector3(x_world, grid_y, end_z * tile_size)
-            _draw_segment(a, b, color)
-
+            target = major_vertices if xi % 5 == 0 else minor_vertices
+            target.extend([a.x, a.y, a.z, b.x, b.y, b.z])
         for zi in range(start_z, end_z + 1):
             z_world = zi * tile_size
-            color = GRID_MAJOR_COLOR if zi % 5 == 0 else GRID_MINOR_COLOR
             a = Vector3(start_x * tile_size, grid_y, z_world)
             b = Vector3(end_x * tile_size, grid_y, z_world)
-            _draw_segment(a, b, color)
-
-    def draw_asteroids(self, camera: ChaseCamera, asteroids: Iterable[Asteroid]) -> None:
-        frame = self._get_camera_frame(camera)
-        for asteroid in asteroids:
-            state = asteroid.render_state
-            state.set_radius(max(asteroid.radius * 1.2, 1.0))
-            state.ensure_current(asteroid.position)
-            visible, distance, _ = self._evaluate_visibility(state, frame)
-            if not visible:
-                continue
-
-            center, vis_center = frame.project_point(asteroid.position)
-            if not vis_center:
-                state.clear_cached_projection()
-                continue
-
-            radius_vectors = [
-                asteroid.position + frame.up * asteroid.radius,
-                asteroid.position - frame.up * asteroid.radius,
-                asteroid.position + frame.right * asteroid.radius,
-                asteroid.position - frame.right * asteroid.radius,
-            ]
-            radii: List[float] = []
-            projection_count = 1  # center
-            for world_point in radius_vectors:
-                projected, visible_point = frame.project_point(world_point)
-                if not visible_point:
-                    radii.append(0.0)
-                else:
-                    dx = projected.x - center.x
-                    dy = projected.y - center.y
-                    radii.append(math.hypot(dx, dy))
-                projection_count += 1
-            radius_vertical = max(radii[0], radii[1])
-            radius_horizontal = max(radii[2], radii[3])
-            if radius_vertical <= 0.0 and radius_horizontal <= 0.0:
-                radius_vertical = radius_horizontal = 2.0
-            radius_vertical = max(2.0, radius_vertical)
-            radius_horizontal = max(2.0, radius_horizontal)
-
-            profile = asteroid.render_profile()
-            if not profile.point_angles:
-                state.clear_cached_projection()
-                continue
-
-            points: List[tuple[float, float]] = []
-            for angle, offset, h_scale, v_scale in zip(
-                profile.point_angles,
-                profile.point_offsets,
-                profile.horizontal_scale,
-                profile.vertical_scale,
-            ):
-                x = center.x + math.cos(angle) * radius_horizontal * h_scale * offset
-                y = center.y + math.sin(angle) * radius_vertical * v_scale * offset
-                points.append((x, y))
-
-            if len(points) < 3:
-                state.clear_cached_projection()
-                continue
-
-            self._frame_counters.vertices_projected_total += projection_count
-            self._frame_counters.objects_projected += 1
-
-            polygon_points = [(int(round(px)), int(round(py))) for px, py in points]
-            xs = [px for px, _ in points]
-            ys = [py for _, py in points]
-            state.cached_screen_rect = (min(xs), min(ys), max(xs), max(ys))
-            state.cached_camera_revision = frame.revision
-
-            color = asteroid.display_color
-            pygame.draw.polygon(self.surface, color, polygon_points)
-
-            outline_color = _darken(color, 0.45)
-            line_mode = "line" if distance > 7500.0 else "aaline"
-            if line_mode == "line":
-                pygame.draw.lines(self.surface, outline_color, True, polygon_points, 1)
-                self._frame_counters.objects_drawn_line += 1
-            else:
-                pygame.draw.aalines(self.surface, outline_color, True, points, blend=1)
-                self._frame_counters.objects_drawn_aaline += 1
-
-            if radius_horizontal > 3.0 or radius_vertical > 3.0:
-                highlight_color = _lighten(color, 0.5)
-                shadow_color = _darken(color, 0.6)
-                accent_radius = max(
-                    1,
-                    int(round((radius_horizontal + radius_vertical) * 0.05)),
-                )
-                for accent in profile.accents:
-                    px = center.x + math.cos(accent.angle) * radius_horizontal * accent.distance * accent.horizontal_scale
-                    py = center.y + math.sin(accent.angle) * radius_vertical * accent.distance * accent.vertical_scale
-                    pygame.draw.circle(
-                        self.surface,
-                        highlight_color if accent.highlight else shadow_color,
-                        (int(round(px)), int(round(py))),
-                        accent_radius,
-                    )
-
-                crater_fill = _darken(color, 0.55)
-                crater_rim = _lighten(color, 0.2)
-                for crater in profile.craters:
-                    px = center.x + math.cos(crater.angle) * radius_horizontal * crater.distance
-                    py = center.y + math.sin(crater.angle) * radius_vertical * crater.distance
-                    crater_radius = max(
-                        1,
-                        int(round((radius_horizontal + radius_vertical) * crater.radius_scale)),
-                    )
-                    pygame.draw.circle(
-                        self.surface,
-                        crater_fill,
-                        (int(round(px)), int(round(py))),
-                        crater_radius,
-                    )
-                    pygame.draw.circle(
-                        self.surface,
-                        crater_rim,
-                        (int(round(px)), int(round(py))),
-                        crater_radius,
-                        1,
-                    )
+            target = major_vertices if zi % 5 == 0 else minor_vertices
+            target.extend([a.x, a.y, a.z, b.x, b.y, b.z])
+        if minor_vertices:
+            self._grid_mesh.update(minor_vertices)
+            self._draw_dynamic(self._grid_mesh, GRID_MINOR_COLOR)
+        if major_vertices:
+            self._grid_mesh.update(major_vertices)
+            self._draw_dynamic(self._grid_mesh, GRID_MAJOR_COLOR)
 
     def draw_ship(self, camera: ChaseCamera, ship: Ship) -> None:
-        frame = self._get_camera_frame(camera)
+        frame = self._prepare_frame(camera)
+        if not frame:
+            return
         geometry = self._ship_geometry_cache.get(
             ship.frame.id,
             self._ship_geometry_cache.get(
-                ship.frame.size, self._ship_geometry_cache["Strike"]
+                ship.frame.size, self._ship_geometry_cache.get('Strike')
             ),
         )
-        scale = _ship_geometry_scale(ship, geometry)
-        state = getattr(ship, "render_state", None)
-        if state is None:
-            state = RenderSpatialState()
-            ship.render_state = state
-        state.set_radius(_estimate_ship_radius(ship, geometry, scale))
-        state.ensure_current(ship.kinematics.position, ship.kinematics.rotation)
-        visible, distance, _ = self._evaluate_visibility(state, frame)
-        if not visible:
+        if not geometry:
             return
-
+        mesh = self._ship_meshes.get(ship.frame.id) or self._ship_meshes.get(ship.frame.size)
+        if mesh is None:
+            mesh = self._ship_meshes.get('Strike')
+        if not mesh:
+            return
+        scale = _ship_geometry_scale(ship, geometry)
         origin = ship.kinematics.position
-        right, up, forward = _ship_axes(ship)
-        projected, visibility = self._project_ship_vertices(
-            ship,
-            geometry,
-            frame,
-            state,
-            origin,
-            (right, up, forward),
-            scale=scale,
-        )
-        color = SHIP_COLOR if ship.team == "player" else ENEMY_COLOR
-        line_mode = "line" if distance > 7500.0 else "aaline"
-        drawn_edges = False
-        for idx_a, idx_b in geometry.edges:
-            if not (visibility[idx_a] and visibility[idx_b]):
-                continue
-            ax, ay = projected[idx_a]
-            bx, by = projected[idx_b]
-            if line_mode == "line":
-                pygame.draw.line(
-                    self.surface,
-                    color,
-                    (int(round(ax)), int(round(ay))),
-                    (int(round(bx)), int(round(by))),
-                    1,
-                )
-            else:
-                pygame.draw.aaline(self.surface, color, (ax, ay), (bx, by), blend=1)
-            drawn_edges = True
+        basis = ship.kinematics.basis
+        model = _model_matrix(origin, (basis.right, basis.up, basis.forward), scale)
+        color = SHIP_COLOR if ship.team == 'player' else ENEMY_COLOR
+        self._draw_mesh(mesh, color, model)
 
-        if drawn_edges:
-            if line_mode == "line":
-                self._frame_counters.objects_drawn_line += 1
-            else:
-                self._frame_counters.objects_drawn_aaline += 1
-
-        speed = ship.kinematics.velocity.length()
-        speed_intensity = 0.0
-        if speed > 80.0:
-            speed_intensity = min(1.0, (speed - 80.0) / 35.0)
-        if speed_intensity > 0.0:
-            self._draw_speed_streaks(frame, origin, right, up, forward, ship, speed_intensity)
-
-        self._draw_hardpoints(frame, origin, right, up, forward, ship, color, scale=scale)
-        self._draw_engines(frame, origin, right, up, forward, ship, color, scale=scale)
+    def draw_asteroids(self, camera: ChaseCamera, asteroids: Iterable[Asteroid]) -> None:
+        frame = self._prepare_frame(camera)
+        if not frame:
+            return
+        right = frame.right
+        up = frame.up
+        segments = 24
+        for asteroid in asteroids:
+            radius = max(asteroid.radius, 1.0)
+            center = asteroid.position
+            vertices: list[float] = []
+            for index in range(segments):
+                angle_a = (index / segments) * (2.0 * math.pi)
+                angle_b = ((index + 1) / segments) * (2.0 * math.pi)
+                point_a = center + right * math.cos(angle_a) * radius + up * math.sin(angle_a) * radius
+                point_b = center + right * math.cos(angle_b) * radius + up * math.sin(angle_b) * radius
+                vertices.extend([point_a.x, point_a.y, point_a.z, point_b.x, point_b.y, point_b.z])
+            self._temp_mesh.update(vertices)
+            self._draw_dynamic(self._temp_mesh, asteroid.display_color)
 
     def draw_projectiles(self, camera: ChaseCamera, projectiles: Iterable[Projectile]) -> None:
+        frame = self._prepare_frame(camera)
+        if not frame:
+            return
+        projectile_lines: list[float] = []
+        missile_lines: list[float] = []
         for projectile in projectiles:
-            if (
-                projectile.position - camera.position
-            ).length_squared() > PROJECTILE_RENDER_DISTANCE_SQR:
+            if projectile.ttl <= 0.0:
                 continue
-            is_missile = projectile.weapon.wclass == "missile"
-            color = MISSILE_COLOR if is_missile else PROJECTILE_COLOR
-            screen_pos, visible = camera.project(projectile.position, self.surface.get_size())
-            if not visible:
-                continue
-            if is_missile:
-                trail_points = list(projectile.trail_positions)
-                trail_length = len(trail_points)
-                if trail_length:
-                    for index, point in enumerate(trail_points):
-                        smoke_pos, smoke_visible = camera.project(point, self.surface.get_size())
-                        if not smoke_visible:
-                            continue
-                        age = index / max(1, trail_length - 1)
-                        shade = int(round(180 + (MISSILE_SMOKE_COLOR[0] - 180) * (1.0 - age)))
-                        radius = max(1, int(round(4 - age * 3)))
-                        pygame.draw.circle(
-                            self.surface,
-                            (shade, shade, shade),
-                            (int(smoke_pos.x), int(smoke_pos.y)),
-                            radius,
-                            0,
-                        )
-            pygame.draw.circle(
-                self.surface,
-                color,
-                (int(screen_pos.x), int(screen_pos.y)),
-                3,
-                0 if is_missile else 1,
+            start = projectile.position
+            velocity = projectile.velocity
+            direction = velocity.normalize() if velocity.length_squared() > 1e-6 else frame.forward
+            length = max(6.0, min(140.0, velocity.length() * 0.04 + 12.0))
+            end = start - direction * length
+            target = missile_lines if projectile.weapon.wclass == 'missile' else projectile_lines
+            target.extend([start.x, start.y, start.z, end.x, end.y, end.z])
+        if projectile_lines:
+            self._projectile_mesh.update(projectile_lines)
+            self._draw_dynamic(self._projectile_mesh, PROJECTILE_COLOR)
+        if missile_lines:
+            self._projectile_mesh.update(missile_lines)
+            self._draw_dynamic(self._projectile_mesh, MISSILE_COLOR)
+
+    def present_ui(self, surface: pygame.Surface) -> None:
+        width, height = surface.get_size()
+        if width <= 0 or height <= 0:
+            return
+        _require_gl()
+        gl.glDisable(gl.GL_DEPTH_TEST)
+        pixel_data = pygame.image.tostring(surface, 'RGBA', True)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, self._ui_texture)
+        gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
+        if (width, height) != self._ui_size:
+            gl.glTexImage2D(
+                gl.GL_TEXTURE_2D,
+                0,
+                gl.GL_RGBA,
+                width,
+                height,
+                0,
+                gl.GL_RGBA,
+                gl.GL_UNSIGNED_BYTE,
+                pixel_data,
             )
+            self._ui_size = (width, height)
+        else:
+            gl.glTexSubImage2D(
+                gl.GL_TEXTURE_2D,
+                0,
+                0,
+                0,
+                width,
+                height,
+                gl.GL_RGBA,
+                gl.GL_UNSIGNED_BYTE,
+                pixel_data,
+            )
+        self._quad_blitter.draw(self._ui_texture)
+        gl.glEnable(gl.GL_DEPTH_TEST)
 
 
-__all__ = ["VectorRenderer"]
+__all__ = ['VectorRenderer']
