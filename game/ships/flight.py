@@ -136,7 +136,7 @@ def update_ship_flight(ship: Ship, dt: float, logger=None) -> None:
         kin.angular_velocity.z, desired_roll_rate, stats.roll_acceleration * dt
     )
 
-    kin.rotation.x = max(-85.0, min(85.0, kin.rotation.x + kin.angular_velocity.x * dt))
+    kin.rotation.x = (kin.rotation.x + kin.angular_velocity.x * dt) % 360.0
     kin.rotation.y = (kin.rotation.y + kin.angular_velocity.y * dt) % 360.0
     kin.rotation.z = (kin.rotation.z + kin.angular_velocity.z * dt) % 360.0
 
