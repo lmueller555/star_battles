@@ -1926,7 +1926,6 @@ def _build_brimir_wireframe() -> list[tuple[Vector3, Vector3]]:
     thruster_length = ship_length * 0.25
     thruster_protrusion = thruster_length * 0.25
     thruster_front_z = stern.z - thruster_protrusion + thruster_length
-    thruster_exit_z = stern.z
     thruster_back_z = stern.z - thruster_protrusion
     thruster_cap_z = thruster_back_z - thruster_protrusion * 0.15
     thruster_support_z = thruster_front_z - thruster_length * 0.25
@@ -1937,7 +1936,7 @@ def _build_brimir_wireframe() -> list[tuple[Vector3, Vector3]]:
     thruster_radius_y = tail_section[2] * 0.34
     nozzle_radius_x = thruster_radius_x * 0.78
     nozzle_radius_y = thruster_radius_y * 0.74
-    thruster_sides = 14
+    thruster_sides = 10
 
     def thruster_ring(
         center_x: float,
@@ -1967,13 +1966,6 @@ def _build_brimir_wireframe() -> list[tuple[Vector3, Vector3]]:
                 thruster_radius_x,
                 thruster_radius_y,
             )
-            exit_ring = thruster_ring(
-                center_x,
-                center_y,
-                thruster_exit_z,
-                thruster_radius_x * 0.96,
-                thruster_radius_y * 0.94,
-            )
             nozzle_ring = thruster_ring(
                 center_x,
                 center_y,
@@ -1983,13 +1975,12 @@ def _build_brimir_wireframe() -> list[tuple[Vector3, Vector3]]:
             )
 
             _loop_segments(segments, front_ring)
-            _loop_segments(segments, exit_ring)
             _loop_segments(segments, nozzle_ring)
-            _connect_rings(segments, front_ring, exit_ring)
-            _connect_rings(segments, exit_ring, nozzle_ring)
+            for index in range(0, thruster_sides, 2):
+                segments.append((front_ring[index], nozzle_ring[index]))
 
             nozzle_cap = Vector3(center_x, center_y, thruster_cap_z)
-            for point in nozzle_ring[::3]:
+            for point in nozzle_ring[::4]:
                 segments.append((point, nozzle_cap))
 
             support_anchor = hull_anchor(
