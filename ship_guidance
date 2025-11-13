@@ -1287,7 +1287,118 @@ If you have an Advanced Vanir pane, share it so we can add upgrade deltas (+Δ) 
 
 CAPITAL CLASS
 
-(Add per-ship sections here — e.g., Brimir carrier, Surtur, battlestars …)
+Capital — Brimir (Role: Carrier)
+Identity
+
+Class / Role: Capital · Carrier
+Level Requirement: 40
+Counterpart / Upgrade To: (TBD) / Advanced Brimir
+Lore / Description:
+
+Discovery of the derelict shipyards near Delta Canopis has allowed the construction of the Brimir-class carrier.
+The carrier is a support and logistics vessel that allows strike ships to coordinate attacks and quickly repair and refit away from an outpost.
+
+Economy
+
+Purchase Cost: 400,000 (confirm currency icon — likely Tylium)
+Operating: Boost Cost 18 Tyl/s · FTL Cost 30 Tyl
+Upgrade Cost (→ Advanced): TBD
+
+Equipment Slots (Weight: Capital)
+
+Weapons (General): 0
+Guns: 4 (Capital)
+Launchers: 2 (Capital)
+Defensive Weapons: 4 (Capital)
+Special Weapons: 4 (Capital)
+Hull: 0 (Capital)
+Engine: 2 (Capital)
+Computer: 3 (Capital)
+
+(All slots are Capital size — verify “Gun / Launcher / Defensive / Special” mount grouping if loadout logic differentiates.)
+
+Hull / Survivability
+
+Hull Points: 8,000
+Hull Recovery: 40 /s
+Durability: 100,000
+Armor Value: 40
+Critical Defense: 150
+Durability Bonus: 0.5
+Firewall Rating: 240
+
+Engine / Mobility
+
+Speed: 18 m/s
+Boost Speed: 30 m/s
+Boost Acceleration: 1.5 m/s²
+Acceleration: 3 m/s²
+Inertial Compensation: 44 m/s
+Turning Speed: 8 deg/s
+Turning Acceleration: 9 deg/s²
+Pitch / Yaw Speed: 9 / 9 deg/s
+Pitch / Yaw Acceleration: 9 / 9 deg/s²
+Roll Speed / Acceleration: 8 / 8 deg/s²
+Strafe Speed / Accel: 0 / 0
+Avoidance: 20
+Avoidance Fading: (not listed — assume 0.75 default)
+Boost Cost: 18 Tyl/s
+
+FTL Systems
+
+FTL Range: 12 LY
+FTL Charge Time: 30 s
+FTL Cooldown: 34 s
+FTL Cost: 30 Tyl
+
+Energy & Sensors / EW
+
+Power Points: 1,000
+Power Recovery: 40 /s
+Emitter Rating: 240
+Firewall Rating: 240
+Maximum DRADIS Range: 4,500 m
+Base DRADIS Range: 2,000 m
+Visual Range: 1,750 m
+
+Environmental
+
+Max Radiation Level: 240
+Radioactive Decay: 1.5
+Radioresistance: 0
+
+Pre-installed Systems
+
+None explicitly listed on panel.
+(You may later add entries for onboard repair drones, strike coordination array, or hangar repair field if implemented as built-in systems.)
+
+Traits & Role Notes
+
+Carrier-class Capital ship, optimized for fleet support and strike coordination.
+
+Provides mobile repair and refit capabilities for allied Strike and Escort craft while away from outposts.
+
+Balanced defensive armament (4 guns, 2 launchers, 4 defensive, 4 special) allows it to defend itself without matching a battleship’s raw damage output.
+
+Moderate FTL reach (12 LY) for a Capital ship — adequate for long-range deployments.
+
+Excellent energy and EW suite (1,000 capacity, 40/s recovery) supports sustained drone operations, PD systems, and EW defenses.
+
+Limited agility (8–9°/s turning) and minimal avoidance (20) — relies on escorts and fleet positioning for protection.
+
+Command-center design enables coordination bonuses when operating near allied squadrons (if your fleet aura systems model these).
+
+Armor (40) and Critical Defense (150) values make it resilient against both kinetic and energy weapon fire.
+
+Open Items / TBD
+
+Confirm purchase currency (Tylium vs Cubits).
+
+Verify FTL Cost model (flat vs per-LY).
+
+If Advanced Brimir exists, capture any “blue” deltas (e.g., +Hull, +Power, +Slots) and record them in the +Δ fields per your canonical upgrade schema.
+
+If carrier drone or repair-field modules are implemented as pre-installed, add those under Pre-installed Systems.
 
 C) QA & Balance Guardrails (reference)
 
