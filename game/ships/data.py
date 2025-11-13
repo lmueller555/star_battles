@@ -107,13 +107,13 @@ def _assign_outpost_facings(hardpoints: List[Hardpoint], indices: List[int]) -> 
     left_ids = [
         "hp_outpost_west",
         "hp_outpost_pd_west",
-        "hp_outpost_south",
+        "hp_outpost_north",
         "hp_outpost_pd_south",
     ]
     right_ids = [
         "hp_outpost_east",
         "hp_outpost_pd_east",
-        "hp_outpost_north",
+        "hp_outpost_south",
         "hp_outpost_pd_north",
     ]
 
