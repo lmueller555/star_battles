@@ -10,7 +10,6 @@ Hit Chance
 
 hit_chance = clamp01((AttackerAccuracy - DefenderAvoidance) / accuracy_scale)
 
-
 Use your engine’s global accuracy_scale (e.g., 400 = baseline).
 
 Negative results clamp to 0.
@@ -21,7 +20,6 @@ Armor & Armor Piercing
 
 EffectiveArmor = max(0, Armor - ArmorPiercing)
 DamageTaken = RawDamage * (1 - EffectiveArmor / 100)
-
 
 Clamp final value ≥ 0.
 
@@ -44,6 +42,8 @@ Other values remain constant unless higher-level screenshots show changes.
 STRIKE CLASS EQUIPMENT
 
 Light, fast attack craft emphasizing agility, precision, and low durability.
+
+Weapons
 
 Weapons (Light Hardpoints – Strike Only)
 
@@ -167,6 +167,8 @@ Durability: 2500 / 2500
 Upgrade Model: Damage and (optionally) Reload.
 Notes: Guided missile with soft-lock tracking.
 
+Hulls
+
 Hull Systems (Strike / Light Hull Slot, Passive)
 
 Strike Composite Plating (L1)
@@ -224,6 +226,8 @@ Cost: 12,000
 Durability: 2500 / 2500
 Effect: Reactive armor layer adds modest Avoidance.
 Upgrade Axis: Armor and Avoidance scale modestly.
+
+Engines
 
 Engine Systems (Strike / Light Engine Slot, Passive)
 
@@ -302,7 +306,13 @@ turn_rate += sum(turn_speed_bonus)
 turn_accel += sum(turn_accel_bonus)
 avoidance += sum(avoidance_bonus)
 
+Computers
+
+Ammo
+
 ESCORT CLASS EQUIPMENT
+
+Weapons
 
 Weapons (Medium Hardpoints – Escort Only)
 
@@ -551,10 +561,19 @@ Restricted to Escort-class hardpoints — enforce requirement in Store and Fitti
 
 Consider distinct missile trail color and targeting reticle for identification.
 
+Hulls
+
+Engines
+
+Computers
+
+Ammo
 
 LINE CLASS EQUIPMENT
 
 Durable gunships designed for sustained frontline combat.
+
+Weapons
 
 Weapons (Medium / Heavy Hardpoints – Line Only)
 
@@ -847,7 +866,17 @@ Restricted to Line-class hardpoints — enforce requirement in Store and Fitting
 
 Works well when paired with Stormstrike batteries for mixed-range salvos.
 
+Hulls
+
+Engines
+
+Computers
+
+Ammo
+
 CAPITAL CLASS EQUIPMENT
+
+Weapons
 
 Weapons (Heavy / Siege Hardpoints – Capital Only)
 
@@ -1096,6 +1125,14 @@ Optimized for long-range sieges and fleet support fire; ineffective versus agile
 Restricted to Capital-class hardpoints — enforce in Store and Fitting UI.
 
 Consider adding visible lock-on indicator and long-trail missile effects for cinematic clarity.
+
+Hulls
+
+Engines
+
+Computers
+
+Ammo
 
 General Store / Fitting Rules
 
