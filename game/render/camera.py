@@ -108,7 +108,9 @@ class ChaseCamera:
         self.up = Vector3(0.0, 1.0, 0.0)
         self.right = Vector3(1.0, 0.0, 0.0)
         self.distance = 12.0
-        self.height = 3.0
+        self.elevation_angle_deg = 30.0
+        self._height_auto = True
+        self._height = self.distance * tan(radians(self.elevation_angle_deg))
         self.shoulder = 1.6
         self.recoil = 0.0
         self.recoil_decay = 6.0
@@ -228,10 +230,13 @@ class ChaseCamera:
 
         self.distance = _ship_follow_distance(ship)
 
+        if self._height_auto:
+            self._height = self.distance * tan(radians(self.elevation_angle_deg))
+
         base_target_pos = (
             ship.kinematics.position
             - focus_forward * self.distance
-            + focus_up * self.height
+            + focus_up * self._height
             + focus_right * self.shoulder
         )
         lock_target_pos = base_target_pos
@@ -301,6 +306,15 @@ class ChaseCamera:
             self.recoil = max(0.0, self.recoil - self.recoil_decay * dt)
 
         self._mark_revision_dirty()
+
+    @property
+    def height(self) -> float:
+        return self._height
+
+    @height.setter
+    def height(self, value: float) -> None:
+        self._height = float(value)
+        self._height_auto = False
 
     def apply_recoil(self, strength: float) -> None:
         self.recoil += strength
