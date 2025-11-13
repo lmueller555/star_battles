@@ -263,40 +263,101 @@ Durability: 6,000 / 6,000
 Effect: Active hull repair system for Strike-class ships. On activation, instantly restores a chunk of Hull Points, consuming ship Power and triggering a 30-second cooldown. Best used reactively to survive burst damage or disengage.
 Upgrade Axis: Hullpoint Restore scales from +50 at L1 up to +120 at L15. Reload time and Power Cost remain fixed at all levels.
 
-Engines
+Strike Engines
 
 Engine Systems (Strike / Light Engine Slot, Passive)
 
-Light Drive Overcharger (L1)
-Speed: +1.25 m/s
-Boost Speed: +1.25 m/s
+Light Drive Overcharger (L1) – Passive
+Boost Speed: +1.25 m/s → +3 m/s (upgrades)
+Speed: +1.25 m/s → +3 m/s (upgrades)
 Cost: 5,000
-Durability: 2500 / 2500
-Effect: Flat boost to both cruise and sprint.
-Upgrade Axis: Speed & Boost Speed scale.
+Durability: 6,000 / 6,000
+Effect: Baseline Strike-class engine upgrade that provides flat bonuses to both cruise Speed and Boost Speed, improving general mobility without affecting acceleration or handling.
+Upgrade Axis: Speed and Boost Speed scale from +1.25 m/s at L1 to +3 m/s at L15. No other stats change with level.
 
-Light Turbo Boosters (L1)
-Acceleration: +1.0
-Boost Speed: +2.5 m/s
+Light Turbo Boosters (L1) – Passive
+Acceleration: +1 → +2.4 (upgrades)
+Boost Speed: +2.5 m/s → +6 m/s (upgrades)
 Cost: 5,000
-Durability: 2500 / 2500
-Effect: Increases sprint capability.
-Upgrade Axis: Accel & Boost Speed scale.
+Durability: 6,000 / 6,000
+Effect: Strike-class engine module that enhances linear Acceleration and Boost Speed, improving sprint capability and responsiveness. Ideal for hit-and-run tactics and quick disengages.
+Upgrade Axis: Acceleration scales from +1 to +2.4 at L15; Boost Speed scales from +2.5 m/s at L1 to +6 m/s at L15.
 
-Light Gyro-Stabilization (L1)
-Turn Speed: +2.5 deg/s
-Turn Acceleration: +2.5 deg/s²
+Light Gyro-Stabilization (L1) – Passive
+Turn Speed: +2.5 deg/s → +6 deg/s (upgrades)
+Turn Acceleration: +2.5 deg/s² → +6 deg/s² (upgrades)
 Cost: 5,000
-Durability: 2500 / 2500
-Effect: Improves rotational agility.
-Upgrade Axis: Turn Speed & Accel scale.
+Durability: 6,000 / 6,000
+Effect: Strike-class maneuvering module that increases Turn Speed and Turn Acceleration, making the ship more agile and responsive in tight dogfights. Does not affect linear speed.
+Upgrade Axis: Both Turn Speed and Turn Acceleration scale from +2.5 at L1 to +6 at L15.
 
-Light RCS Ducting (L1)
-Avoidance: +15
+Light RCS Ducting (L1) – Passive
+Avoidance: +15 → +36 (upgrades)
 Cost: 5,000
-Durability: 2500 / 2500
-Effect: Increases Avoidance (harder to hit).
-Upgrade Axis: Avoidance scales.
+Durability: 6,000 / 6,000
+Effect: Strike-class RCS module that boosts Avoidance, making the ship harder to hit with cannon fire and other direct-fire weapons. No effect on speed or acceleration.
+Upgrade Axis: Avoidance scales from +15 at L1 to +36 at L15.
+
+T8 Drive Turbo Charger (L1) – Passive | Raven Mk VI-R Only
+Speed: +3% → +7% (upgrades)
+Boost Speed: +4% → +8% (upgrades)
+Cost: 60,000
+Durability: 6,000 / 6,000
+Effect: Ship-specific engine upgrade for the Raven Mk VI-R Strike. Increases base Speed and Boost Speed by percentage, significantly improving flank and sprint performance without altering acceleration.
+Availability: Usable only by the Raven Mk VI-R (Strike).
+Upgrade Axis: Speed bonus scales from +3% to +7%; Boost Speed bonus scales from +4% to +8% by L15.
+
+FoG Gyro-Stabilization System (L1) – Passive | Raven Mk VI-R Only
+Turn Speed: +10% → +16% (upgrades)
+Turn Acceleration: +10% → +16% (upgrades)
+Cost: 50,000
+Durability: 6,000 / 6,000
+Effect: Advanced gyro system for the Raven Mk VI-R that increases Turn Speed and Turn Acceleration by percentage, delivering very sharp rotational control and tracking in dogfights.
+Availability: Usable only by the Raven Mk VI-R (Strike).
+Upgrade Axis: Turn Speed and Turn Acceleration scale from +10% at L1 to +16% at L15.
+
+Translation RCS Thrusters (L1) – Passive | Raven Mk VI-R Only
+Turn Speed: +10% → +20% (upgrades)
+Strafe Speed: +15% → +24.5% (upgrades)
+Cost: 50,000
+Durability: 6,000 / 6,000
+Effect: Specialized RCS package for the Raven Mk VI-R that boosts Turn Speed and lateral Strafe Speed, enabling aggressive strafing maneuvers and rapid course changes.
+Availability: Usable only by the Raven Mk VI-R (Strike).
+Upgrade Axis: Turn Speed scales from +10% to +20%; Strafe Speed scales from +15% to +24.5% by L15.
+
+T15 Pulsed Plasma Thruster (L1) – Passive | Raven Mk VI-R Only
+Boost Speed: +6% → +11% (upgrades)
+Acceleration: +20% → +28% (upgrades)
+Boost Cost: +25% (fixed)
+Cost: 90,000
+Durability: 6,000 / 6,000
+Effect: High-end engine upgrade for the Raven Mk VI-R that substantially increases Acceleration and Boost Speed but raises Boost Cost, making sprinting more expensive in energy terms. Designed for pilots who value raw burst mobility over efficiency.
+Availability: Usable only by the Raven Mk VI-R (Strike).
+Upgrade Axis: Boost Speed scales from +6% to +11%; Acceleration scales from +20% to +28% by L15. Boost Cost penalty remains fixed at +25%.
+
+Coupled RCS Ducting (L1) – Passive | Raven Mk VI-R Only
+Avoidance: +4% → +9% (upgrades)
+Boost Speed: −2.5% (fixed)
+Cost: 62,000
+Durability: 6,000 / 6,000
+Effect: Defensive RCS upgrade for the Raven Mk VI-R that increases Avoidance at the expense of Boost Speed. Ideal for evasive, survivability-focused builds that prioritize not being hit over pure sprint performance.
+Availability: Usable only by the Raven Mk VI-R (Strike).
+Upgrade Axis: Avoidance scales from +4% at L1 to +9% at L15; Boost Speed penalty remains fixed at −2.5%.
+
+FBS-12 Engine Overload System (L1) – Active | Rhino Only
+Boost Speed: +16 m/s (fixed during effect)
+Boost Acceleration: +3× (fixed during effect)
+Boost Cost: +200% (fixed during effect)
+Target: Self (Ignore)
+Range: 0–0
+Duration: 8 s → 16 s (upgrades)
+Reload: 80 s
+Power Cost: 60
+Cost: 60,000
+Durability: 6,000 / 6,000
+Effect: Active overdrive system for the Rhino Strike that massively increases Boost Speed and Boost Acceleration for a short duration, at the cost of greatly increased Boost Cost and a long cooldown. Best used for emergency sprints, rapid repositioning, or high-risk attack runs.
+Availability: Usable only by the Rhino (Strike).
+Upgrade Axis: Duration scales from 8 seconds at L1 to 16 seconds at L15. Boost Speed, Boost Acceleration, Boost Cost, Reload, and Power Cost remain fixed.
 
 Module Application Order (Strike Engines):
 
