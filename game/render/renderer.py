@@ -2,14 +2,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from array import array
 from math import ceil, floor
 import logging
 import math
 import random
-from typing import Dict, Iterable, List, Sequence, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 import pygame
 from pygame.math import Vector3
+
+try:
+    import moderngl
+except ImportError:  # pragma: no cover - dependency optional for tests
+    moderngl = None  # type: ignore[assignment]
 
 from game.combat.weapons import Projectile
 from game.render.camera import CameraFrameData, ChaseCamera, DEFAULT_SHIP_LENGTHS
@@ -66,6 +72,21 @@ class ShipGeometry:
     edges: List[Tuple[int, int]]
     radius: float
     length: float
+
+
+@dataclass
+class ShipGPUGeometry:
+    vao: "moderngl.VertexArray"
+    index_count: int
+    vbo: "moderngl.Buffer"
+    ibo: Optional["moderngl.Buffer"]
+
+
+@dataclass
+class ShipInstance:
+    geometry: ShipGPUGeometry
+    model_matrix: bytes
+    color: tuple[float, float, float]
 
 
 LOGGER = logging.getLogger(__name__)
@@ -2038,6 +2059,204 @@ class VectorRenderer:
         self._last_report_ms = pygame.time.get_ticks()
         self._telemetry_interval_ms = 2500
         self._current_camera_frame: CameraFrameData | None = None
+        self._gpu_enabled = True
+        self._ctx: Optional[moderngl.Context] = None
+        self._line_program: Optional[moderngl.Program] = None
+        self._framebuffer: Optional[moderngl.Framebuffer] = None
+        self._gpu_geometry_cache: Dict[str, ShipGPUGeometry] = {}
+        self._ship_instances: list[ShipInstance] = []
+        self._init_gpu()
+
+    def _init_gpu(self) -> None:
+        if moderngl is None:
+            LOGGER.warning("moderngl not available; using CPU renderer")
+            self._gpu_enabled = False
+            return
+        try:
+            self._ctx = moderngl.create_context(standalone=True)
+        except Exception as exc:  # pragma: no cover - environment dependent
+            LOGGER.warning("Falling back to CPU renderer: %s", exc)
+            self._gpu_enabled = False
+            self._ctx = None
+            return
+        self._ctx.enable(moderngl.BLEND)
+        if hasattr(moderngl, "BLEND_DEFAULT"):
+            self._ctx.blend_func = moderngl.BLEND_DEFAULT
+        vertex_shader = """
+            #version 330
+            uniform mat4 model;
+            uniform mat4 view_proj;
+            in vec3 in_position;
+            void main() {
+                gl_Position = view_proj * model * vec4(in_position, 1.0);
+            }
+        """
+        fragment_shader = """
+            #version 330
+            uniform vec3 color;
+            out vec4 fragColor;
+            void main() {
+                fragColor = vec4(color, 1.0);
+            }
+        """
+        self._line_program = self._ctx.program(
+            vertex_shader=vertex_shader,
+            fragment_shader=fragment_shader,
+        )
+
+    def _ensure_framebuffer(self) -> None:
+        if not self._gpu_enabled or self._ctx is None:
+            return
+        width, height = self.surface.get_size()
+        if width <= 0 or height <= 0:
+            return
+        if self._framebuffer and self._framebuffer.size == (width, height):
+            return
+        self._framebuffer = self._ctx.simple_framebuffer((width, height), components=4)
+        self._framebuffer.use()
+        self._framebuffer.clear(0.0, 0.0, 0.0, 0.0)
+
+    @staticmethod
+    def _flatten_mat4(matrix: list[list[float]]) -> bytes:
+        values = []
+        for column in range(4):
+            for row in range(4):
+                values.append(matrix[row][column])
+        return array("f", values).tobytes()
+
+    @staticmethod
+    def _mat4_multiply(a: list[list[float]], b: list[list[float]]) -> list[list[float]]:
+        result = [[0.0 for _ in range(4)] for _ in range(4)]
+        for row in range(4):
+            for col in range(4):
+                result[row][col] = sum(a[row][k] * b[k][col] for k in range(4))
+        return result
+
+    @staticmethod
+    def _compute_view_matrix(frame: CameraFrameData) -> list[list[float]]:
+        right = frame.right
+        up = frame.up
+        forward = frame.forward
+        position = frame.position
+        view = [
+            [right.x, right.y, right.z, -position.dot(right)],
+            [up.x, up.y, up.z, -position.dot(up)],
+            [-forward.x, -forward.y, -forward.z, position.dot(forward)],
+            [0.0, 0.0, 0.0, 1.0],
+        ]
+        return view
+
+    @staticmethod
+    def _compute_projection_matrix(frame: CameraFrameData) -> list[list[float]]:
+        f = frame.fov_factor
+        aspect = frame.aspect if frame.aspect else 1.0
+        near = max(1e-3, frame.near)
+        far = max(near + 1e-3, frame.far)
+        nf = 1.0 / (near - far)
+        proj = [
+            [f / aspect, 0.0, 0.0, 0.0],
+            [0.0, f, 0.0, 0.0],
+            [0.0, 0.0, (far + near) * nf, (2.0 * far * near) * nf],
+            [0.0, 0.0, -1.0, 0.0],
+        ]
+        return proj
+
+    def _view_proj_matrix(self, frame: CameraFrameData) -> bytes:
+        view = self._compute_view_matrix(frame)
+        proj = self._compute_projection_matrix(frame)
+        combined = self._mat4_multiply(proj, view)
+        return self._flatten_mat4(combined)
+
+    def _get_gpu_geometry(self, key: str, geometry: ShipGeometry) -> ShipGPUGeometry:
+        cached = self._gpu_geometry_cache.get(key)
+        if cached is not None:
+            return cached
+        if not self._ctx or not self._line_program:
+            raise RuntimeError("GPU context not initialized")
+        vertex_data = array("f")
+        for vertex in geometry.vertices:
+            vertex_data.extend((vertex.x, vertex.y, vertex.z))
+        index_data = array("I")
+        for start, end in geometry.edges:
+            index_data.extend((start, end))
+        vbo = self._ctx.buffer(vertex_data.tobytes())
+        ibo = self._ctx.buffer(index_data.tobytes()) if index_data else None
+        content = [(vbo, "3f", "in_position")]
+        vao = self._ctx.vertex_array(
+            self._line_program,
+            content,
+            index_buffer=ibo,
+        )
+        geometry_gpu = ShipGPUGeometry(
+            vao=vao,
+            index_count=len(index_data),
+            vbo=vbo,
+            ibo=ibo,
+        )
+        self._gpu_geometry_cache[key] = geometry_gpu
+        return geometry_gpu
+
+    @staticmethod
+    def _ship_model_matrix(
+        origin: Vector3,
+        right: Vector3,
+        up: Vector3,
+        forward: Vector3,
+        scale: float,
+    ) -> bytes:
+        model = [
+            [right.x * scale, up.x * scale, forward.x * scale, origin.x],
+            [right.y * scale, up.y * scale, forward.y * scale, origin.y],
+            [right.z * scale, up.z * scale, forward.z * scale, origin.z],
+            [0.0, 0.0, 0.0, 1.0],
+        ]
+        return VectorRenderer._flatten_mat4(model)
+
+    def _queue_ship_instance(
+        self,
+        geometry_key: str,
+        geometry: ShipGeometry,
+        origin: Vector3,
+        basis: tuple[Vector3, Vector3, Vector3],
+        scale: float,
+        color: tuple[int, int, int],
+    ) -> None:
+        if not self._gpu_enabled:
+            return
+        right, up, forward = basis
+        gpu_geometry = self._get_gpu_geometry(geometry_key, geometry)
+        model = self._ship_model_matrix(origin, right, up, forward, scale)
+        rgb = tuple(channel / 255.0 for channel in color)
+        if gpu_geometry.index_count <= 0:
+            return
+        self._ship_instances.append(
+            ShipInstance(geometry=gpu_geometry, model_matrix=model, color=rgb)
+        )
+
+    def _flush_ship_batches(self, frame: CameraFrameData) -> None:
+        if not self._gpu_enabled or not self._ship_instances:
+            return
+        if not self._ctx or not self._line_program:
+            return
+        self._ensure_framebuffer()
+        if not self._framebuffer:
+            return
+        self._framebuffer.use()
+        self._framebuffer.clear(0.0, 0.0, 0.0, 0.0)
+        view_proj = self._view_proj_matrix(frame)
+        self._line_program["view_proj"].write(view_proj)
+        for instance in self._ship_instances:
+            self._line_program["model"].write(instance.model_matrix)
+            self._line_program["color"].value = instance.color
+            instance.geometry.vao.render(mode=moderngl.LINES)
+        width, height = self.surface.get_size()
+        data = self._framebuffer.read(components=4, alignment=1)
+        gpu_surface = pygame.image.frombuffer(data, (width, height), "RGBA")
+        gpu_surface = pygame.transform.flip(gpu_surface, False, True)
+        gpu_surface = gpu_surface.convert_alpha()
+        self.surface.blit(gpu_surface, (0, 0))
+        self._framebuffer.clear(0.0, 0.0, 0.0, 0.0)
+        self._ship_instances.clear()
 
     def _flush_frame_counters(self) -> None:
         if (
@@ -2564,6 +2783,12 @@ class VectorRenderer:
     def clear(self) -> None:
         self._start_frame()
         self.surface.fill(BACKGROUND)
+        self._ship_instances.clear()
+        if self._gpu_enabled:
+            self._ensure_framebuffer()
+        if self._gpu_enabled and self._framebuffer is not None:
+            self._framebuffer.use()
+            self._framebuffer.clear(0.0, 0.0, 0.0, 0.0)
 
     def draw_grid(
         self,
@@ -2736,12 +2961,13 @@ class VectorRenderer:
 
     def draw_ship(self, camera: ChaseCamera, ship: Ship) -> None:
         frame = self._get_camera_frame(camera)
-        geometry = self._ship_geometry_cache.get(
-            ship.frame.id,
-            self._ship_geometry_cache.get(
-                ship.frame.size, self._ship_geometry_cache["Strike"]
-            ),
-        )
+        if ship.frame.id in self._ship_geometry_cache:
+            geometry_key = ship.frame.id
+        elif ship.frame.size in self._ship_geometry_cache:
+            geometry_key = ship.frame.size
+        else:
+            geometry_key = "Strike"
+        geometry = self._ship_geometry_cache.get(geometry_key, self._ship_geometry_cache["Strike"])
         scale = _ship_geometry_scale(ship, geometry)
         state = getattr(ship, "render_state", None)
         if state is None:
@@ -2765,30 +2991,42 @@ class VectorRenderer:
             scale=scale,
         )
         color = SHIP_COLOR if ship.team == "player" else ENEMY_COLOR
-        line_mode = "line" if distance > 7500.0 else "aaline"
-        drawn_edges = False
-        for idx_a, idx_b in geometry.edges:
-            if not (visibility[idx_a] and visibility[idx_b]):
-                continue
-            ax, ay = projected[idx_a]
-            bx, by = projected[idx_b]
-            if line_mode == "line":
-                pygame.draw.line(
-                    self.surface,
-                    color,
-                    (int(round(ax)), int(round(ay))),
-                    (int(round(bx)), int(round(by))),
-                    1,
-                )
-            else:
-                pygame.draw.aaline(self.surface, color, (ax, ay), (bx, by), blend=1)
-            drawn_edges = True
+        if self._gpu_enabled:
+            self._queue_ship_instance(
+                geometry_key,
+                geometry,
+                origin,
+                (right, up, forward),
+                scale,
+                color,
+            )
+            self._flush_ship_batches(frame)
+            self._frame_counters.objects_drawn_line += 1
+        else:
+            line_mode = "line" if distance > 7500.0 else "aaline"
+            drawn_edges = False
+            for idx_a, idx_b in geometry.edges:
+                if not (visibility[idx_a] and visibility[idx_b]):
+                    continue
+                ax, ay = projected[idx_a]
+                bx, by = projected[idx_b]
+                if line_mode == "line":
+                    pygame.draw.line(
+                        self.surface,
+                        color,
+                        (int(round(ax)), int(round(ay))),
+                        (int(round(bx)), int(round(by))),
+                        1,
+                    )
+                else:
+                    pygame.draw.aaline(self.surface, color, (ax, ay), (bx, by), blend=1)
+                drawn_edges = True
 
-        if drawn_edges:
-            if line_mode == "line":
-                self._frame_counters.objects_drawn_line += 1
-            else:
-                self._frame_counters.objects_drawn_aaline += 1
+            if drawn_edges:
+                if line_mode == "line":
+                    self._frame_counters.objects_drawn_line += 1
+                else:
+                    self._frame_counters.objects_drawn_aaline += 1
 
         speed = ship.kinematics.velocity.length()
         speed_intensity = 0.0
