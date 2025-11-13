@@ -3,7 +3,7 @@ from typing import Callable, Union
 
 import pytest
 
-from game.assets.content import ContentManager
+from game.assets.content import ContentManager, ItemData
 from game.ships.ship import Ship
 from game.ui.strike_store import StoreFilters, fitting, store
 
@@ -210,3 +210,28 @@ def test_filtering_returns_only_matching_slot() -> None:
     filters = StoreFilters(slot_families=("engine",), sort_by="name", descending=False)
     items = store.list_items(filters)
     assert all(card.item.slot_family == "engine" for card in items)
+
+
+def test_ship_percent_modules_modify_stats() -> None:
+    content = ContentManager(Path("game/assets"))
+    content.load()
+    frame = content.ships.get("raven_mk_vi_r")
+    ship = Ship(frame)
+    base_speed = ship.stats.max_speed
+    base_boost = ship.stats.boost_speed
+    base_cost = ship.stats.boost_cost
+    module = ItemData(
+        id="test_percent_module",
+        slot_type="engine",
+        name="Test Percent Module",
+        tags=[],
+        stats={
+            "max_speed_percent": 10.0,
+            "boost_speed_percent": 5.0,
+            "boost_cost_percent": 20.0,
+        },
+    )
+    assert ship.equip_module(module)
+    assert ship.stats.max_speed == pytest.approx(base_speed * 1.10)
+    assert ship.stats.boost_speed == pytest.approx(base_boost * 1.05)
+    assert ship.stats.boost_cost == pytest.approx(base_cost * 1.20)
