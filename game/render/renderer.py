@@ -17,6 +17,7 @@ from game.ships.ship import Ship
 from game.world.asteroids import Asteroid
 
 from game.render.state import ProjectedVertexCache, RenderSpatialState, TelemetryCounters
+from game.render.escort_gpu import initialize_gpu_renderer
 
 BACKGROUND = (5, 8, 12)
 GRID_MINOR_COLOR = (20, 32, 44)
@@ -2038,6 +2039,14 @@ class VectorRenderer:
         self._last_report_ms = pygame.time.get_ticks()
         self._telemetry_interval_ms = 2500
         self._current_camera_frame: CameraFrameData | None = None
+        escort_geometry = self._ship_geometry_cache.get("Escort")
+        if escort_geometry is not None:
+            self._escort_gpu_renderer = initialize_gpu_renderer(
+                escort_geometry.vertices,
+                escort_geometry.edges,
+            )
+        else:
+            self._escort_gpu_renderer = None
 
     def _flush_frame_counters(self) -> None:
         if (
@@ -2767,28 +2776,71 @@ class VectorRenderer:
         color = SHIP_COLOR if ship.team == "player" else ENEMY_COLOR
         line_mode = "line" if distance > 7500.0 else "aaline"
         drawn_edges = False
-        for idx_a, idx_b in geometry.edges:
-            if not (visibility[idx_a] and visibility[idx_b]):
-                continue
-            ax, ay = projected[idx_a]
-            bx, by = projected[idx_b]
-            if line_mode == "line":
-                pygame.draw.line(
-                    self.surface,
-                    color,
-                    (int(round(ax)), int(round(ay))),
-                    (int(round(bx)), int(round(by))),
-                    1,
-                )
+        use_gpu = (
+            ship.frame.size == "Escort"
+            and getattr(self, "_escort_gpu_renderer", None) is not None
+        )
+        if use_gpu:
+            drawn_edges = any(
+                visibility[idx_a] and visibility[idx_b]
+                for idx_a, idx_b in geometry.edges
+            )
+            if drawn_edges:
+                try:
+                    assert self._escort_gpu_renderer is not None
+                    self._escort_gpu_renderer.draw(
+                        self.surface,
+                        camera_position=frame.position,
+                        camera_forward=frame.forward,
+                        camera_right=frame.right,
+                        camera_up=frame.up,
+                        aspect=frame.aspect,
+                        fov_factor=frame.fov_factor,
+                        near=frame.near,
+                        far=frame.far,
+                        ship_origin=origin,
+                        ship_right=right,
+                        ship_up=up,
+                        ship_forward=forward,
+                        scale=scale,
+                        color=color,
+                    )
+                except Exception as exc:
+                    LOGGER.warning(
+                        "Escort GPU renderer failed; falling back to CPU rendering: %s",
+                        exc,
+                    )
+                    self._escort_gpu_renderer = None
+                    drawn_edges = False
+                    use_gpu = False
             else:
-                pygame.draw.aaline(self.surface, color, (ax, ay), (bx, by), blend=1)
-            drawn_edges = True
+                use_gpu = False
+
+        if not use_gpu:
+            for idx_a, idx_b in geometry.edges:
+                if not (visibility[idx_a] and visibility[idx_b]):
+                    continue
+                ax, ay = projected[idx_a]
+                bx, by = projected[idx_b]
+                if line_mode == "line":
+                    pygame.draw.line(
+                        self.surface,
+                        color,
+                        (int(round(ax)), int(round(ay))),
+                        (int(round(bx)), int(round(by))),
+                        1,
+                    )
+                else:
+                    pygame.draw.aaline(
+                        self.surface, color, (ax, ay), (bx, by), blend=1
+                    )
+                drawn_edges = True
 
         if drawn_edges:
-            if line_mode == "line":
-                self._frame_counters.objects_drawn_line += 1
-            else:
+            if use_gpu or line_mode == "aaline":
                 self._frame_counters.objects_drawn_aaline += 1
+            else:
+                self._frame_counters.objects_drawn_line += 1
 
         speed = ship.kinematics.velocity.length()
         speed_intensity = 0.0
