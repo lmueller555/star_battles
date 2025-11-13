@@ -25,6 +25,8 @@ SHIP_COLOR = (120, 220, 255)
 ENEMY_COLOR = (255, 80, 100)
 PROJECTILE_COLOR = (255, 200, 80)
 MISSILE_COLOR = (255, 140, 60)
+PROJECTILE_RENDER_DISTANCE = 3000.0
+PROJECTILE_RENDER_DISTANCE_SQR = PROJECTILE_RENDER_DISTANCE * PROJECTILE_RENDER_DISTANCE
 
 # Engine layout presets by ship size. These are expressed using the same
 # lightweight local-space units as the wireframe definitions and roughly align
@@ -2296,6 +2298,10 @@ class VectorRenderer:
 
     def draw_projectiles(self, camera: ChaseCamera, projectiles: Iterable[Projectile]) -> None:
         for projectile in projectiles:
+            if (
+                projectile.position - camera.position
+            ).length_squared() > PROJECTILE_RENDER_DISTANCE_SQR:
+                continue
             color = MISSILE_COLOR if projectile.weapon.wclass == "missile" else PROJECTILE_COLOR
             screen_pos, visible = camera.project(projectile.position, self.surface.get_size())
             if visible:

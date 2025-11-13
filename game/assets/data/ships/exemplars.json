@@ -84,10 +84,11 @@
     "slots": {
       "weapons": {
         "cannon": {
-          "base": 4,
+          "base": 3,
           "advanced_delta": 1,
-          "advanced_total": 5
-        }
+          "advanced_total": 4
+        },
+        "launcher": 1
       },
       "hull": 2,
       "engine": {
@@ -125,15 +126,15 @@
       },
       {
         "id": "hp_viper2_starboard_inner",
-        "slot": "cannon",
+        "slot": "launcher",
         "position": [
           0.7,
           -0.1,
           2.0
         ],
-        "gimbal": 24,
+        "gimbal": 28,
         "tracking_speed": 240,
-        "group": "primary"
+        "group": "aux"
       },
       {
         "id": "hp_viper2_starboard_outer",
@@ -162,7 +163,7 @@
       "weapons": {
         "hp_viper2_port_outer": "mec_a6",
         "hp_viper2_port_inner": "mec_a6p",
-        "hp_viper2_starboard_inner": "mec_a6p",
+        "hp_viper2_starboard_inner": "mel_w9",
         "hp_viper2_starboard_outer": "mec_a6"
       }
     },
@@ -362,7 +363,8 @@
     },
     "slots": {
       "weapons": {
-        "cannon": 3
+        "cannon": 2,
+        "launcher": 1
       },
       "hull": 1,
       "engine": 4,
@@ -396,7 +398,7 @@
       },
       {
         "id": "hp_raptor_dorsal",
-        "slot": "cannon",
+        "slot": "launcher",
         "position": [
           0.0,
           0.4,
@@ -404,7 +406,7 @@
         ],
         "gimbal": 36,
         "tracking_speed": 180,
-        "group": "primary"
+        "group": "aux"
       }
     ],
     "economy": {
@@ -421,7 +423,7 @@
       "weapons": {
         "hp_raptor_port": "mel_n2",
         "hp_raptor_starboard": "mel_n2",
-        "hp_raptor_dorsal": "mec_a8p"
+        "hp_raptor_dorsal": "mel_w9"
       }
     },
     "role_bonuses": [
@@ -484,7 +486,8 @@
     },
     "slots": {
       "weapons": {
-        "cannon": 3
+        "cannon": 2,
+        "launcher": 1
       },
       "hull": 3,
       "engine": 3,
@@ -518,15 +521,15 @@
       },
       {
         "id": "hp_viper3_center",
-        "slot": "cannon",
+        "slot": "launcher",
         "position": [
           0.0,
           -0.18,
           2.5
         ],
-        "gimbal": 30,
+        "gimbal": 34,
         "tracking_speed": 210,
-        "group": "primary"
+        "group": "aux"
       }
     ],
     "economy": {
@@ -543,7 +546,7 @@
       "weapons": {
         "hp_viper3_port": "mec_a8",
         "hp_viper3_starboard": "mec_a8p",
-        "hp_viper3_center": "mel_n2"
+        "hp_viper3_center": "mel_v1"
       }
     },
     "role_bonuses": [],
@@ -604,7 +607,8 @@
     },
     "slots": {
       "weapons": {
-        "cannon": 4
+        "cannon": 3,
+        "launcher": 1
       },
       "hull": 5,
       "engine": 2,
@@ -650,15 +654,15 @@
       },
       {
         "id": "hp_rhino_starboard_rear",
-        "slot": "cannon",
+        "slot": "launcher",
         "position": [
           1.1,
           -0.02,
           0.6
         ],
-        "gimbal": 30,
+        "gimbal": 32,
         "tracking_speed": 190,
-        "group": "primary"
+        "group": "aux"
       }
     ],
     "economy": {
@@ -676,7 +680,7 @@
         "hp_rhino_port_front": "mec_a8",
         "hp_rhino_port_rear": "mec_a6p",
         "hp_rhino_starboard_front": "mec_a8",
-        "hp_rhino_starboard_rear": "mec_a6p"
+        "hp_rhino_starboard_rear": "mel_w9"
       }
     },
     "role_bonuses": [
@@ -739,7 +743,8 @@
     },
     "slots": {
       "weapons": {
-        "gun": 2
+        "gun": 2,
+        "launcher": 1
       },
       "hull": 2,
       "engine": 2,
@@ -770,6 +775,18 @@
         "gimbal": 34,
         "tracking_speed": 250,
         "group": "primary"
+      },
+      {
+        "id": "hp_raven_missile",
+        "slot": "launcher",
+        "position": [
+          0.0,
+          -0.32,
+          1.4
+        ],
+        "gimbal": 40,
+        "tracking_speed": 220,
+        "group": "aux"
       }
     ],
     "economy": {
@@ -785,7 +802,8 @@
       "modules": {},
       "weapons": {
         "hp_raven_port": "mec_a6p",
-        "hp_raven_starboard": "mec_a8p"
+        "hp_raven_starboard": "mec_a8p",
+        "hp_raven_missile": "mel_v1"
       }
     },
     "role_bonuses": [
@@ -848,8 +866,8 @@
     },
     "slots": {
       "weapons": {
-        "cannon": 5,
-        "launcher": 1
+        "cannon": 4,
+        "launcher": 2
       },
       "hull": 2,
       "engine": 2,
@@ -895,7 +913,7 @@
       },
       {
         "id": "hp_glaive_dorsal",
-        "slot": "cannon",
+        "slot": "launcher",
         "position": [
           0.0,
           0.9,
@@ -903,7 +921,7 @@
         ],
         "gimbal": 55,
         "tracking_speed": 160,
-        "group": "primary"
+        "group": "aux"
       },
       {
         "id": "hp_glaive_ventral",
@@ -945,7 +963,7 @@
         "hp_glaive_front": "mec_e13",
         "hp_glaive_port": "mec_e12",
         "hp_glaive_starboard": "mec_e12",
-        "hp_glaive_dorsal": "mec_e17",
+        "hp_glaive_dorsal": "hd_m50p",
         "hp_glaive_ventral": "mec_e17",
         "hp_glaive_launcher": "hd_m63p"
       }
@@ -1010,7 +1028,8 @@
     },
     "slots": {
       "weapons": {
-        "cannon": 4
+        "cannon": 2,
+        "launcher": 2
       },
       "hull": 2,
       "engine": 4,
@@ -1020,7 +1039,7 @@
     "hardpoints": [
       {
         "id": "hp_scythe_port_front",
-        "slot": "cannon",
+        "slot": "launcher",
         "position": [
           -1.6,
           -0.05,
@@ -1028,7 +1047,7 @@
         ],
         "gimbal": 32,
         "tracking_speed": 210,
-        "group": "primary"
+        "group": "aux"
       },
       {
         "id": "hp_scythe_port_rear",
@@ -1044,7 +1063,7 @@
       },
       {
         "id": "hp_scythe_starboard_front",
-        "slot": "cannon",
+        "slot": "launcher",
         "position": [
           1.6,
           -0.05,
@@ -1052,7 +1071,7 @@
         ],
         "gimbal": 32,
         "tracking_speed": 210,
-        "group": "primary"
+        "group": "aux"
       },
       {
         "id": "hp_scythe_starboard_rear",
@@ -1079,9 +1098,9 @@
     "equipment": {
       "modules": {},
       "weapons": {
-        "hp_scythe_port_front": "mec_e13",
+        "hp_scythe_port_front": "hd_m63",
         "hp_scythe_port_rear": "mec_e17",
-        "hp_scythe_starboard_front": "mec_e13",
+        "hp_scythe_starboard_front": "hd_m63",
         "hp_scythe_starboard_rear": "mec_e17"
       }
     },
@@ -1145,7 +1164,8 @@
     },
     "slots": {
       "weapons": {
-        "cannon": 4,
+        "cannon": 2,
+        "launcher": 2,
         "special": 1
       },
       "hull": 4,
@@ -1156,7 +1176,7 @@
     "hardpoints": [
       {
         "id": "hp_maul_port_forward",
-        "slot": "cannon",
+        "slot": "launcher",
         "position": [
           -2.2,
           -0.1,
@@ -1164,11 +1184,11 @@
         ],
         "gimbal": 34,
         "tracking_speed": 200,
-        "group": "primary"
+        "group": "aux"
       },
       {
         "id": "hp_maul_starboard_forward",
-        "slot": "cannon",
+        "slot": "launcher",
         "position": [
           2.2,
           -0.1,
@@ -1176,7 +1196,7 @@
         ],
         "gimbal": 34,
         "tracking_speed": 200,
-        "group": "primary"
+        "group": "aux"
       },
       {
         "id": "hp_maul_port_aft",
@@ -1227,8 +1247,8 @@
     "equipment": {
       "modules": {},
       "weapons": {
-        "hp_maul_port_forward": "mec_e12",
-        "hp_maul_starboard_forward": "mec_e12",
+        "hp_maul_port_forward": "hd_m63p",
+        "hp_maul_starboard_forward": "hd_m63p",
         "hp_maul_port_aft": "mec_e13",
         "hp_maul_starboard_aft": "mec_e13",
         "hp_maul_spinal": "hd_m50p"

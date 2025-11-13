@@ -60,6 +60,21 @@ COLLISION_RESTITUTION = 0.35
 COLLISION_DAMAGE_SCALE = 6.0
 HITSCAN_BULLET_SPEED = 1800.0
 
+MISSILE_TTL_BY_SIZE: dict[str, float] = {
+    "Strike": 30.0,
+    "Escort": 40.0,
+    "Line": 50.0,
+    "Capital": 60.0,
+}
+
+
+def _missile_ttl_for_ship(ship: Ship | None, fallback: float) -> float:
+    """Return the configured missile lifetime for the firing ship."""
+
+    if ship is None:
+        return fallback
+    return MISSILE_TTL_BY_SIZE.get(ship.frame.size, fallback)
+
 # Offsets used to position player spawns around a friendly Outpost.
 _OUTPOST_SPAWN_PATTERN: tuple[tuple[float, float, float], ...] = (
     (0.0, 820.0, 20.0),
@@ -587,12 +602,15 @@ class SpaceWorld:
                 target_id = id(target_ship)
             elif target_asteroid:
                 target_id = id(target_asteroid)
+            ttl = weapon.max_range / max(1.0, weapon.projectile_speed)
+            if weapon.wclass == "missile":
+                ttl = _missile_ttl_for_ship(ship, ttl)
             projectile = Projectile(
                 weapon=weapon,
                 position=muzzle,
                 velocity=velocity,
                 target_id=target_id,
-                ttl=weapon.max_range / max(1.0, weapon.projectile_speed),
+                ttl=ttl,
                 team=ship.team,
                 source_ship=ship,
             )
