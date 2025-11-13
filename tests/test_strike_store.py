@@ -7,12 +7,12 @@ from game.ships.ship import Ship
 from game.ui.strike_store import StoreFilters, fitting, store
 
 
-def _make_ship() -> Ship:
+def _make_ship(frame_id: str = "viper_mk_vii", *, cubits: float = 20000.0) -> Ship:
     content = ContentManager(Path("game/assets"))
     content.load()
-    frame = content.ships.get("viper_mk_vii")
+    frame = content.ships.get(frame_id)
     ship = Ship(frame)
-    ship.resources.cubits = 20000.0
+    ship.resources.cubits = cubits
     store.bind_ship(ship)
     return ship
 
@@ -58,6 +58,18 @@ def test_store_purchase_respects_hold_capacity() -> None:
             "strike_armor_plating",
             {"armor": 4.5, "acceleration": -0.4, "turn_accel": -0.5},
         ),
+        (
+            "strike_ablative_lattice",
+            {"armor": 6.0, "hull_hp": 10.0, "acceleration": -0.5, "turn_accel": -0.3},
+        ),
+        (
+            "strike_bulkhead_reinforcement",
+            {"hull_hp": 70.0, "acceleration": -0.3, "turn_accel": -1.2},
+        ),
+        (
+            "strike_reactive_plating",
+            {"armor": 3.0, "avoidance_rating": 5.0, "acceleration": -0.2},
+        ),
     ],
 )
 def test_hull_module_preview_deltas(item_id: str, expected: dict[str, float]) -> None:
@@ -83,6 +95,22 @@ def test_hull_module_preview_deltas(item_id: str, expected: dict[str, float]) ->
             "light_gyro_stabilization",
             {"turn_rate": 2.5, "turn_accel": 2.5},
         ),
+        (
+            "light_afterburn_coupling",
+            {"max_speed": 0.5, "boost_speed": 3.5, "acceleration": 0.5},
+        ),
+        (
+            "light_vectoring_nozzles",
+            {"turn_rate": 3.5, "turn_accel": 3.0, "acceleration": -0.2},
+        ),
+        (
+            "light_inertial_dampeners",
+            {"acceleration": 1.5, "turn_accel": 1.0, "max_speed": -0.5},
+        ),
+        (
+            "light_ecm_weave",
+            {"avoidance_rating": 12.0, "turn_rate": 1.0},
+        ),
     ],
 )
 def test_engine_module_preview_deltas(item_id: str, expected: dict[str, float]) -> None:
@@ -101,6 +129,23 @@ def test_light_rcs_ducting_updates_avoidance() -> None:
     current = preview["current"]["avoidance"]
     future = preview["preview"]["avoidance"]
     assert future - current == pytest.approx(0.015)
+
+
+def test_strike_store_filters_to_strike_items() -> None:
+    ship = _make_ship("viper_mk_vii")
+    filters = StoreFilters(sort_by="name")
+    items = store.list_items(filters)
+    assert {card.item.ship_class for card in items} == {"Strike"}
+    assert any(card.item.id == "mel_n2" for card in items)
+
+
+def test_store_filters_for_escort_ship() -> None:
+    ship = _make_ship("glaive_command")
+    filters = StoreFilters(sort_by="name")
+    items = store.list_items(filters)
+    classes = {card.item.ship_class for card in items}
+    assert classes == {"Escort"}
+    assert any(card.item.id == "mec_e12" for card in items)
 
 
 def test_filtering_returns_only_matching_slot() -> None:
