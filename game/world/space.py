@@ -351,7 +351,7 @@ class SpaceWorld:
                     continue
                 if projectile.weapon.wclass == "missile" and to_target.length_squared() > 0.0:
                     desired = to_target.normalize() * projectile.weapon.projectile_speed
-                    projectile.velocity += (desired - projectile.velocity) * min(1.0, 1.5 * dt)
+                    projectile.velocity += (desired - projectile.velocity) * min(1.0, 1.1 * dt)
             elif target_asteroid and not target_asteroid.is_destroyed():
                 to_target = target_asteroid.position - projectile.position
                 distance = to_target.length()
@@ -370,7 +370,7 @@ class SpaceWorld:
                     continue
                 if projectile.weapon.wclass == "missile" and to_target.length_squared() > 0.0:
                     desired = to_target.normalize() * projectile.weapon.projectile_speed
-                    projectile.velocity += (desired - projectile.velocity) * min(1.0, 1.5 * dt)
+                    projectile.velocity += (desired - projectile.velocity) * min(1.0, 1.1 * dt)
 
         # Simple PD: ships with PD grid attempt to destroy missiles within module-defined range.
         for ship in self.ships:
