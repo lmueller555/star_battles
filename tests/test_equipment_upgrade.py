@@ -31,7 +31,7 @@ def test_weapon_upgrade_costs_and_stats():
     assert math.isclose(totals["tylium"], 2_800.0)
     damage_value, known = model.stat_value("damage_min", model.preview_level)
     assert known
-    assert math.isclose(damage_value, 1.32, rel_tol=1e-3)
+    assert math.isclose(damage_value, 1.2, rel_tol=1e-3)
 
 
 def test_skill_requirement_gate_blocks_upgrade():

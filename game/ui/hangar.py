@@ -945,6 +945,14 @@ class HangarView:
                 lines.append(f"Speed {stats['projectile_speed']:.0f} m/s")
             if "damage_per_second" in stats:
                 lines.append(f"DPS {stats['damage_per_second']:.1f}")
+            if "power_damage_min" in stats and "power_damage_max" in stats:
+                lines.append(
+                    f"Power Damage {stats['power_damage_min']:.0f}–{stats['power_damage_max']:.0f}"
+                )
+            if "explosion_radius" in stats:
+                lines.append(f"Blast Radius {stats['explosion_radius']:.0f} m")
+            if "mining_yield" in stats:
+                lines.append(f"Mining Yield ×{stats['mining_yield']:.1f}")
             return lines
         if data.slot_family == "hull":
             lines = []
@@ -952,6 +960,12 @@ class HangarView:
                 lines.append(f"Armor +{stats['armor']:.2f}")
             if "hull_hp" in stats:
                 lines.append(f"Hull +{stats['hull_hp']:.1f}")
+            if "critical_defense" in stats:
+                lines.append(f"Crit Defense +{stats['critical_defense']:.1f}")
+            if "hull_recovery" in stats:
+                lines.append(f"Regen +{stats['hull_recovery']:.2f}/s")
+            if "hull_restore" in stats:
+                lines.append(f"Repair +{stats['hull_restore']:.0f}")
             if "acceleration" in stats:
                 lines.append(f"Accel {stats['acceleration']:+.1f}")
             if "turn_accel" in stats:
@@ -965,14 +979,38 @@ class HangarView:
                 lines.append(f"Speed +{stats['max_speed']:.2f} m/s")
             if "boost_speed" in stats:
                 lines.append(f"Boost +{stats['boost_speed']:.2f} m/s")
+            if "max_speed_percent" in stats:
+                lines.append(f"Speed +{stats['max_speed_percent']:.1f}%")
+            if "boost_speed_percent" in stats:
+                lines.append(f"Boost +{stats['boost_speed_percent']:.1f}%")
             if "acceleration" in stats:
                 lines.append(f"Accel {stats['acceleration']:+.2f}")
+            if "acceleration_percent" in stats:
+                lines.append(f"Accel {stats['acceleration_percent']:+.1f}%")
             if "turn_rate" in stats:
                 lines.append(f"Turn {stats['turn_rate']:+.2f}°/s")
+            if "turn_rate_percent" in stats:
+                lines.append(f"Turn {stats['turn_rate_percent']:+.1f}%")
             if "turn_accel" in stats:
                 lines.append(f"Turn Accel {stats['turn_accel']:+.2f}°/s²")
+            if "turn_accel_percent" in stats:
+                lines.append(f"Turn Accel {stats['turn_accel_percent']:+.1f}%")
+            if "strafe_speed" in stats:
+                lines.append(f"Strafe +{stats['strafe_speed']:.2f} m/s")
+            if "strafe_speed_percent" in stats:
+                lines.append(f"Strafe +{stats['strafe_speed_percent']:.1f}%")
             if "avoidance_rating" in stats:
                 lines.append(f"Avoidance +{stats['avoidance_rating']:.0f}")
+            if "avoidance_percent" in stats:
+                lines.append(f"Avoidance +{stats['avoidance_percent']:.1f}%")
+            if "boost_cost_percent" in stats:
+                lines.append(f"Boost Cost {stats['boost_cost_percent']:+.1f}%")
+            if "boost_speed_active" in stats:
+                lines.append(f"Active Boost +{stats['boost_speed_active']:.0f} m/s")
+            if "boost_acceleration_multiplier" in stats:
+                lines.append(
+                    f"Boost Accel ×{stats['boost_acceleration_multiplier']:.1f}"
+                )
             return lines
         return []
 
@@ -1024,6 +1062,8 @@ class HangarView:
             for key, label in (
                 ("hull_hp", "Hull"),
                 ("armor", "Armor"),
+                ("critical_defense", "Crit Defense"),
+                ("hull_recovery", "Hull Regen"),
                 ("acceleration", "Acceleration"),
                 ("turn_accel", "Turn Accel"),
             ):
@@ -1037,6 +1077,8 @@ class HangarView:
                 ("turn_rate", "Turn"),
                 ("turn_accel", "Turn Accel"),
                 ("avoidance_rating", "Avoidance"),
+                ("strafe_speed", "Strafe"),
+                ("boost_cost", "Boost Cost"),
             ):
                 if key in deltas:
                     lines.append((label, current.get(key, 0.0), preview_stats.get(key, 0.0)))
@@ -1062,6 +1104,25 @@ class HangarView:
                 lines.append(("Projectile Speed", stats["projectile_speed"], stats["projectile_speed"]))
             if "damage_per_second" in stats:
                 lines.append(("Damage / s", stats["damage_per_second"], stats["damage_per_second"]))
+            if "power_damage_min" in stats and "power_damage_max" in stats:
+                lines.append(
+                    (
+                        "Power Damage",
+                        stats["power_damage_min"],
+                        stats["power_damage_min"],
+                    )
+                )
+                lines.append(
+                    (
+                        "Power Damage Max",
+                        stats["power_damage_max"],
+                        stats["power_damage_max"],
+                    )
+                )
+            if "explosion_radius" in stats:
+                lines.append(("Blast Radius", stats["explosion_radius"], stats["explosion_radius"]))
+            if "mining_yield" in stats:
+                lines.append(("Mining Yield", stats["mining_yield"], stats["mining_yield"]))
         return lines
 
     def _draw_hold_panel(self, surface: pygame.Surface, rect: pygame.Rect, ship: Ship) -> None:

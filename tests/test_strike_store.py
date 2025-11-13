@@ -59,16 +59,26 @@ def test_store_purchase_respects_hold_capacity() -> None:
             {"armor": 4.5, "acceleration": -0.4, "turn_accel": -0.5},
         ),
         (
-            "strike_ablative_lattice",
-            {"armor": 6.0, "hull_hp": 10.0, "acceleration": -0.5, "turn_accel": -0.3},
+            "strike_ht_plating",
+            {"critical_defense": 7.5},
         ),
         (
-            "strike_bulkhead_reinforcement",
-            {"hull_hp": 70.0, "acceleration": -0.3, "turn_accel": -1.2},
+            "strike_ht_hull_plating",
+            {"critical_defense": 2.5, "hull_hp": 30.0, "acceleration": -0.13, "turn_accel": -0.67},
         ),
         (
-            "strike_reactive_plating",
-            {"armor": 3.0, "avoidance_rating": 5.0, "acceleration": -0.2},
+            "strike_ht_armor_plating",
+            {"armor": 3.0, "critical_defense": 2.5, "acceleration": -0.27, "turn_accel": -0.33},
+        ),
+        (
+            "strike_ht_composite_plating",
+            {
+                "armor": 1.8,
+                "critical_defense": 1.5,
+                "hull_hp": 18.0,
+                "acceleration": -0.24,
+                "turn_accel": -0.6,
+            },
         ),
     ],
 )
@@ -96,20 +106,24 @@ def test_hull_module_preview_deltas(item_id: str, expected: dict[str, float]) ->
             {"turn_rate": 2.5, "turn_accel": 2.5},
         ),
         (
-            "light_afterburn_coupling",
-            {"max_speed": 0.5, "boost_speed": 3.5, "acceleration": 0.5},
+            "light_rcs_ducting",
+            {"avoidance_rating": 15.0},
         ),
         (
-            "light_vectoring_nozzles",
-            {"turn_rate": 3.5, "turn_accel": 3.0, "acceleration": -0.2},
+            "t8_drive_turbo_charger",
+            {"max_speed": 1.65, "boost_speed": 3.4},
         ),
         (
-            "light_inertial_dampeners",
-            {"acceleration": 1.5, "turn_accel": 1.0, "max_speed": -0.5},
+            "fog_gyro_stabilization",
+            {"turn_rate": 5.0, "turn_accel": 5.5},
         ),
         (
-            "light_ecm_weave",
-            {"avoidance_rating": 12.0, "turn_rate": 1.0},
+            "t15_pulsed_plasma_thruster",
+            {"boost_speed": 5.1, "acceleration": 2.4, "boost_cost": 0.1875},
+        ),
+        (
+            "coupled_rcs_ducting",
+            {"avoidance_rating": 20.4, "boost_speed": -2.125},
         ),
     ],
 )
@@ -136,7 +150,7 @@ def test_strike_store_filters_to_strike_items() -> None:
     filters = StoreFilters(sort_by="name")
     items = store.list_items(filters)
     assert {card.item.ship_class for card in items} == {"Strike"}
-    assert any(card.item.id == "mel_n2" for card in items)
+    assert any(card.item.id == "mec_a6" for card in items)
 
 
 def test_store_filters_for_escort_ship() -> None:
