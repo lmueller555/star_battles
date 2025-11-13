@@ -1717,8 +1717,8 @@
     },
     "slots": {
       "weapons": {
-        "guns": 6,
-        "launcher": 4,
+        "guns": 0,
+        "launcher": 8,
         "defensive": 2
       },
       "hull": 6,
@@ -1729,7 +1729,7 @@
     "hardpoints": [
       {
         "id": "hp_outpost_north",
-        "slot": "gun",
+        "slot": "launcher",
         "position": [
           -70.0,
           32.0,
@@ -1741,7 +1741,7 @@
       },
       {
         "id": "hp_outpost_south",
-        "slot": "gun",
+        "slot": "launcher",
         "position": [
           70.0,
           32.0,
@@ -1753,7 +1753,7 @@
       },
       {
         "id": "hp_outpost_east",
-        "slot": "gun",
+        "slot": "launcher",
         "position": [
           248.0,
           42.0,
@@ -1765,7 +1765,7 @@
       },
       {
         "id": "hp_outpost_west",
-        "slot": "gun",
+        "slot": "launcher",
         "position": [
           -248.0,
           42.0,
@@ -1873,10 +1873,10 @@
         ]
       },
       "weapons": {
-        "hp_outpost_north": "m_39f",
-        "hp_outpost_south": "m_37a",
-        "hp_outpost_east": "hag_mk16a",
-        "hp_outpost_west": "hag_mk16a",
+        "hp_outpost_north": "hd_m50p",
+        "hp_outpost_south": "hd_m63",
+        "hp_outpost_east": "hd_h48",
+        "hp_outpost_west": "hd_h48",
         "hp_outpost_launcher_port": "ram_179a",
         "hp_outpost_launcher_starboard": "ram_179a",
         "hp_outpost_pd_north": "ram_179a",
