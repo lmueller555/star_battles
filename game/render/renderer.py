@@ -17,6 +17,8 @@ try:
 except ImportError:  # pragma: no cover - dependency optional for tests
     moderngl = None  # type: ignore[assignment]
 
+_SHARED_CONTEXT: "moderngl.Context | None" = None
+
 from game.combat.weapons import Projectile
 from game.render.camera import CameraFrameData, ChaseCamera, DEFAULT_SHIP_LENGTHS
 from game.ships.ship import Ship
@@ -2047,8 +2049,24 @@ WIREFRAMES = {
 SHIP_GEOMETRY_CACHE = _build_ship_geometry_cache()
 
 
+def acquire_shared_context() -> "moderngl.Context | None":
+    """Lazily create and return a shared moderngl context."""
+
+    global _SHARED_CONTEXT
+    if moderngl is None:
+        return None
+    if _SHARED_CONTEXT is not None:
+        return _SHARED_CONTEXT
+    try:
+        _SHARED_CONTEXT = moderngl.create_context(standalone=True)
+    except Exception as exc:  # pragma: no cover - environment dependent
+        LOGGER.warning("Falling back to CPU renderer: %s", exc)
+        _SHARED_CONTEXT = None
+    return _SHARED_CONTEXT
+
+
 class VectorRenderer:
-    def __init__(self, surface: pygame.Surface) -> None:
+    def __init__(self, surface: pygame.Surface, ctx: "moderngl.Context | None" = None) -> None:
         self.surface = surface
         self._rng = random.Random()
         self._ship_geometry_cache: Dict[str, ShipGeometry] = dict(SHIP_GEOMETRY_CACHE)
@@ -2060,6 +2078,7 @@ class VectorRenderer:
         self._telemetry_interval_ms = 2500
         self._current_camera_frame: CameraFrameData | None = None
         self._gpu_enabled = True
+        self._provided_ctx = ctx
         self._ctx: Optional[moderngl.Context] = None
         self._line_program: Optional[moderngl.Program] = None
         self._framebuffer: Optional[moderngl.Framebuffer] = None
@@ -2072,12 +2091,12 @@ class VectorRenderer:
             LOGGER.warning("moderngl not available; using CPU renderer")
             self._gpu_enabled = False
             return
-        try:
-            self._ctx = moderngl.create_context(standalone=True)
-        except Exception as exc:  # pragma: no cover - environment dependent
-            LOGGER.warning("Falling back to CPU renderer: %s", exc)
+        if self._provided_ctx is not None:
+            self._ctx = self._provided_ctx
+        else:
+            self._ctx = acquire_shared_context()
+        if self._ctx is None:
             self._gpu_enabled = False
-            self._ctx = None
             return
         self._ctx.enable(moderngl.BLEND)
         if hasattr(moderngl, "BLEND_DEFAULT"):
@@ -3076,4 +3095,4 @@ class VectorRenderer:
             )
 
 
-__all__ = ["VectorRenderer"]
+__all__ = ["VectorRenderer", "acquire_shared_context"]
