@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import math
+import sys
 from dataclasses import dataclass
 
 import pygame
@@ -90,6 +91,8 @@ class SandboxScene(Scene):
         self.selected_object: Ship | Asteroid | None = None
         self._mouse_freelook_active: bool = False
         self._mouse_freelook_dragging: bool = False
+        self._relative_mouse_active: bool = False
+        self._cursor_clipped: bool = False
 
     def _equip_ship(self, ship: Ship) -> None:
         if not self.content:
@@ -1194,16 +1197,43 @@ class SandboxScene(Scene):
 
     def _enter_game_cursor(self) -> None:
         pygame.mouse.set_visible(False)
-        pygame.event.set_grab(True)
+        self._release_cursor_clip()
+        self._cursor_clipped = self._clip_cursor_to_window()
+        relative_mode_enabled = False
+        if not self._cursor_clipped:
+            set_relative = getattr(pygame.mouse, "set_relative_mode", None)
+            get_relative = getattr(pygame.mouse, "get_relative_mode", None)
+            if callable(set_relative) and callable(get_relative):
+                try:
+                    set_relative(True)
+                    relative_mode_enabled = bool(get_relative())
+                except pygame.error:
+                    relative_mode_enabled = False
+        if not self._cursor_clipped and not relative_mode_enabled and sys.platform != "win32":
+            pygame.event.set_grab(True)
+        self._relative_mouse_active = relative_mode_enabled
         self.cursor_indicator_visible = True
         self._reset_cursor_to_center()
-        current_pos = pygame.mouse.get_pos()
-        converted = self._surface_mouse_pos(current_pos)
-        self._last_mouse_pos = Vector2(converted)
+        if self._relative_mouse_active:
+            self._last_mouse_pos = Vector2(self.cursor_pos)
+        else:
+            current_pos = pygame.mouse.get_pos()
+            converted = self._surface_mouse_pos(current_pos)
+            self._last_mouse_pos = Vector2(converted)
 
     def _enter_ui_cursor(self) -> None:
         pygame.mouse.set_visible(True)
-        pygame.event.set_grab(False)
+        if self._relative_mouse_active:
+            set_relative = getattr(pygame.mouse, "set_relative_mode", None)
+            if callable(set_relative):
+                try:
+                    set_relative(False)
+                except pygame.error:
+                    pass
+        self._relative_mouse_active = False
+        if not self._cursor_clipped:
+            pygame.event.set_grab(False)
+        self._release_cursor_clip()
         self.cursor_indicator_visible = False
         self._last_mouse_pos = None
 
@@ -1213,6 +1243,59 @@ class SandboxScene(Scene):
             return
         width, height = surface.get_size()
         self.cursor_pos.update(width / 2, height / 2)
+        if not self._relative_mouse_active:
+            try:
+                pygame.mouse.set_pos(int(width / 2), int(height / 2))
+            except pygame.error:
+                pass
+
+    def _clip_cursor_to_window(self) -> bool:
+        if sys.platform != "win32":
+            return False
+        try:
+            info = pygame.display.get_wm_info()
+        except pygame.error:
+            return False
+        hwnd = info.get("window") if isinstance(info, dict) else None
+        if not hwnd:
+            return False
+        try:
+            import ctypes
+            from ctypes import wintypes
+        except Exception:
+            return False
+        user32 = getattr(ctypes, "windll", None)
+        if user32 is None:
+            return False
+        user32 = user32.user32
+        rect = wintypes.RECT()
+        if not user32.GetClientRect(hwnd, ctypes.byref(rect)):
+            return False
+        top_left = wintypes.POINT(rect.left, rect.top)
+        bottom_right = wintypes.POINT(rect.right, rect.bottom)
+        if not user32.ClientToScreen(hwnd, ctypes.byref(top_left)):
+            return False
+        if not user32.ClientToScreen(hwnd, ctypes.byref(bottom_right)):
+            return False
+        clip_rect = wintypes.RECT(top_left.x, top_left.y, bottom_right.x, bottom_right.y)
+        if not user32.ClipCursor(ctypes.byref(clip_rect)):
+            return False
+        return True
+
+    def _release_cursor_clip(self) -> None:
+        if not self._cursor_clipped or sys.platform != "win32":
+            self._cursor_clipped = False
+            return
+        try:
+            import ctypes
+        except Exception:
+            self._cursor_clipped = False
+            return
+        try:
+            ctypes.windll.user32.ClipCursor(None)
+        except Exception:
+            pass
+        self._cursor_clipped = False
 
 
 __all__ = ["SandboxScene"]
