@@ -668,8 +668,11 @@ class SpaceWorld:
         gimbal_limit: float,
     ) -> Ship | None:
         best: Ship | None = None
-        best_distance = float("inf")
+        best_score = float("inf")
         max_range = max(0.0, weapon.max_range)
+        pd_weapon = weapon.id in POINT_DEFENSE_WEAPONS
+        if pd_weapon and max_range > 0.0:
+            max_range = min(max_range, 1000.0)
         for enemy in enemies:
             if enemy.team == outpost.team or not enemy.is_alive():
                 continue
@@ -683,8 +686,15 @@ class SpaceWorld:
             angle = mount_direction.angle_to(direction)
             if gimbal_limit > 0.0 and angle > gimbal_limit:
                 continue
-            if distance < best_distance:
-                best_distance = distance
+            score = distance
+            if pd_weapon:
+                size = enemy.frame.size.lower() if enemy.frame else ""
+                if size == "strike":
+                    score *= 0.5
+                elif size == "escort":
+                    score *= 0.75
+            if score < best_score:
+                best_score = score
                 best = enemy
         return best
 
