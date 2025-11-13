@@ -86,6 +86,15 @@ def _forward_speed(ship: Ship) -> float:
     return ship.kinematics.velocity.dot(forward)
 
 
+def _apply_yaw_turn(ship: Ship, dt: float = 0.1) -> float:
+    ship.control.look_delta = Vector3(1.0, 0.0, 0.0)
+    forward_before = ship.kinematics.forward()
+    right_before = ship.kinematics.right()
+    update_ship_flight(ship, dt)
+    forward_after = ship.kinematics.forward()
+    return forward_after.dot(right_before)
+
+
 def test_thruster_speed_respects_lower_stat_limit() -> None:
     ship = _make_test_ship(max_speed=80.0, boost_speed=100.0)
     ship.control.throttle = 1.0
@@ -115,3 +124,22 @@ def test_thruster_speed_scales_with_higher_stat() -> None:
 
     assert boosted_speed > fallback_speed + 5.0
     assert boosted_speed >= ship.stats.boost_speed * 0.8
+
+
+def test_yaw_input_consistent_when_inverted() -> None:
+    upright = _make_test_ship(max_speed=80.0, boost_speed=100.0)
+    upright.auto_level_enabled = False
+    upright_turn = _apply_yaw_turn(upright)
+    assert upright_turn > 0.0
+
+    inverted_roll = _make_test_ship(max_speed=80.0, boost_speed=100.0)
+    inverted_roll.auto_level_enabled = False
+    inverted_roll.kinematics.rotation = Vector3(0.0, 0.0, 180.0)
+    roll_turn = _apply_yaw_turn(inverted_roll)
+    assert roll_turn > 0.0
+
+    inverted_pitch = _make_test_ship(max_speed=80.0, boost_speed=100.0)
+    inverted_pitch.auto_level_enabled = False
+    inverted_pitch.kinematics.rotation = Vector3(180.0, 0.0, 0.0)
+    pitch_turn = _apply_yaw_turn(inverted_pitch)
+    assert pitch_turn > 0.0
