@@ -52,12 +52,10 @@ ENGINE_LAYOUTS: dict[str, list[Vector3]] = {
         Vector3(52.0, -10.0, -212.0),
     ],
     "Capital": [
-        Vector3(-180.0, -62.0, -468.0),
-        Vector3(180.0, -62.0, -468.0),
-        Vector3(-132.0, 44.0, -432.0),
-        Vector3(132.0, 44.0, -432.0),
-        Vector3(-72.0, -20.0, -502.0),
-        Vector3(72.0, -20.0, -502.0),
+        Vector3(-51.0, 33.0, -490.0),
+        Vector3(51.0, 33.0, -490.0),
+        Vector3(-51.0, -33.0, -490.0),
+        Vector3(51.0, -33.0, -490.0),
     ],
     "Outpost": [],
 }
@@ -1924,23 +1922,83 @@ def _build_brimir_wireframe() -> list[tuple[Vector3, Vector3]]:
     star_catapult_back = _mirror_vector(port_catapult_back)
     segments.append((star_catapult_front, star_catapult_back))
 
-    engine_face = _elliptical_ring(
-        tail_z - 40.0 * length_scale,
-        tail_section[1] * 0.92,
-        tail_section[2] * 0.94,
-        sides=12,
-    )
-    nozzle_face = _elliptical_ring(
-        tail_z - 100.0 * length_scale,
-        tail_section[1] * 0.62,
-        tail_section[2] * 0.68,
-        sides=12,
-    )
-    _loop_segments(segments, engine_face)
-    _loop_segments(segments, nozzle_face)
-    _connect_rings(segments, engine_face, nozzle_face)
-    for point in engine_face[::3]:
-        segments.append((point, stern))
+    ship_length = nose_tip.z - stern.z
+    thruster_length = ship_length * 0.25
+    thruster_protrusion = thruster_length * 0.25
+    thruster_front_z = stern.z - thruster_protrusion + thruster_length
+    thruster_exit_z = stern.z
+    thruster_back_z = stern.z - thruster_protrusion
+    thruster_cap_z = thruster_back_z - thruster_protrusion * 0.15
+    thruster_support_z = thruster_front_z - thruster_length * 0.25
+
+    thruster_offset_x = tail_section[1] * 0.55
+    thruster_offset_y = tail_section[2] * 0.55
+    thruster_radius_x = tail_section[1] * 0.28
+    thruster_radius_y = tail_section[2] * 0.34
+    nozzle_radius_x = thruster_radius_x * 0.78
+    nozzle_radius_y = thruster_radius_y * 0.74
+    thruster_sides = 14
+
+    def thruster_ring(
+        center_x: float,
+        center_y: float,
+        z_pos: float,
+        radius_x: float,
+        radius_y: float,
+    ) -> list[Vector3]:
+        angle_step = 2.0 * math.pi / thruster_sides
+        return [
+            Vector3(
+                center_x + math.cos(step * angle_step) * radius_x,
+                center_y + math.sin(step * angle_step) * radius_y,
+                z_pos,
+            )
+            for step in range(thruster_sides)
+        ]
+
+    for x_sign in (-1, 1):
+        for y_sign in (-1, 1):
+            center_x = x_sign * thruster_offset_x
+            center_y = y_sign * thruster_offset_y
+            front_ring = thruster_ring(
+                center_x,
+                center_y,
+                thruster_front_z,
+                thruster_radius_x,
+                thruster_radius_y,
+            )
+            exit_ring = thruster_ring(
+                center_x,
+                center_y,
+                thruster_exit_z,
+                thruster_radius_x * 0.96,
+                thruster_radius_y * 0.94,
+            )
+            nozzle_ring = thruster_ring(
+                center_x,
+                center_y,
+                thruster_back_z,
+                nozzle_radius_x,
+                nozzle_radius_y,
+            )
+
+            _loop_segments(segments, front_ring)
+            _loop_segments(segments, exit_ring)
+            _loop_segments(segments, nozzle_ring)
+            _connect_rings(segments, front_ring, exit_ring)
+            _connect_rings(segments, exit_ring, nozzle_ring)
+
+            nozzle_cap = Vector3(center_x, center_y, thruster_cap_z)
+            for point in nozzle_ring[::3]:
+                segments.append((point, nozzle_cap))
+
+            support_anchor = hull_anchor(
+                thruster_support_z,
+                x_sign,
+                y_sign * 0.72,
+            )
+            for index in range(0, thruster_sides, thruster_sides // 2):
+                segments.append((front_ring[index], support_anchor))
 
     segments.append((tower_tip, nose_tip))
     segments.append((tower_back, ventral_spear))
