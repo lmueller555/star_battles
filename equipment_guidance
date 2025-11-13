@@ -590,250 +590,418 @@ Escort Weapons
 
 Weapons (Medium Hardpoints – Escort Only)
 
-MEC-E12(S) “Claw” — Medium Cannon Battery (L1)
-
-Damage: 10 – 25 (upgrades)
+MEC-E12(S) “Claw” — Medium Cannon Battery (Standard Targeting) (L1–L15)
+Damage: 10–25 (L1) → 24–60 (L15)
 Armor Piercing: 15
-Range: 0 – 1150 m (upgrades)
-Optimal Range: 450 m (upgrades)
+Range: 0–1150 m
+Optimal Range: 450 m (L1) → 800 m (L15)
 Accuracy: 335
 Critical Offense: 100
 Reload: 1.5 s
 Power Cost: 6
 Firing Arc: 180°
-Cost: 15 000
-Durability: 7 500 / 7 500
+Cost: 15,000
+Durability: 18,000 / 18,000
+Requirements: Requires ship class: Escort
+Effect: General-purpose medium cannon battery for Escort ships using standard single-target fire control. Balanced DPS and mid-range reach; good default gun for most fits.
+Upgrade Model: Damage and Optimal Range scale with level (10–25 → 24–60; 450 m → 800 m). Other stats remain fixed unless higher-level data indicate otherwise.
 
-Effect:
-General-purpose medium cannon battery for Escort-class ships.
-Provides a balance of firepower and accuracy, well-suited for mid-range skirmishes.
-Delivers solid kinetic damage output with moderate reload time and energy use.
-Ideal for flexible engagement profiles and hit-and-run combat typical of Escort vessels.
-
-Upgrade Model:
-Increase Damage and Optimal Range per level. Reload and Power Cost remain fixed unless higher-level data show changes.
-
-Implementation Notes:
-
-Uses standard ballistic weapon model with hit, crit, and armor formulas identical to Strike and Line-class cannons.
-
-Accuracy 335 tuned for agile Escort platforms; still reliable versus medium and large targets.
-
-Apply standard range falloff centered on Optimal Range (peak DPS ≈ 450 m).
-
-Power Cost consumed per shot; independent reload tracking per turret.
-
-Restricted to Escort-class hardpoints — enforce requirement in Store and Fitting UI.
-
-Consider medium-caliber muzzle flash and recoil animation for realism.
-
-Weapons (Medium Hardpoints – Escort Only)
-
-MEC-E13(S) “Hurricane” — Medium Cannon Battery (L1)
-
-Damage: 10 – 25 (upgrades)
+MEC-E12(M) “Claw” — Medium Cannon Battery (Multi-Targeting) (L1–L15)
+Damage: 10–25 (L1) → 24–60 (L15)
 Armor Piercing: 15
-Range: 0 – 900 m (upgrades)
-Optimal Range: 350 m (upgrades)
+Range: 0–1150 m
+Optimal Range: 450 m (L1) → 800 m (L15)
+Accuracy: 335
+Critical Offense: 100
+Reload: 1.5 s
+Power Cost: 6
+Firing Arc: 180°
+Cost: 15,000
+Durability: 18,000 / 18,000
+Requirements: Requires ship class: Escort
+Effect: Same ballistic profile as the standard Claw, but wired to multi-targeting fire control, allowing salvos to be distributed across multiple locked targets (as per your targeting system).
+Upgrade Model: Damage and Optimal Range scale (10–25 → 24–60; 450 m → 800 m). Multi-targeting behavior is purely logic, not an upgrade axis.
+
+MEC-E12P “Claw-P” — Medium Cannon Battery (Precision, Multi-Targeting) (L1–L15)
+Damage: 10–25 (L1) → 24–60 (L15)
+Armor Piercing: 15
+Range: 0–1150 m
+Optimal Range: 450 m (L1) → 800 m (L15)
+Accuracy: 335
+Critical Offense: 100 (L1) → 170 (L15)
+Reload: 1.5 s
+Power Cost: 6
+Firing Arc: 180°
+Cost: 15,000
+Durability: 18,000 / 18,000
+Requirements: Requires ship class: Escort
+Effect: Precision version of the Claw with increased crit potential and multi-targeting. Same base DPS profile, but significantly higher chance to land critical hits across several targets.
+Upgrade Model: Damage, Optimal Range, and Critical Offense all scale with level (Damage 10–25 → 24–60; Optimal Range 450 → 800 m; Crit 100 → 170).
+
+MEC-E13(S) “Hurricane” — Medium Cannon Battery (Standard Targeting) (L1–L15)
+Damage: 10–25 (L1) → 24–60 (L15)
+Armor Piercing: 15
+Range: 0–900 m
+Optimal Range: 350 m (L1) → 630 m (L15)
 Accuracy: 335
 Critical Offense: 100
 Reload: 1.2 s
 Power Cost: 6
 Firing Arc: 180°
-Cost: 15 000
-Durability: 7 500 / 7 500
+Cost: 15,000
+Durability: 18,000 / 18,000
+Requirements: Requires ship class: Escort
+Effect: Short-range, rapid-fire cannon for aggressive Escorts using single-target tracking. Higher sustained DPS than Claw at the cost of range.
+Upgrade Model: Damage and Optimal Range scale (10–25 → 24–60; 350 → 630 m). Other values remain fixed.
 
-Effect:
-Short-range, rapid-fire cannon battery for Escort-class ships.
-Emphasizes close-range engagement and sustained pressure through a fast reload cycle.
-Ideal for aggressive brawling and strike support where high burst cadence outweighs range.
-
-Upgrade Model:
-Increase Damage and Optimal Range per level. Reload and Power Cost remain constant unless higher-level data indicate variation.
-
-Implementation Notes:
-
-Follows standard ballistic, armor, and critical hit rules shared across all cannon classes.
-
-Shorter Optimal Range prioritizes close-quarters performance with high consistency inside 400 m.
-
-Reload cycle of 1.2 seconds enables near-continuous fire in dueling scenarios.
-
-Accuracy 335 ensures solid reliability at short range but moderate degradation beyond 900 m.
-
-Power Cost consumed per shot; manage energy draw in multi-turret configurations.
-
-Restricted to Escort-class hardpoints — enforce eligibility in Store and Fitting UI.
-
-Consider distinct rapid-fire muzzle flash and audio profile for combat clarity.
-
-Weapons (Medium Hardpoints – Escort Only)
-
-MEC-E17(S) “Falcon” — Medium Cannon Battery (L1)
-
-Damage: 10 – 25 (upgrades)
+MEC-E13P “Hurricane-P” — Medium Cannon Battery (Precision, Multi-Targeting) (L1–L15)
+Damage: 10–25 (L1) → 24–60 (L15)
 Armor Piercing: 15
-Range: 0 – 1350 m (upgrades)
-Optimal Range: 550 m (upgrades)
+Range: 0–900 m
+Optimal Range: 350 m (L1) → 630 m (L15)
+Accuracy: 335
+Critical Offense: 100 (L1) → 170 (L15)
+Reload: 1.2 s
+Power Cost: 6
+Firing Arc: 180°
+Cost: 15,000
+Durability: 18,000 / 18,000
+Requirements: Requires ship class: Escort
+Effect: Rapid-fire precision variant of Hurricane with boosted Critical Offense and multi-targeting capability. Designed for close-range brawling while spreading crit-heavy fire across several enemies.
+Upgrade Model: Damage, Optimal Range, and Critical Offense scale (Damage 10–25 → 24–60; Optimal Range 350 → 630 m; Crit 100 → 170).
+
+MEC-E13(M) “Hurricane” — Medium Cannon Battery (Multi-Targeting) (L1–L15)
+Damage: 10–25 (L1) → 24–60 (L15)
+Armor Piercing: 15
+Range: 0–900 m
+Optimal Range: 350 m (L1) → 630 m (L15)
+Accuracy: 335
+Critical Offense: 100
+Reload: 1.2 s
+Power Cost: 6
+Firing Arc: 180°
+Cost: 15,000
+Durability: 18,000 / 18,000
+Requirements: Requires ship class: Escort
+Effect: Multi-targeting version of the Hurricane. Same close-range DPS profile, but able to allocate volleys across multiple targets under Escort multi-targeting logic.
+Upgrade Model: Damage and Optimal Range scale as above; targeting behavior is fixed.
+
+MEC-E17(S) “Falcon” — Medium Cannon Battery (Standard Targeting) (L1–L15)
+Damage: 10–25 (L1) → 24–60 (L15)
+Armor Piercing: 15
+Range: 0–1350 m
+Optimal Range: 550 m (L1) → 900 m (L15)
 Accuracy: 335
 Critical Offense: 100
 Reload: 1.8 s
 Power Cost: 6
 Firing Arc: 180°
-Cost: 15 000
-Durability: 7 500 / 7 500
+Cost: 15,000
+Durability: 18,000 / 18,000
+Requirements: Requires ship class: Escort
+Effect: Long-range cannon battery for Escorts using single-target tracking. Lower ROF but better reach and safety; suited to standoff kiting and fire support.
+Upgrade Model: Damage and Optimal Range scale (10–25 → 24–60; 550 → 900 m). Other stats fixed unless otherwise specified.
 
-Effect:
-Long-range cannon battery for Escort-class ships.
-Prioritizes reach and precision over rate of fire, allowing Escorts to engage from a safer standoff distance.
-Best suited for disciplined hit-and-run tactics and sustained fire support in formation combat.
-
-Upgrade Model:
-Increase Damage and Optimal Range per level. Reload and Power Cost remain constant unless higher-level data indicate otherwise.
-
-Implementation Notes:
-
-Standard ballistic and crit model identical to other cannon batteries.
-
-Accuracy 335 enables reliable fire at medium to long range but penalizes mobility-based tracking.
-
-Range and Optimal Range values should apply to the standard falloff curve (peak DPS ≈ 550 m).
-
-Reload 1.8 s ensures lower sustained DPS but higher individual shot reliability.
-
-Ideal for pairing with short-range weapons like Hurricane to create mixed-range loadouts.
-
-Power Cost applied per shot; reloads tracked independently per weapon.
-
-Restricted to Escort-class hardpoints — enforce requirement in Store and Fitting UI.
-
-Add tracer visual effects and shell trails to reinforce long-range identity.
-
-Weapons (Medium Hardpoints – Escort Only)
-
-HD-M50P “Thunderbolt-P” — Medium Missile Battery (L1)
-
-Damage: 40 – 100 (upgrades)
-Armor Piercing: 25
-Range: 200 – 1350 m (upgrades)
-Turn Speed: 75 deg/s
-Speed: 100 m/s
-Critical Offense: 100 (upgrades)
-Reload: 12.5 s
-Power Cost: 50
+MEC-E17P “Falcon-P” — Medium Cannon Battery (Precision, Multi-Targeting) (L1–L15)
+Damage: 10–25 (L1) → 24–60 (L15)
+Armor Piercing: 15
+Range: 0–1350 m
+Optimal Range: 550 m (L1) → 900 m (L15)
+Accuracy: 335
+Critical Offense: 100 (L1) → 170 (L15)
+Reload: 1.8 s
+Power Cost: 6
 Firing Arc: 180°
-Cost: 15 000
-Durability: 7 500 / 7 500
+Cost: 15,000
+Durability: 18,000 / 18,000
+Requirements: Requires ship class: Escort
+Effect: Precision long-range variant of Falcon with increased Critical Offense and multi-targeting. Ideal for Escorts providing accurate fire support while distributing crit-heavy shells across several distant targets.
+Upgrade Model: Damage, Optimal Range, and Critical Offense scale with level (Damage 10–25 → 24–60; Optimal Range 550 → 900 m; Crit 100 → 170).
+
+MEC-E17(M) “Falcon” — Medium Cannon Battery (Multi-Targeting) (L1–L15)
+Damage: 10–25 (L1) → 24–60 (L15)
+Armor Piercing: 15
+Range: 0–1350 m
+Optimal Range: 550 m (L1) → 900 m (L15)
+Accuracy: 335
+Critical Offense: 100
+Reload: 1.8 s
+Power Cost: 6
+Firing Arc: 180°
+Cost: 15,000
+Durability: 18,000 / 18,000
+Requirements: Requires ship class: Escort
+Effect: Multi-targeting version of the long-range Falcon battery. Maintains the same reach and single-shot impact, but salvos can be split among multiple targets.
+Upgrade Model: Damage and Optimal Range scale; targeting mode is fixed.
+
+“Mole” — Medium Mining Battery (L1–L15)
+Damage: 4–10 (L1) → 9.6–24 (L15)
+Armor Piercing: 25
+Mining Yield: ×5 (asteroid mining multiplier)
+Range: 0–900 m
+Optimal Range: 350 m (L1) → 630 m (L15)
+Accuracy: 350
+Critical Offense: 100
+Reload: 1.5 s
+Power Cost: 12
+Firing Arc: 180°
+Cost: 7,500
+Durability: 18,000 / 18,000
+Requirements: Requires ship class: Escort
+Effect: Asteroid mining cannon for Escort-class ships. Provides moderate combat damage and a strong ×5 mining yield, making it the primary medium-slot choice for resource-oriented fits.
+Upgrade Model: Damage and Optimal Range scale with level (4–10 → 9.6–24; 350 → 630 m). Mining multiplier remains constant unless future data show otherwise.
+
+CAPITAL “Blaster” AC-42 — Anti-Capital Cannon (Escort Only, L1)
+Damage: 120–155 (L1) → 180–225 (max) (upgrades)
+Armor Piercing: 60
+Range: 500–2150 m
+Optimal Range: 1450 m
+Accuracy: 335
+Critical Offense: 200
+Reload: 2.5 s
+Power Cost: 9
+Firing Arc: 90°
+Cost: 175,000
+Durability: 18,000 / 18,000
+Requirements: Ship class Escort; can only target Capital-class ships.
 
 Effect:
-Precision variant of the Thunderbolt missile system for Escort-class ships.
-Improves critical hit potential and supports multi-targeting logic for coordinated strike patterns.
-Maintains the same baseline damage profile but rewards accuracy and tactical positioning.
+Specialized medium cannon battery that allows an Escort ship (Scythe-only in source game, but treat as “anti-capital” archetype) to directly threaten Capital hulls. High armor piercing and strong per-shot damage balanced by a narrow arc and moderate reload. Should not be usable against Strike/Escort/Line targets in the targeting logic.
 
 Upgrade Model:
-Increase Damage and Critical Offense per level. Reload and Power Cost remain fixed unless higher-level data indicate otherwise.
+Damage scales with level; all other stats remain fixed unless higher-level data indicate changes.
 
 Implementation Notes:
 
-Guided missile logic identical to Thunderbolt, with added multi-target acquisition capability.
+Use normal cannon ballistic model (projectile flight optional or instant-hit, as per engine standard).
 
-Each missile uses standard hit, crit, and armor calculations upon impact.
+Apply standard hit/crit/armor formulas; Capital-only restriction is enforced in target filtering.
 
-Power Cost applied at missile launch.
+Narrow 90° arc encourages deliberate nose-on attack runs or fixed broadside mounts.
 
-180° firing arc allows broad forward coverage; requires active target lock for launch.
+Mark internally as “AntiCapitalOnly = true” so AI and UI can clearly communicate its role.
 
-Critical Offense scaling provides higher crit frequency and synergy with crit-boosting modules.
+AC-M Nuclear Warhead Launcher — Capital-Killer Missile (Maul-Exclusive, L1)
+Damage: 1800–2100 (L1) → 2200–2700 (max) (upgrades)
+Armor Piercing: 60
+Range: 1350–1900 m (L1) → 1350–2200 m (max) (upgrades)
+Turn Speed: 30 deg/s
+Speed: 90 m/s
+Critical Offense: 200
+Reload: 16 s (L1) → 12 s (max) (upgrades)
+Power Cost: 42
+Firing Arc: 180°
+Cost: 215,000
+Durability: 18,000 / 18,000
+Requirements: Ship: Maul (Escort)
 
-Designed for precision bombardment and fleet coordination rather than raw sustained fire.
+Effect:
+Escort-mounted strategic nuclear warhead designed to deliver catastrophic damage to Capital-class targets. Very high base damage and armor piercing, long effective range, and wide 180° launch arc. Constrained by slow reload and heavy power draw, making each shot a major commitment.
 
-Restricted to Escort-class hardpoints — enforce in Store and Fitting UI.
+Upgrade Model:
+Damage, maximum Range, and Reload time improve with level (shorter reload). Power Cost remains constant unless higher-level data show changes.
 
-Consider unique lock-on tone and sleek missile trail color to distinguish from standard variant.
+Implementation Notes:
 
-Weapons (Medium Hardpoints – Escort Only)
+Uses guided missile logic; warhead tracks like a slow but persistent torpedo (90 m/s, 30 deg/s turn).
 
-HD-M63(S) “Scorpio” — Medium Missile Battery (L1)
+Apply large explosion effects and potentially AOE vs nearby large ships, as desired for cinematic impact.
 
-Damage: 40 – 100 (upgrades)
+Intended primarily for use against Line/Capital ships; you can optionally give it reduced hit chance vs small targets.
+
+Mark internally as “Nuclear”/“Strategic” to gate usage in missions and balance passes.
+
+ASM-12 “Agrius” — Nuclear Torpedo Launcher (Escort, L1)
+Damage: 600–1000
 Armor Piercing: 25
-Range: 200 – 1600 m (upgrades)
+Power Damage: 40–60 (L1) → 50–75 (max) (upgrades)
+Range: 800–1600 m (L1) → 800–1900 m (max) (upgrades)
+Turn Speed: 70 deg/s
+Speed: 85 m/s
+Critical Offense: 100
+Reload: 240 s (L1) → 190 s (max) (upgrades)
+Power Cost: 70 (L1) → 58.5 (max) (upgrades)
+Firing Arc: 180°
+Explosion Radius: 400 m
+Cost: 60,000
+Durability: 18,000 / 18,000
+Requirements: Ship class Escort
+
+Effect:
+Escort-class nuclear torpedo delivering massive hull and power-grid damage in a large blast radius. Best used as an opening salvo or objective-breaking tool, not for sustained DPS. Very long reload and heavy energy cost limit it to deliberate, high-impact shots.
+
+Upgrade Model:
+Power Damage, maximum Range, Reload time, and Power Cost scale with level. Base kinetic Damage stays fixed unless higher-level values indicate otherwise.
+
+Implementation Notes:
+
+Guided torpedo with modest speed/turn; easy to dodge at long range without proper setup (e.g., slows).
+
+Apply both hull damage and additional “power damage” to target’s energy pool or power-related subsystem.
+
+Explosion radius should affect all valid targets in 400 m, with normal hit/crit rolls per affected ship if you support that.
+
+Mark as a special/rare weapon for late-game Escort builds.
+
+HD-M50(S) “Thunderbolt” — Medium Missile Battery (Standard Targeting, L1)
+Damage: 40–100
+Armor Piercing: 25
+Range: 200–1350 m (L1) → 200–1840 m (max) (upgrades)
 Turn Speed: 75 deg/s
 Speed: 100 m/s
 Critical Offense: 100
-Reload: 15 s
-Power Cost: 50
+Reload: 12.5 s (L1) → 5.2 s (max) (upgrades)
+Power Cost: 50 (L1) → 20.83 (max) (upgrades)
 Firing Arc: 180°
-Cost: 15 000
-Durability: 7 500 / 7 500
+Cost: 15,000
+Durability: 18,000 / 18,000
+Requirements: Ship class Escort
 
 Effect:
-Long-range missile battery for Escort-class ships.
-Trades rate of fire for increased range and reach, enabling Escorts to engage from outside standard cannon and autocannon engagement envelopes.
-Ideal for coordinated long-range strikes and support roles in fleet combat.
+Baseline medium missile battery for Escort ships. Provides flexible mid-range firepower with good tracking and moderate burst damage. Standard single-target missile logic.
 
 Upgrade Model:
-Increase Damage and Range per level. Reload and Power Cost remain constant unless higher-level data show otherwise.
+Range, Reload time (faster at higher levels), and Power Cost (cheaper at higher levels) scale with level. Damage remains constant unless higher-level data show changes.
 
 Implementation Notes:
 
-Guided missile logic identical to Thunderbolt, with adjusted range and timing parameters.
+Guided missiles using standard hit, crit, and armor rules.
 
-Missiles travel at 100 m/s with a 75°/s turn rate for moderate agility and stable tracking.
+180° frontal arc with lock-on; projectiles travel at 100 m/s with good agility vs medium targets.
 
-Standard hit, crit, and armor rules apply at impact; Power Cost charged at missile launch.
+Serves as the “baseline” stat reference for the Thunderbolt family (M and P variants).
 
-180° firing arc allows forward coverage with standard lock-on targeting.
-
-Longer reload (15 s) emphasizes deliberate fire timing and tactical spacing.
-
-Balanced for long-range accuracy and strategic alpha strikes rather than close combat.
-
-Restricted to Escort-class hardpoints — enforce requirement in Store and Fitting UI.
-
-Consider adding longer smoke trails and launch delay effects to reinforce long-range identity.
-
-Weapons (Medium Hardpoints – Escort Only)
-
-HD-M63P “Scorpio-P” — Medium Missile Battery (L1)
-
-Damage: 40 – 100 (upgrades)
+HD-M50(M) “Thunderbolt” — Medium Missile Battery (Multi-Targeting, L1)
+Damage: 40–100
 Armor Piercing: 25
-Range: 200 – 1600 m (upgrades)
+Range: 200–1350 m (L1) → 200–1840 m (max) (upgrades)
 Turn Speed: 75 deg/s
 Speed: 100 m/s
-Critical Offense: 100 (upgrades)
-Reload: 15 s
-Power Cost: 50
+Critical Offense: 100
+Reload: 12.5 s (L1) → 5.2 s (max) (upgrades)
+Power Cost: 50 (L1) → 20.83 (max) (upgrades)
 Firing Arc: 180°
-Cost: 15 000
-Durability: 7 500 / 7 500
+Cost: 15,000
+Durability: 18,000 / 18,000
+Requirements: Ship class Escort
 
 Effect:
-Precision variant of the Scorpio long-range missile system for Escort-class ships.
-Offers the same engagement range as the base model but enhances critical strike potential and supports limited multi-targeting.
-Optimized for long-range accuracy and coordinated critical volleys in fleet support operations.
+Multi-targeting variant of the Thunderbolt system. Trades no raw stat compared to the standard version but gains the ability to engage multiple locked targets per volley (as allowed by your targeting model). Ideal for Escorts providing distributed pressure across several enemies or missiles.
 
 Upgrade Model:
-Increase Damage and Critical Offense per level. Reload and Power Cost remain constant unless higher-level data show changes.
+Same as Thunderbolt(S): Range, Reload, and Power Cost scale with level.
 
 Implementation Notes:
 
-Guided missile logic identical to Scorpio, with added critical and multi-target modifiers.
+Use the same projectile stats and damage model as the S-variant.
 
-Each missile independently executes hit, crit, and armor calculations on impact.
+Add logic to split salvos across N targets (e.g., nearest or highest-priority within arc/lock cone).
 
-Power Cost applied per launch; reload timers tracked per launcher.
+Clearly mark in UI as “Multi-Targeting” and reflect that in tooltips/fitting screen.
 
-180° firing arc allows wide frontal coverage while maintaining lock-on requirements.
+HD-M50P “Thunderbolt-P” — Precision Medium Missile Battery (L1)
+Damage: 40–100
+Armor Piercing: 25
+Range: 200–1350 m (L1) → 200–1840 m (max) (upgrades)
+Turn Speed: 75 deg/s
+Speed: 100 m/s
+Critical Offense: 100 (L1) → 170 (max) (upgrades)
+Reload: 12.5 s (L1) → 5.2 s (max) (upgrades)
+Power Cost: 50 (L1) → 20.83 (max) (upgrades)
+Firing Arc: 180°
+Cost: 15,000
+Durability: 18,000 / 18,000
+Requirements: Ship class Escort
 
-Critical Offense scaling synergizes with support modules that boost critical damage or rate.
+Effect:
+Precision variant of the Thunderbolt battery. Maintains general-purpose stats while emphasizing higher crit potential and multi-targeting behavior. Suited for Escorts that lean on crit-focused builds and coordinated missile salvos.
 
-Designed for precision engagements at 1 km+ range; trades sustained fire for spike damage capability.
+Upgrade Model:
+Critical Offense, Range, Reload time, and Power Cost all scale with level. Base Damage remains fixed unless higher-level screenshots indicate otherwise.
 
-Restricted to Escort-class hardpoints — enforce requirement in Store and Fitting UI.
+Implementation Notes:
 
-Consider distinct missile trail color and targeting reticle for identification.
+Same missile kinematics as other Thunderbolt variants.
+
+Multi-targeting recommended (matches in-game behavior) — treat this as both a crit-buffed and multi-target capable version.
+
+Ensure crit bonuses apply after armor reduction, consistent with your global crit model.
+
+ITEM: HD-M63(S) “Scorpio” Medium Missile Battery
+Ship Class: Escort
+Slot / Type: Weapon – Medium Missile Battery (long-range, Standard Targeting)
+Active/Passive: Passive
+Level Range: 1–15
+DPS:
+Level 1: 4.7 DPS
+Level 15: 11.2 DPS
+Primary Stats (Level 1 → Level 15):
+Damage: 40–100 (no listed scaling)
+Armor Piercing: 25
+Range (m): 200–1600 → 200–2160
+Turn Speed: 75 deg/sec
+Missile Speed: 100 m/sec
+Critical Offense: 100
+Reload: 15 sec → 6.25 sec
+Power Cost: 50 → 20.83
+Firing Arc: 180°
+Requirements:
+Ship class Escort
+Economy:
+Purchase Cost: 15,000 credits
+Durability: 18,000
+Design Notes: Baseline long-range missile battery for Escort ships. Trades very long reach and wide firing arc for low DPS and heavy power draw at low levels; becomes significantly more efficient as reload and power cost scale down with upgrades.
+
+ITEM: HD-M63(M) “Scorpio” Medium Missile Battery
+Ship Class: Escort
+Slot / Type: Weapon – Medium Missile Battery (long-range, Multi-Targeting)
+Active/Passive: Passive
+Level Range: 1–15
+DPS:
+Level 1: 4.7 DPS
+Level 15: 11.1 DPS
+Primary Stats (Level 1 → Level 15):
+Damage: 40–100
+Armor Piercing: 25
+Range (m): 200–1600 → 200–2160
+Turn Speed: 75 deg/sec
+Missile Speed: 100 m/sec
+Critical Offense: 100
+Reload: 15 sec → 6.3 sec
+Power Cost: 50 → 20.83
+Firing Arc: 180°
+Requirements:
+Ship class Escort
+Economy:
+Purchase Cost: 15,000 credits
+Durability: 18,000
+Design Notes: Multi-targeting variant of the Scorpio battery. Statline is almost identical to the standard (S) version, but supports engaging multiple targets; slightly lower max DPS reflects the added utility.
+
+ITEM: HD-M63P “Scorpio-P” Medium Missile Battery
+Ship Class: Escort
+Slot / Type: Weapon – Medium Missile Battery (long-range precision, increased Critical Hit, Multi-Targeting)
+Active/Passive: Passive
+Level Range: 1–15
+DPS:
+Level 1: 4.7 DPS
+Level 15: 11.1 DPS
+Primary Stats (Level 1 → Level 15):
+Damage: 40–100
+Armor Piercing: 25
+Range (m): 200–1600 (no explicit scaling shown; assume same end range as other Scorpio variants if needed: 200–2160)
+Turn Speed: 75 deg/sec
+Missile Speed: 100 m/sec
+Critical Offense: 100 → 170
+Reload: 15 sec → 6.3 sec
+Power Cost: 50 → 20.83
+Firing Arc: 180°
+Requirements:
+Ship class Escort
+Economy:
+Purchase Cost: 15,000 credits
+Durability: 18,000
+Design Notes: Precision Scorpio variant. Keeps the same long-range profile and multi-targeting as the M-version, but adds a strong scaling bonus to Critical Offense, turning volleys into high-spike damage when crits land.
+
 
 Escort Hulls
 
