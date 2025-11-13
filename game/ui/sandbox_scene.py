@@ -1143,6 +1143,7 @@ class SandboxScene(Scene):
             z_norm = (float(pos.z) - center_z) / half_depth if half_depth > 1e-3 else 0.0
             x_norm = max(-1.0, min(1.0, x_norm))
             z_norm = max(-1.0, min(1.0, z_norm))
+            mount_position = (float(pos.x), float(pos.y), float(pos.z))
             states.append(
                 WeaponSlotHUDState(
                     label=slot.label,
@@ -1152,6 +1153,7 @@ class SandboxScene(Scene):
                     weapon_class=str(weapon.wclass),
                     facing=str(getattr(hardpoint, "facing", "forward")),
                     relative_position=(x_norm, z_norm),
+                    mount_position=mount_position,
                 )
             )
         return states
