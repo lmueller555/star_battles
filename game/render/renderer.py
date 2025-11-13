@@ -16,7 +16,6 @@ from game.render.camera import CameraFrameData, ChaseCamera, DEFAULT_SHIP_LENGTH
 from game.ships.ship import Ship
 from game.world.asteroids import Asteroid
 
-from game.render.moderngl_ship_renderer import ModernglShipRenderer
 from game.render.state import ProjectedVertexCache, RenderSpatialState, TelemetryCounters
 
 BACKGROUND = (5, 8, 12)
@@ -2035,8 +2034,6 @@ class VectorRenderer:
         self._vertex_cache: Dict[int, ProjectedVertexCache] = {}
         self._frame_counters = TelemetryCounters()
         self._telemetry_accum = TelemetryCounters()
-        self._gpu_renderer = ModernglShipRenderer()
-        self._gpu_ship_classes = {"Capital", "Outpost"}
         self._frame_active = False
         self._last_report_ms = pygame.time.get_ticks()
         self._telemetry_interval_ms = 2500
@@ -2769,42 +2766,23 @@ class VectorRenderer:
         )
         color = SHIP_COLOR if ship.team == "player" else ENEMY_COLOR
         line_mode = "line" if distance > 7500.0 else "aaline"
-        segments: list[tuple[tuple[float, float], tuple[float, float]]] = []
+        drawn_edges = False
         for idx_a, idx_b in geometry.edges:
             if not (visibility[idx_a] and visibility[idx_b]):
                 continue
-            segments.append((projected[idx_a], projected[idx_b]))
-
-        drawn_edges = False
-        use_gpu = (
-            ship.frame.size in self._gpu_ship_classes
-            and self._gpu_renderer.available
-        )
-        if use_gpu and segments:
-            line_width = 1.0 if line_mode == "aaline" else 1.5
-            drawn_edges = self._gpu_renderer.render_segments(
-                self.surface,
-                segments,
-                color,
-                line_width=line_width,
-            )
-            if not drawn_edges:
-                use_gpu = False
-
-        if not use_gpu:
-            for segment in segments:
-                (ax, ay), (bx, by) = segment
-                if line_mode == "line":
-                    pygame.draw.line(
-                        self.surface,
-                        color,
-                        (int(round(ax)), int(round(ay))),
-                        (int(round(bx)), int(round(by))),
-                        1,
-                    )
-                else:
-                    pygame.draw.aaline(self.surface, color, (ax, ay), (bx, by), blend=1)
-                drawn_edges = True
+            ax, ay = projected[idx_a]
+            bx, by = projected[idx_b]
+            if line_mode == "line":
+                pygame.draw.line(
+                    self.surface,
+                    color,
+                    (int(round(ax)), int(round(ay))),
+                    (int(round(bx)), int(round(by))),
+                    1,
+                )
+            else:
+                pygame.draw.aaline(self.surface, color, (ax, ay), (bx, by), blend=1)
+            drawn_edges = True
 
         if drawn_edges:
             if line_mode == "line":
