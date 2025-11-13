@@ -244,6 +244,11 @@
     "name": "MEC-L31 'Talon'",
     "slotType": "cannon",
     "class": "projectile",
+    "damageMin": 35.0,
+    "damageMax": 70.0,
+    "accuracyRating": 125.0,
+    "powerCost": 25.0,
+    "firingArc": 180.0,
     "damage": 840.0,
     "accuracy": 0.25,
     "crit": 0.1,
@@ -255,13 +260,18 @@
     "projectileSpeed": 0.0,
     "ammo": 0,
     "reload": 4.0,
-    "gimbal": 75.0
+    "gimbal": 180.0
   },
   {
     "id": "mec_l34",
     "name": "MEC-L34 'Cyclone'",
     "slotType": "cannon",
     "class": "projectile",
+    "damageMin": 35.0,
+    "damageMax": 70.0,
+    "accuracyRating": 125.0,
+    "powerCost": 25.0,
+    "firingArc": 180.0,
     "damage": 840.0,
     "accuracy": 0.25,
     "crit": 0.1,
@@ -273,13 +283,18 @@
     "projectileSpeed": 0.0,
     "ammo": 0,
     "reload": 3.2,
-    "gimbal": 75.0
+    "gimbal": 180.0
   },
   {
     "id": "mec_l35",
     "name": "MEC-L35 'Eagle'",
     "slotType": "cannon",
     "class": "projectile",
+    "damageMin": 35.0,
+    "damageMax": 70.0,
+    "accuracyRating": 125.0,
+    "powerCost": 25.0,
+    "firingArc": 180.0,
     "damage": 840.0,
     "accuracy": 0.25,
     "crit": 0.1,
@@ -291,13 +306,18 @@
     "projectileSpeed": 0.0,
     "ammo": 0,
     "reload": 4.8,
-    "gimbal": 75.0
+    "gimbal": 180.0
   },
   {
     "id": "hd_h40",
     "name": "HD-H40 'Stormstrike'",
     "slotType": "launcher",
     "class": "missile",
+    "damageMin": 55.0,
+    "damageMax": 150.0,
+    "accuracyRating": 125.0,
+    "powerCost": 100.0,
+    "firingArc": 180.0,
     "damage": 1800.0,
     "accuracy": 0.25,
     "crit": 0.12,
@@ -309,13 +329,18 @@
     "projectileSpeed": 80.0,
     "ammo": 0,
     "reload": 15.0,
-    "gimbal": 75.0
+    "gimbal": 180.0
   },
   {
     "id": "mec_l39f",
     "name": "MEC-L39F 'Landslide'",
     "slotType": "cannon",
     "class": "projectile",
+    "damageMin": 1.0,
+    "damageMax": 35.0,
+    "accuracyRating": 300.0,
+    "powerCost": 7.0,
+    "firingArc": 180.0,
     "damage": 420.0,
     "accuracy": 0.6,
     "crit": 0.12,
@@ -327,13 +352,18 @@
     "projectileSpeed": 0.0,
     "ammo": 0,
     "reload": 1.0,
-    "gimbal": 75.0
+    "gimbal": 180.0
   },
   {
     "id": "mec_l30p",
     "name": "MEC-L30P 'Brushfire'",
     "slotType": "cannon",
     "class": "projectile",
+    "damageMin": 1.0,
+    "damageMax": 5.0,
+    "accuracyRating": 500.0,
+    "powerCost": 3.5,
+    "firingArc": 180.0,
     "damage": 60.0,
     "accuracy": 0.95,
     "crit": 0.12,
@@ -345,13 +375,18 @@
     "projectileSpeed": 0.0,
     "ammo": 0,
     "reload": 0.5,
-    "gimbal": 75.0
+    "gimbal": 180.0
   },
   {
     "id": "hd_h48",
     "name": "HD-H48 'Ballista'",
     "slotType": "launcher",
     "class": "missile",
+    "damageMin": 55.0,
+    "damageMax": 150.0,
+    "accuracyRating": 125.0,
+    "powerCost": 100.0,
+    "firingArc": 180.0,
     "damage": 1800.0,
     "accuracy": 0.25,
     "crit": 0.12,
@@ -363,7 +398,7 @@
     "projectileSpeed": 80.0,
     "ammo": 0,
     "reload": 18.0,
-    "gimbal": 75.0
+    "gimbal": 180.0
   },
   {
     "id": "hag_mk16a",
