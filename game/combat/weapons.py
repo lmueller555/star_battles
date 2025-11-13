@@ -140,6 +140,8 @@ class WeaponData:
         )
         if weapon.wclass == "missile":
             weapon.projectile_speed = 100.0
+        elif weapon.wclass == "projectile":
+            weapon.projectile_speed = 500.0
         return weapon
 
     @property
