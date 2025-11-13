@@ -273,6 +273,24 @@ def test_store_filters_for_escort_ship() -> None:
     assert any(card.item.id == "mec_e12" for card in items)
 
 
+def test_store_filters_for_line_ship() -> None:
+    ship = _make_ship("vanir_command")
+    filters = StoreFilters(slot_families=("weapon",), sort_by="name")
+    items = store.list_items(filters)
+    assert items, "Expected at least one Line weapon"
+    assert {card.item.ship_class for card in items} == {"Line"}
+    assert any(card.item.id == "mec_l31" for card in items)
+
+
+def test_line_missile_purchase_allows_equipping_launcher() -> None:
+    ship = _make_ship("vanir_command")
+    result = store.buy("hd_h40")
+    assert result["success"] is True
+    assert ship.hold_items["hd_h40"] == 1
+    store.bind_ship(ship)
+    assert fitting.apply("hd_h40") is True
+
+
 def test_filtering_returns_only_matching_slot() -> None:
     ship = _make_ship()
     filters = StoreFilters(slot_families=("engine",), sort_by="name", descending=False)
