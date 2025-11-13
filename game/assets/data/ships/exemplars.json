@@ -1439,9 +1439,9 @@
     "name": "Brimir Carrier",
     "role": "Carrier",
     "size": "Capital",
-    "level_requirement": 26,
+    "level_requirement": 40,
     "faction": "Colonial Fleet",
-    "counterpart": "Cylon Basestar",
+    "counterpart": null,
     "upgrade_to": null,
     "stats": {
       "hull_points": 8000,
@@ -1454,17 +1454,17 @@
       "speed": 18,
       "boost_speed": 30,
       "acceleration": 3,
-      "boost_acceleration": 0.8,
+      "boost_acceleration": 1.5,
       "strafe_speed": 0,
       "strafe_acceleration": 0,
       "turn_rate": 8,
       "turn_accel": 9,
-      "pitch_speed": 8,
-      "yaw_speed": 8,
-      "roll_speed": 9,
+      "pitch_speed": 9,
+      "yaw_speed": 9,
+      "roll_speed": 8,
       "pitch_acceleration": 9,
       "yaw_acceleration": 9,
-      "roll_acceleration": 9,
+      "roll_acceleration": 8,
       "inertial_compensation": 44,
       "boost_cost": 18,
       "power_points": 1000,
@@ -1474,24 +1474,25 @@
       "dradis_range_base": 2000,
       "dradis_range_max": 4500,
       "visual_range": 1750,
-      "ftl_range": 12.5,
+      "ftl_range": 12,
       "ftl_charge_time": 30,
-      "ftl_cooldown": 40,
-      "ftl_cost": 600,
+      "ftl_cooldown": 34,
+      "ftl_cost": 30,
       "transponder_power_cost": 0,
-      "durability_bonus": 0,
-      "max_radiation_level": 260,
-      "radioactive_decay": 1.6,
+      "durability_bonus": 0.5,
+      "max_radiation_level": 240,
+      "radioactive_decay": 1.5,
       "radioresistance": 0
     },
     "slots": {
       "weapons": {
         "guns": 4,
         "launcher": 2,
-        "defensive": 4
+        "defensive": 4,
+        "special": 4
       },
-      "hull": 2,
-      "engine": 3,
+      "hull": 0,
+      "engine": 2,
       "computer": 3,
       "utility": 3
     },
@@ -1615,21 +1616,64 @@
         "gimbal": 180,
         "tracking_speed": 220,
         "group": "defense"
+      },
+      {
+        "id": "hp_brimir_special_port_forward",
+        "slot": "special",
+        "position": [
+          -3.6,
+          1.2,
+          7.5
+        ],
+        "gimbal": 120,
+        "tracking_speed": 110,
+        "group": "aux"
+      },
+      {
+        "id": "hp_brimir_special_starboard_forward",
+        "slot": "special",
+        "position": [
+          3.6,
+          1.2,
+          7.5
+        ],
+        "gimbal": 120,
+        "tracking_speed": 110,
+        "group": "aux"
+      },
+      {
+        "id": "hp_brimir_special_port_aft",
+        "slot": "special",
+        "position": [
+          -3.0,
+          0.9,
+          -2.5
+        ],
+        "gimbal": 140,
+        "tracking_speed": 105,
+        "group": "aux"
+      },
+      {
+        "id": "hp_brimir_special_starboard_aft",
+        "slot": "special",
+        "position": [
+          3.0,
+          0.9,
+          -2.5
+        ],
+        "gimbal": 140,
+        "tracking_speed": 105,
+        "group": "aux"
       }
     ],
     "economy": {
       "purchase": {
-        "tylium": 36000,
-        "cubits": 120,
-        "merits": 320
+        "tylium": 400000
       },
-      "upgrade": {
-        "tylium": 42000,
-        "level": 32
-      },
+      "upgrade": {},
       "operating": {
         "boost": 18,
-        "ftl": 600
+        "ftl": 30
       }
     },
     "equipment": {

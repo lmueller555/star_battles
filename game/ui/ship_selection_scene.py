@@ -38,7 +38,7 @@ class InfoLine:
 class ShipSelectionScene(Scene):
     """Allow the player to pick a starting hull before entering the sandbox."""
 
-    TABS: Tuple[str, ...] = ("Strike", "Escort", "Line")
+    TABS: Tuple[str, ...] = ("Strike", "Escort", "Line", "Capital")
 
     def __init__(self, manager) -> None:
         super().__init__(manager)

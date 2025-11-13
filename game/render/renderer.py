@@ -51,6 +51,14 @@ ENGINE_LAYOUTS: dict[str, list[Vector3]] = {
         Vector3(-52.0, -10.0, -212.0),
         Vector3(52.0, -10.0, -212.0),
     ],
+    "Capital": [
+        Vector3(-180.0, -62.0, -468.0),
+        Vector3(180.0, -62.0, -468.0),
+        Vector3(-132.0, 44.0, -432.0),
+        Vector3(132.0, 44.0, -432.0),
+        Vector3(-72.0, -20.0, -502.0),
+        Vector3(72.0, -20.0, -502.0),
+    ],
     "Outpost": [],
 }
 
@@ -1667,59 +1675,275 @@ def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
 def _build_brimir_wireframe() -> list[tuple[Vector3, Vector3]]:
     segments: list[tuple[Vector3, Vector3]] = []
 
-    prow = Vector3(0.0, 12.0, 22.0)
-    tower = Vector3(0.0, 18.0, 6.0)
-    stern = Vector3(0.0, -10.0, -20.0)
+    length_scale = 0.75
+    width_scale = 0.62
+    height_scale = 0.62
 
-    port_planes = [
-        Vector3(-12.0, 6.0, 14.0),
-        Vector3(-16.0, 5.0, 6.0),
-        Vector3(-14.0, 4.5, -2.0),
-        Vector3(-10.0, 4.0, -12.0),
+    base_profile = [
+        (-640.0, 150.0, 96.0),
+        (-560.0, 146.0, 92.0),
+        (-480.0, 140.0, 88.0),
+        (-360.0, 180.0, 102.0),
+        (-240.0, 210.0, 114.0),
+        (-120.0, 232.0, 122.0),
+        (0.0, 240.0, 126.0),
+        (160.0, 230.0, 120.0),
+        (320.0, 200.0, 110.0),
+        (440.0, 164.0, 94.0),
+        (520.0, 136.0, 80.0),
+        (560.0, 120.0, 70.0),
     ]
 
-    for point in port_planes:
-        mirrored = _mirror_vector(point)
-        segments.append((point, mirrored))
-        segments.append((point, prow))
-        segments.append((mirrored, prow))
-        segments.append((point, stern))
-        segments.append((mirrored, stern))
-        segments.append((point, tower))
-        segments.append((mirrored, tower))
+    ring_sides = 18
+    hull_sections: list[tuple[float, float, float, list[Vector3]]] = []
+    previous_section: tuple[float, float, float, list[Vector3]] | None = None
 
-    dorsal_array = [
-        Vector3(-4.0, 16.0, -4.0),
-        Vector3(0.0, 17.5, -6.0),
-        Vector3(4.0, 16.0, -4.0),
-        Vector3(0.0, 14.5, 0.0),
+    for z_raw, width_raw, height_raw in base_profile:
+        z = z_raw * length_scale
+        half_width = width_raw * width_scale
+        half_height = height_raw * height_scale
+        ring = _elliptical_ring(z, half_width, half_height, sides=ring_sides)
+        hull_sections.append((z, half_width, half_height, ring))
+        _loop_segments(segments, ring)
+        if previous_section is not None:
+            previous_ring = previous_section[3]
+            for current, previous in zip(ring, previous_ring):
+                segments.append((current, previous))
+            for offset in range(0, ring_sides, 6):
+                segments.append((ring[offset], ring[(offset + 3) % ring_sides]))
+        previous_section = (z, half_width, half_height, ring)
+
+    def hull_anchor(z_target: float, x_sign: int, y_factor: float) -> Vector3:
+        section = min(hull_sections, key=lambda entry: abs(entry[0] - z_target))
+        z, half_width, half_height, _ = section
+        clamped_y = max(-1.0, min(1.0, y_factor))
+        return Vector3(half_width * x_sign * 0.88, half_height * clamped_y, z)
+
+    tail_section = hull_sections[0]
+    nose_section = hull_sections[-1]
+    mid_section = hull_sections[len(hull_sections) // 2]
+
+    tail_z = tail_section[0]
+    nose_z = nose_section[0]
+    mid_z = mid_section[0]
+
+    stern = Vector3(0.0, -68.0 * height_scale, tail_z - 5.0 * length_scale)
+    nose_tip = Vector3(0.0, 42.0 * height_scale, nose_z + 70.0 * length_scale)
+    ventral_spear = Vector3(0.0, -36.0 * height_scale, nose_z + 60.0 * length_scale)
+
+    dorsal_spine = [
+        nose_tip,
+        Vector3(0.0, 90.0 * height_scale, mid_z + 180.0 * length_scale),
+        Vector3(0.0, 96.0 * height_scale, mid_z),
+        Vector3(0.0, 84.0 * height_scale, tail_z - 120.0 * length_scale),
+        stern,
     ]
-    _loop_segments(segments, dorsal_array)
-    for point in dorsal_array:
-        segments.append((point, tower))
+    for start, end in zip(dorsal_spine, dorsal_spine[1:]):
+        segments.append((start, end))
 
-    ventral_keel = [
-        Vector3(-6.0, -12.0, 8.0),
-        Vector3(0.0, -13.0, 2.0),
-        Vector3(6.0, -12.0, 8.0),
-        Vector3(0.0, -11.0, 12.0),
+    ventral_spine = [
+        ventral_spear,
+        Vector3(0.0, -74.0 * height_scale, mid_z + 120.0 * length_scale),
+        Vector3(0.0, -78.0 * height_scale, mid_z - 40.0 * length_scale),
+        Vector3(0.0, -70.0 * height_scale, tail_z - 80.0 * length_scale),
+        stern,
     ]
-    _loop_segments(segments, ventral_keel)
-    for point in ventral_keel:
-        segments.append((point, stern))
+    for start, end in zip(ventral_spine, ventral_spine[1:]):
+        segments.append((start, end))
 
+    forward_ring = nose_section[3]
+    for index in range(0, ring_sides, 2):
+        point = forward_ring[index]
+        segments.append((point, nose_tip))
+        segments.append((point, ventral_spear))
+
+    nose_ridge_port = [
+        Vector3(-52.0 * width_scale, 48.0 * height_scale, nose_z + 28.0 * length_scale),
+        Vector3(-34.0 * width_scale, 56.0 * height_scale, nose_z + 48.0 * length_scale),
+        Vector3(-18.0 * width_scale, 60.0 * height_scale, nose_z + 62.0 * length_scale),
+    ]
+    nose_ridge = (
+        nose_ridge_port
+        + [Vector3(0.0, 64.0 * height_scale, nose_z + 66.0 * length_scale)]
+        + [_mirror_vector(point) for point in reversed(nose_ridge_port)]
+    )
+    _loop_segments(segments, nose_ridge)
+    for point in nose_ridge:
+        segments.append((point, nose_tip))
+
+    ventral_ridge_port = [
+        Vector3(-40.0 * width_scale, -38.0 * height_scale, nose_z + 26.0 * length_scale),
+        Vector3(-26.0 * width_scale, -46.0 * height_scale, nose_z + 44.0 * length_scale),
+        Vector3(-14.0 * width_scale, -48.0 * height_scale, nose_z + 56.0 * length_scale),
+    ]
+    ventral_ridge = (
+        ventral_ridge_port
+        + [Vector3(0.0, -52.0 * height_scale, nose_z + 60.0 * length_scale)]
+        + [_mirror_vector(point) for point in reversed(ventral_ridge_port)]
+    )
+    _loop_segments(segments, ventral_ridge)
+    for point in ventral_ridge:
+        segments.append((point, ventral_spear))
+
+    segments.append((nose_tip, ventral_spear))
+
+    tower_base_z = mid_z + 120.0 * length_scale
+    tower_mid = Vector3(0.0, 178.0 * height_scale, tower_base_z - 80.0 * length_scale)
+    tower_tip = Vector3(0.0, 214.0 * height_scale, tower_base_z - 160.0 * length_scale)
+    tower_back = Vector3(0.0, 150.0 * height_scale, tower_base_z - 250.0 * length_scale)
+    tower_frame_port = [
+        Vector3(-48.0 * width_scale, 118.0 * height_scale, tower_base_z + 24.0 * length_scale),
+        Vector3(-34.0 * width_scale, 142.0 * height_scale, tower_base_z - 12.0 * length_scale),
+        Vector3(-26.0 * width_scale, 158.0 * height_scale, tower_base_z - 88.0 * length_scale),
+        Vector3(-20.0 * width_scale, 150.0 * height_scale, tower_base_z - 162.0 * length_scale),
+    ]
+    tower_frame = (
+        tower_frame_port
+        + [_mirror_vector(point) for point in reversed(tower_frame_port)]
+    )
+    _loop_segments(segments, tower_frame)
+    for point in tower_frame:
+        segments.append((point, tower_mid))
+    segments.append((tower_mid, tower_tip))
+    segments.append((tower_tip, tower_back))
+    segments.append((tower_mid, hull_anchor(tower_base_z - 20.0 * length_scale, -1, 0.68)))
+    segments.append((tower_mid, hull_anchor(tower_base_z - 20.0 * length_scale, 1, 0.68)))
+    segments.append((tower_back, hull_anchor(tower_back.z, -1, 0.52)))
+    segments.append((tower_back, hull_anchor(tower_back.z, 1, 0.52)))
+
+    belt_samples = [
+        nose_z + 40.0 * length_scale,
+        mid_z + 160.0 * length_scale,
+        mid_z,
+        mid_z - 160.0 * length_scale,
+        tail_z - 120.0 * length_scale,
+    ]
+    upper_belt_port = [hull_anchor(sample, -1, 0.66) for sample in belt_samples]
+    upper_belt = upper_belt_port + [
+        _mirror_vector(point) for point in reversed(upper_belt_port)
+    ]
+    _loop_segments(segments, upper_belt)
+
+    lower_belt_port = [hull_anchor(sample, -1, -0.58) for sample in belt_samples]
+    lower_belt = lower_belt_port + [
+        _mirror_vector(point) for point in reversed(lower_belt_port)
+    ]
+    _loop_segments(segments, lower_belt)
+
+    for port_point, lower_point in zip(upper_belt_port, lower_belt_port):
+        segments.append((port_point, lower_point))
+        star_upper = _mirror_vector(port_point)
+        star_lower = _mirror_vector(lower_point)
+        segments.append((star_upper, star_lower))
+
+    hangar_front_z = mid_z + 120.0 * length_scale
+    hangar_back_z = mid_z - 120.0 * length_scale
+    hangar_half_width = 188.0 * width_scale
     hangar_frame = [
-        Vector3(-8.0, -2.0, 4.0),
-        Vector3(-8.0, -2.0, -4.0),
-        Vector3(8.0, -2.0, -4.0),
-        Vector3(8.0, -2.0, 4.0),
+        Vector3(-hangar_half_width, -60.0 * height_scale, hangar_front_z),
+        Vector3(-hangar_half_width, -60.0 * height_scale, hangar_back_z),
+        Vector3(hangar_half_width, -60.0 * height_scale, hangar_back_z),
+        Vector3(hangar_half_width, -60.0 * height_scale, hangar_front_z),
     ]
     _loop_segments(segments, hangar_frame)
+    hangar_pivot = Vector3(0.0, -96.0 * height_scale, mid_z)
     for point in hangar_frame:
-        segments.append((point, ventral_keel[1]))
+        segments.append((point, hangar_pivot))
 
-    segments.append((prow, tower))
-    segments.append((tower, stern))
+    pod_front_z = mid_z + 220.0 * length_scale
+    pod_back_z = mid_z - 240.0 * length_scale
+    pod_outer_x = 320.0 * width_scale
+    pod_inner_x = 200.0 * width_scale
+    pod_top_y = 72.0 * height_scale
+    pod_bottom_y = -74.0 * height_scale
+    pod_inner_top_y = 44.0 * height_scale
+    pod_inner_bottom_y = -48.0 * height_scale
+
+    port_front = [
+        Vector3(-pod_outer_x, pod_top_y, pod_front_z),
+        Vector3(-pod_inner_x, pod_inner_top_y, pod_front_z),
+        Vector3(-pod_inner_x, pod_inner_bottom_y, pod_front_z),
+        Vector3(-pod_outer_x, pod_bottom_y, pod_front_z),
+    ]
+    port_back = [
+        Vector3(-pod_outer_x, pod_top_y, pod_back_z),
+        Vector3(-pod_inner_x, pod_inner_top_y, pod_back_z),
+        Vector3(-pod_inner_x, pod_inner_bottom_y, pod_back_z),
+        Vector3(-pod_outer_x, pod_bottom_y, pod_back_z),
+    ]
+    _loop_segments(segments, port_front)
+    _loop_segments(segments, port_back)
+    for index in range(len(port_front)):
+        segments.append((port_front[index], port_back[index]))
+
+    star_front = [_mirror_vector(point) for point in port_front]
+    star_back = [_mirror_vector(point) for point in port_back]
+    _loop_segments(segments, star_front)
+    _loop_segments(segments, star_back)
+    for index in range(len(star_front)):
+        segments.append((star_front[index], star_back[index]))
+
+    for port_point, star_point in zip(port_front, star_front):
+        segments.append((port_point, star_point))
+    for port_point, star_point in zip(port_back, star_back):
+        segments.append((port_point, star_point))
+
+    def attach_pod(points: list[Vector3], x_sign: int) -> None:
+        for point in points:
+            y_ratio = point.y / (pod_top_y if point.y >= 0.0 else abs(pod_bottom_y))
+            anchor = hull_anchor(point.z, x_sign, y_ratio)
+            segments.append((point, anchor))
+
+    attach_pod(port_front[1:3], -1)
+    attach_pod(port_back[1:3], -1)
+    attach_pod(star_front[1:3], 1)
+    attach_pod(star_back[1:3], 1)
+
+    for point in (port_front[0], port_back[0]):
+        segments.append((point, hull_anchor(point.z, -1, 0.4)))
+    for point in (port_front[3], port_back[3]):
+        segments.append((point, hull_anchor(point.z, -1, -0.5)))
+    for point in (star_front[0], star_back[0]):
+        segments.append((point, hull_anchor(point.z, 1, 0.4)))
+    for point in (star_front[3], star_back[3]):
+        segments.append((point, hull_anchor(point.z, 1, -0.5)))
+
+    catapult_offset = 32.0 * width_scale
+    port_catapult_front = Vector3(
+        -pod_outer_x + catapult_offset,
+        pod_top_y - 10.0 * height_scale,
+        pod_front_z,
+    )
+    port_catapult_back = Vector3(
+        -pod_outer_x + catapult_offset,
+        pod_top_y - 10.0 * height_scale,
+        pod_back_z,
+    )
+    segments.append((port_catapult_front, port_catapult_back))
+    star_catapult_front = _mirror_vector(port_catapult_front)
+    star_catapult_back = _mirror_vector(port_catapult_back)
+    segments.append((star_catapult_front, star_catapult_back))
+
+    engine_face = _elliptical_ring(
+        tail_z - 40.0 * length_scale,
+        tail_section[1] * 0.92,
+        tail_section[2] * 0.94,
+        sides=12,
+    )
+    nozzle_face = _elliptical_ring(
+        tail_z - 100.0 * length_scale,
+        tail_section[1] * 0.62,
+        tail_section[2] * 0.68,
+        sides=12,
+    )
+    _loop_segments(segments, engine_face)
+    _loop_segments(segments, nozzle_face)
+    _connect_rings(segments, engine_face, nozzle_face)
+    for point in engine_face[::3]:
+        segments.append((point, stern))
+
+    segments.append((tower_tip, nose_tip))
+    segments.append((tower_back, ventral_spear))
 
     return segments
 
@@ -1735,6 +1959,7 @@ WIREFRAMES = {
     ],
     "Escort": _build_escort_wireframe(),
     "Line": _build_line_wireframe(),
+    "Capital": _build_brimir_wireframe(),
     "Outpost": _build_outpost_wireframe(),
     "viper_mk_ii": _build_viper_mk_ii_wireframe(),
     "viper_mk_vii": _build_viper_mk_vii_wireframe(),
