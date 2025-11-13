@@ -941,16 +941,21 @@ class HangarView:
         self._blit_panel(surface, rect, fill, border, 1)
         icon_key = self._store_icon_key(card.item)
         icon = self._slot_icons.get(icon_key) or self._slot_icons.get(card.item.slot_family)
+        text_left = rect.x + 16
         name_color = (220, 240, 255)
         title = self.small_font.render(card.item.name, True, name_color)
-        surface.blit(title, (rect.x + 16, rect.y + 12))
         slot_label = f"{card.item.slot_family.title()} • {card.item.ship_class} only"
         subtitle = self.mini_font.render(slot_label, True, (172, 198, 220))
-        surface.blit(subtitle, (rect.x + 16, rect.y + 32))
         if icon:
+            icon_size = 40
+            if icon.get_width() != icon_size or icon.get_height() != icon_size:
+                icon = pygame.transform.smoothscale(icon, (icon_size, icon_size))
             icon_rect = icon.get_rect()
-            icon_rect.topright = (rect.right - 16, rect.y + 12)
+            icon_rect.topleft = (rect.x + 16, rect.y + 12)
             surface.blit(icon, icon_rect.topleft)
+            text_left = icon_rect.right + 12
+        surface.blit(title, (text_left, rect.y + 12))
+        surface.blit(subtitle, (text_left, rect.y + 32))
         stats_y = rect.y + 58
         highlight_lines = self._store_highlight_lines(card.item)
         for idx, line in enumerate(highlight_lines):
