@@ -48,124 +48,320 @@ Strike Weapons
 Weapons (Light Hardpoints – Strike Only)
 
 MEC-A6 “Fang” — Light Autocannon (L1)
-Damage: 1–10 (upgrades)
+Damage: 1–10 → 2.4–24 (upgrades)
 Armor Piercing: 5
 Range: 0–750 m
-Optimal Range: 300 m (upgrades)
+Optimal Range: 300 m → 510 m (upgrades)
 Accuracy: 400
 Critical Offense: 100
 Reload: 0.5 s
 Power Cost: 1
 Firing Arc: 75°
 Cost: 10,000
-Durability: 2500 / 2500
-Upgrade Model: Damage and Optimal Range scale per level.
-Notes: Baseline autocannon. Standard accuracy, mid-range DPS.
+Durability: 6,000 / 6,000
+Effect: General-purpose light autocannon for Strike-class ships. Balanced DPS and mid-range performance; reliable primary weapon for most builds.
+Upgrade Model: Damage and Optimal Range scale from the listed L1 to L15 values. All other stats remain fixed.
+
+FC-39B “Blackjack” — 8 mm Flechette Cannon (L1) – Raven Mk VI-R Only
+Damage: 26.5–42.4 → 35.75–57.15 (upgrades)
+Armor Piercing: 0
+Range: 0–350 m
+Optimal Range: 150 m
+Accuracy: 450
+Critical Offense: 110
+Reload: 0.8 s
+Power Cost: 4.5
+Firing Arc: 40°
+Cost: 62,000
+Durability: 6,000 / 6,000
+Effect: High-DPS close-range flechette gun exclusive to the Raven Mk VI-R. Excellent tracking and hit rate inside 200 m but no Armor Piercing, making it best versus lightly armored targets.
+Availability: Usable only by Raven Mk VI-R (Strike).
+Upgrade Model: Damage scales from 26.5–42.4 at L1 to 35.75–57.15 at L15. All other stats remain fixed.
+
+KEW-9A “Dagger” — 20 mm Autocannon (L1) – Raven Mk VI-R Only
+Damage: 9–18 → 12.15–23.4 (upgrades)
+Armor Piercing: 5
+Range: 0–650 m
+Optimal Range: 400 m
+Accuracy: 400
+Critical Offense: 100
+Reload: 0.4 s
+Power Cost: 2
+Firing Arc: 30°
+Cost: 60,000
+Durability: 6,000 / 6,000
+Effect: Ship-specific 20 mm autocannon for the Raven Mk VI-R. Combines strong Armor Piercing with high rate of fire, optimized for mid-range burst damage against armored targets. Narrow firing arc encourages precise aiming.
+Availability: Usable only by Raven Mk VI-R (Strike).
+Upgrade Model: Damage scales from 9–18 at L1 to 12.15–23.4 at L15. All other stats remain fixed.
+
+KKC-H1 “Javelin” — 2 MJ Kinetic Kill Cannon (L1) – Rhino Only
+Damage: 65–100 → 89.5–140 (upgrades)
+Armor Piercing: 35
+Range: 100–1500 m
+Optimal Range: 1,000 m
+Accuracy: 100
+Critical Offense: 150
+Reload: 2.0 s
+Power Cost: 6
+Firing Arc: 30°
+Cost: 95,000
+Durability: 6,000 / 6,000
+Effect: Heavy-hitting kinetic kill cannon unique to the Rhino Strike. High AP and crit potential make it devastating against larger or heavily armored ships at standoff range, offset by low accuracy versus agile targets and a long reload.
+Availability: Usable only by Rhino (Strike).
+Upgrade Model: Damage scales from 65–100 at L1 to 89.5–140 at L15. All other stats remain fixed.
+
+KEW-2B “Stiletto” — 11.7 mm Machine Gun (L1) – Raven Mk VI-R Only
+Damage: 5–10 → 8–15 (upgrades)
+Armor Piercing: 2.5
+Range: 0–500 m
+Optimal Range: 300 m
+Accuracy: 400
+Critical Offense: 90
+Reload: 0.2 s
+Power Cost: 1.4
+Firing Arc: 40°
+Cost: 55,000
+Durability: 6,000 / 6,000
+Effect: Fast-cycling machine gun for the Raven Mk VI-R. Focuses on extremely high rate of fire and close-range pressure with modest AP, ideal for shredding light hulls in knife-fight ranges.
+Availability: Usable only by Raven Mk VI-R (Strike).
+Upgrade Model: Damage scales from 5–10 at L1 to 8–15 at L15. All other stats remain fixed.
 
 MEC-A6P “Fang-P” — Light Autocannon (L1)
-Damage: 1–10 (upgrades)
+Damage: 1–10 → 2.4–24 (upgrades)
 Armor Piercing: 5
 Range: 0–750 m
 Optimal Range: 300 m
 Accuracy: 400
-Critical Offense: 100 (upgrades)
+Critical Offense: 100 → 170 (upgrades)
 Reload: 0.5 s
 Power Cost: 1
 Firing Arc: 75°
 Cost: 10,000
-Durability: 2500 / 2500
-Upgrade Model: Damage and Critical Offense scale.
-Notes: Precision variant emphasizing crit damage.
+Durability: 6,000 / 6,000
+Effect: Precision variant of the Fang autocannon with increased critical potential. Maintains baseline range/handling but rewards crit-focused builds.
+Upgrade Model: Damage scales from 1–10 to 2.4–24; Critical Offense scales from 100 to 170 by L15. Optimal Range and other stats remain fixed.
 
 MEC-A8 “Tornado” — Light Autocannon (L1)
-Damage: 1–10 (upgrades)
+Damage: 1–10 → 2.4–24 (upgrades)
 Armor Piercing: 5
 Range: 0–600 m
-Optimal Range: 250 m (upgrades)
+Optimal Range: 250 m → 390 m (upgrades)
 Accuracy: 400
 Critical Offense: 100
 Reload: 0.4 s
 Power Cost: 1
 Firing Arc: 75°
 Cost: 10,000
-Durability: 2500 / 2500
-Upgrade Model: Damage and Optimal Range scale.
-Notes: Fast ROF variant; lower range for higher DPS.
+Durability: 6,000 / 6,000
+Effect: Short-range, rapid-fire variant of the Fang. Sacrifices some reach for higher close-in DPS via faster reload.
+Upgrade Model: Damage and Optimal Range scale from the listed L1 to L15 values. Other stats remain constant.
 
 MEC-A8P “Tornado-P” — Light Autocannon (L1)
-Damage: 1–10 (upgrades)
+Damage: 1–10 → 2.4–24 (upgrades)
 Armor Piercing: 5
 Range: 0–600 m
 Optimal Range: 250 m
 Accuracy: 400
-Critical Offense: 100 (upgrades)
+Critical Offense: 100 → 170 (upgrades)
 Reload: 0.4 s
 Power Cost: 1
 Firing Arc: 75°
 Cost: 10,000
-Durability: 2500 / 2500
-Upgrade Model: Damage and Critical Offense scale.
-Notes: Critical-leaning rapid-fire variant.
+Durability: 6,000 / 6,000
+Effect: Rapid-fire precision version of the Tornado that emphasizes critical hits while keeping its close-range, high-cadence identity.
+Upgrade Model: Damage scales from 1–10 to 2.4–24; Critical Offense scales from 100 to 170 by L15. Optimal Range and other stats remain fixed.
 
-MEL-N2 “Needle” — Light Railgun (L1)
-Damage: 8–20 (upgrades)
-Armor Piercing: 18
+MEC-A9 “Hawk” — Light Autocannon (L1)
+Damage: 1–10 → 2.4–24 (upgrades)
+Armor Piercing: 5
 Range: 0–900 m
-Optimal Range: 500 m (upgrades)
-Accuracy: 380
-Critical Offense: 120
-Reload: 0.9 s
-Power Cost: 3
-Firing Arc: 60°
-Cost: 18,000
-Durability: 2500 / 2500
-Upgrade Model: Damage and Optimal Range scale.
-Notes: Precision kinetic weapon with high AP and long reach.
+Optimal Range: 350 m → 630 m (upgrades)
+Accuracy: 400
+Critical Offense: 100
+Reload: 0.6 s
+Power Cost: 1
+Firing Arc: 75°
+Cost: 10,000
+Durability: 6,000 / 6,000
+Effect: Long-range autocannon variant for Strike-class ships. Trades rate of fire for extended reach and higher optimal engagement distance, favoring standoff skirmishing.
+Upgrade Model: Damage and Optimal Range scale from the listed L1 to L15 values. All other stats remain fixed.
 
-MEL-V1 “Viper Pod” — Light Rocket Pod (L1)
-Damage: 5 × 4 (burst) (upgrades)
-Armor Piercing: 8
+MEC-A9P “Hawk-P” — Light Autocannon (L1)
+Damage: 1–10 → 2.4–24 (upgrades)
+Armor Piercing: 5
+Range: 0–900 m
+Optimal Range: 350 m
+Accuracy: 400
+Critical Offense: 100 → 170 (upgrades)
+Reload: 0.6 s
+Power Cost: 1
+Firing Arc: 75°
+Cost: 10,000
+Durability: 6,000 / 6,000
+Effect: Precision long-range variant of the Hawk. Maintains extended reach while boosting crit potential, ideal for disciplined, accurate pilots.
+Upgrade Model: Damage scales from 1–10 to 2.4–24; Critical Offense scales from 100 to 170 by L15. Optimal Range and other stats remain fixed.
+
+“Gopher” Light Mining Cannon — Light Mining Cannon (L1–L15)
+Damage: 1–4 (L1) → 2.4–9.6 (L15)
+Armor Piercing: 5
+Mining Yield: ×5 (asteroid mining multiplier; assumed constant unless higher-level data show scaling)
 Range: 0–600 m
-Optimal Range: 200 m (upgrades)
-Accuracy: 360
-Critical Offense: 80
-Reload: 1.6 s (between bursts)
-Power Cost: 4
-Firing Arc: 85°
-Cost: 14,000
-Durability: 2500 / 2500
-Upgrade Model: Per-rocket Damage and Optimal Range scale.
-Notes: Close-range burst weapon; 4 rockets per trigger pull.
+Optimal Range: 250 m (L1) → 390 m (L15)
+Accuracy: 400
+Critical Offense: 100
+Reload: 0.5 s
+Power Cost: 2
+Firing Arc: 75°
+Cost: 5,000
+Durability: 6,000 / 6,000
+Requirements: Requires ship class: Strike
+Effect: Dual-purpose light cannon designed for asteroid mining and light combat. Deals modest kinetic damage while applying a strong mining multiplier to asteroid targets.
+Upgrade Model: Damage and Optimal Range scale with level; other stats remain fixed unless higher-level data indicate otherwise.
 
-MEL-S3 “Stiletto” — Light Beam Emitter (L1)
-Damage: 3.0/s (continuous) (upgrades)
-Armor Piercing: 10
-Range: 0–700 m
-Optimal Range: 350 m (upgrades)
-Accuracy: 420
-Critical Offense: 90
-Reload: 0.2 s tick (continuous)
-Power Cost: 1 per tick (0.2 s)
-Firing Arc: 70°
-Cost: 16,000
-Durability: 2500 / 2500
-Upgrade Model: Damage/s and Optimal Range scale.
-Notes: Continuous beam; best for sustained tracking.
+DFSR-18 “Hornet” — 88mm Rocket Pack (L1–L15)
+Damage: 200–200 (L1–L15, no change shown)
+Armor Piercing: 20
+Critical Offense: 100
+Projectile Speed: 210 m/s
+Reload: 4 s (L1) → 2 s (L15)
+Power Cost: 16.2 (L1) → 12.5 (L15)
+Cost: 52,000
+Durability: 6,000 / 6,000
+Requirements: Requires ship: Raven Mk VI-R (Strike, ship-exclusive weapon)
+Effect: Unguided 88mm rocket pack that delivers high burst damage at short-to-medium range. Best used in close attack runs or ambushes where the fixed damage per rocket can be fully leveraged.
+Upgrade Model: Reload time decreases and Power Cost per volley decreases with level, improving sustained DPS and energy efficiency. Damage and other stats remain constant unless future data show changes.
 
-MEL-W9 “Wasp” — Light Seeker Missile (L1)
-Damage: 24 (upgrades)
-Armor Piercing: 14
-Range: 200–1200 m
-Optimal Range: 650 m
-Accuracy: 410
-Critical Offense: 110
-Reload: 2.2 s
-Power Cost: 6
-Firing Arc: 120° (soft-lock cone)
-Cost: 22,000
-Durability: 2500 / 2500
-Upgrade Model: Damage and (optionally) Reload.
-Notes: Guided missile with soft-lock tracking.
+HD-70P “Lightning-P” — Light Missile Launcher (L1–L15)
+Damage: 25–50 (L1–L15, no change shown)
+Armor Piercing: 15
+Range: 200–1000 m
+Turn Speed: 100 deg/s
+Missile Speed: 120 m/s
+Critical Offense: 100 (L1) → 170 (L15)
+Reload: 10 s (L1) → 4.17 s (L15)
+Power Cost: 20 (L1) → 8.33 (L15)
+Firing Arc: 75°
+Cost: 10,000
+Durability: 6,000 / 6,000
+Requirements: Requires ship class: Strike
+Effect: Precision light missile launcher with elevated critical potential. Ideal for pilots who can maintain locks and want spike damage via crits rather than raw volley size.
+Upgrade Model: Critical Offense increases significantly with level while Reload time decreases and Power Cost per shot improves, boosting both spike and sustained DPS. Range and base damage remain fixed unless future data indicate scaling.
+
+ASM-A9 “Zephyr” — Heavy Missile Launcher (L1–L15)
+Damage: 750–750 (L1–L15, no change shown)
+Armor Piercing: 35
+Range: 500–1200 m
+Turn Speed: 15 deg/s
+Missile Speed: 120 m/s
+Critical Offense: 0
+Reload: 60 s (L1) → 36 s (L15)
+Power Cost: 5
+Firing Arc: 75°
+Cost: 95,000
+Durability: 6,000 / 6,000
+Requirements: Requires ship: Raven Mk VI-R (Strike, ship-exclusive heavy missile)
+Effect: Single-shot heavy missile launcher that delivers a massive, non-critical explosive strike. Best used as an opening salvo or finisher against larger targets, trading long reload for very high per-shot damage.
+Upgrade Model: Reload time decreases with level, improving long-term DPS while keeping the per-shot impact, range, and energy footprint largely unchanged.
+
+HD-70 “Lightning” — Light Missile Launcher (L1–L15)
+Damage: 25–50 (L1–L15, no change shown)
+Armor Piercing: 15
+Range: 200–1000 m (L1) → 200–1350 m (L15)
+Turn Speed: 100 deg/s
+Missile Speed: 120 m/s
+Critical Offense: 100
+Reload: 10 s (L1) → 4.17 s (L15)
+Power Cost: 20 (L1) → 8.33 (L15)
+Firing Arc: 75°
+Cost: 10,000
+Durability: 6,000 / 6,000
+Requirements: Requires ship class: Strike
+Effect: General-purpose light missile launcher for Strike craft. Offers flexible mid-range engagement with decent crit potential and a fairly quick missile flight profile.
+Upgrade Model: Maximum Range, Reload, and Power Cost all improve with level, enhancing reach, firing cadence, and energy efficiency; Damage and Critical Offense remain fixed unless later data show scaling.
+
+SIW-9M “Wasp” — Interceptor Missile Launcher (L1–L15)
+Damage: 300–300 (L1–L15, no change shown)
+Armor Piercing: 15
+Range: 300–1000 m
+Turn Speed: 65 deg/s
+Missile Speed: 150 m/s
+Critical Offense: 100
+Reload: 30 s (L1) → 23.5 s (L15)
+Power Cost: 5
+Firing Arc: 75°
+Cost: 75,000
+Durability: 6,000 / 6,000
+Requirements: Requires ship: Raven Mk VI-R (Strike, ship-exclusive interceptor missiles)
+Effect: High-impact interceptor missile system optimized for taking down other Strike craft or fast targets. Faster missiles and moderate turn rate make it suitable for anti-fighter roles and agile duels.
+Upgrade Model: Reload time decreases with level to improve responsiveness and sustained DPS; other stats remain constant unless higher-level data indicate otherwise.
+
+HD-82 “Longbow” — Long-Range Light Missile Launcher (L1–L15)
+Damage: 25–50 (L1–L15, no change shown)
+Armor Piercing: 15
+Range: 200–1250 m (L1) → 200–1705 m (L15)
+Turn Speed: 100 deg/s
+Missile Speed: 120 m/s
+Critical Offense: 100
+Reload: 12 s (L1) → 5 s (L15)
+Power Cost: 20 (L1) → 8.33 (L15)
+Firing Arc: 75°
+Cost: 10,000
+Durability: 6,000 / 6,000
+Requirements: Requires ship class: Strike
+Effect: Long-range variant of the light missile launcher, emphasizing standoff engagements and kiting. Best when used to harass or finish targets outside typical autocannon ranges.
+Upgrade Model: Maximum Range, Reload, and Power Cost all improve with level, yielding greater reach, faster volleys, and better energy efficiency while leaving base damage and crit behavior unchanged.
+
+HD-82P “Longbow-P” — Precision Long-Range Light Missile Launcher (L1–L15)
+Damage: 25–50 (L1–L15, no change shown)
+Armor Piercing: 15
+Range: 200–1250 m
+Turn Speed: 100 deg/s
+Missile Speed: 120 m/s
+Critical Offense: 100 (L1) → 170 (L15)
+Reload: 12 s (L1) → 5 s (L15)
+Power Cost: 20 (L1) → 8.33 (L15)
+Firing Arc: 75°
+Cost: 10,000
+Durability: 6,000 / 6,000
+Requirements: Requires ship class: Strike
+Effect: Precision version of the Longbow launcher. Maintains long engagement range but focuses on enhanced crits and improved firing cadence, making it ideal for burst volleys at range.
+Upgrade Model: Critical Offense increases with level while Reload decreases and Power Cost improves, enhancing both spike and sustained damage. Range and base damage remain fixed unless later data show otherwise.
+
+ASM-A3 “Cyclops” — Nuclear Torpedo Launcher (L1–L15)
+Damage: 250–500 (L1–L15, no change shown)
+Armor Piercing: 35
+Power Damage: 40–60 (L1) → 50–75 (L15)
+Range: 600–1080 m (L1) → 600–1335 m (L15)
+Turn Speed: 70 deg/s
+Speed: 85 m/s
+Critical Offense: 100
+Reload: 120 s (L1) → 90 s (L15)
+Power Cost: 45 (L1) → 36 (L15)
+Firing Arc: 75°
+Explosion Radius: 400 m
+Cost: 45,000
+Durability: 6,000 / 6,000
+Requirements: Requires ship class: Strike
+Effect: Heavy nuclear torpedo launcher for Strike ships, delivering high hull and power-grid damage in a wide blast radius. Suited for anti-capital strikes and objective demolition rather than dogfights.
+Upgrade Model: Power Damage, maximum Range, Reload time, and Power Cost all improve with level, making each torpedo more debilitating, easier to deploy, and cheaper to fire while keeping base kinetic damage and AoE radius stable.
+
+AST-7A “Manticore” — Tactical Nuclear Torpedo Launcher (L1–L15)
+Damage: 600–850 (L1–L15, no change shown)
+Armor Piercing: 35
+Power Damage: 80–120 (L1) → 90–135 (L15)
+Range: 200–680 m (L1) → 200–850 m (L15)
+Turn Speed: 2 deg/s
+Speed: 60 m/s
+Critical Offense: 100
+Reload: 160 s (L1) → 134 s (L15)
+Power Cost: 70 (L1) → 58.5 (L15)
+Firing Arc: 75°
+Explosion Radius: 200 m
+Cost: 45,000
+Durability: 6,000 / 6,000
+Requirements: Requires ship class: Strike
+Effect: Short-range tactical nuke launcher with very high direct damage but smaller blast radius than Cyclops. Designed for daring close-approach strikes against priority targets, trading safety and reload time for overwhelming impact.
+Upgrade Model: Power Damage, maximum Range, Reload time, and Power Cost scale with level, increasing both lethality and efficiency while leaving base kinetic damage and explosion radius constant unless later data indicate changes.
 
 Strike Hulls
 
