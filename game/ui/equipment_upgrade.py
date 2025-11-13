@@ -405,6 +405,140 @@ EQUIPMENT_UPGRADE_SPECS: Dict[str, EquipmentUpgradeSpec] = {
             for level in range(2, 16)
         },
     ),
+    "mel_n2": EquipmentUpgradeSpec(
+        item_id="mel_n2",
+        name="MEL-N2 'Needle'",
+        slot="weapon",
+        effect="Precision railgun; Damage and Optimal Range scale with upgrades.",
+        level_cap=15,
+        upgrade_axes=("damage", "optimal_range"),
+        curves={
+            "damage_min": _linear(8.0, 0.8),
+            "damage_max": _linear(20.0, 2.0),
+            "armor_piercing": _linear(18.0, 0.0),
+            "range_min": _linear(0.0, 0.0),
+            "range_max": _linear(900.0, 0.0),
+            "optimal_range": _linear(500.0, 20.0),
+            "accuracy": _linear(380.0, 0.0),
+            "critical_offense": _linear(120.0, 0.0),
+            "reload": _linear(0.9, 0.0),
+            "power": _linear(3.0, 0.0),
+            "firing_arc": _linear(60.0, 0.0),
+            "durability": _linear(2500.0, 0.0),
+        },
+        steps={
+            level: UpgradeStep(
+                level=level,
+                costs={"tylium": 1600.0 + 480.0 * (level - 2)},
+                requirement=UpgradeRequirement("Gunnery", 1 if level <= 5 else 2 if level <= 10 else 3),
+                success_chance=1.0 if level <= 10 else 0.7,
+                tuning_kits=1 if level > 10 else None,
+                guarantee_kits=3 if level > 10 else None,
+            )
+            for level in range(2, 16)
+        },
+    ),
+    "mel_v1": EquipmentUpgradeSpec(
+        item_id="mel_v1",
+        name="MEL-V1 'Viper Pod'",
+        slot="weapon",
+        effect="Close-range rocket pod; per-rocket Damage and Optimal Range improve.",
+        level_cap=15,
+        upgrade_axes=("damage", "optimal_range"),
+        curves={
+            "damage_min": _linear(5.0, 0.5),
+            "damage_max": _linear(5.0, 0.5),
+            "burst_count": _linear(4.0, 0.0),
+            "armor_piercing": _linear(8.0, 0.0),
+            "range_min": _linear(0.0, 0.0),
+            "range_max": _linear(600.0, 0.0),
+            "optimal_range": _linear(200.0, 8.0),
+            "accuracy": _linear(360.0, 0.0),
+            "critical_offense": _linear(80.0, 0.0),
+            "reload": _linear(1.6, 0.0),
+            "power": _linear(4.0, 0.0),
+            "firing_arc": _linear(85.0, 0.0),
+            "durability": _linear(2500.0, 0.0),
+        },
+        steps={
+            level: UpgradeStep(
+                level=level,
+                costs={"tylium": 1500.0 + 450.0 * (level - 2)},
+                requirement=UpgradeRequirement("Gunnery", 1 if level <= 5 else 2 if level <= 10 else 3),
+                success_chance=1.0 if level <= 10 else 0.7,
+                tuning_kits=1 if level > 10 else None,
+                guarantee_kits=3 if level > 10 else None,
+            )
+            for level in range(2, 16)
+        },
+    ),
+    "mel_s3": EquipmentUpgradeSpec(
+        item_id="mel_s3",
+        name="MEL-S3 'Stiletto'",
+        slot="weapon",
+        effect="Continuous beam emitter; Damage throughput and Optimal Range scale.",
+        level_cap=15,
+        upgrade_axes=("damage", "optimal_range"),
+        curves={
+            "damage_min": _linear(3.0, 0.3),
+            "damage_max": _linear(3.0, 0.3),
+            "damage_per_second": _linear(3.0, 0.3),
+            "armor_piercing": _linear(10.0, 0.0),
+            "range_min": _linear(0.0, 0.0),
+            "range_max": _linear(700.0, 0.0),
+            "optimal_range": _linear(350.0, 14.0),
+            "accuracy": _linear(420.0, 0.0),
+            "critical_offense": _linear(90.0, 0.0),
+            "reload": _linear(0.2, 0.0),
+            "power": _linear(1.0, 0.0),
+            "firing_arc": _linear(70.0, 0.0),
+            "durability": _linear(2500.0, 0.0),
+        },
+        steps={
+            level: UpgradeStep(
+                level=level,
+                costs={"tylium": 1550.0 + 460.0 * (level - 2)},
+                requirement=UpgradeRequirement("Gunnery", 1 if level <= 5 else 2 if level <= 10 else 3),
+                success_chance=1.0 if level <= 10 else 0.7,
+                tuning_kits=1 if level > 10 else None,
+                guarantee_kits=3 if level > 10 else None,
+            )
+            for level in range(2, 16)
+        },
+    ),
+    "mel_w9": EquipmentUpgradeSpec(
+        item_id="mel_w9",
+        name="MEL-W9 'Wasp'",
+        slot="weapon",
+        effect="Guided seeker missile; Damage and reload cadence refine with upgrades.",
+        level_cap=15,
+        upgrade_axes=("damage", "reload"),
+        curves={
+            "damage_min": _linear(24.0, 2.4),
+            "damage_max": _linear(24.0, 2.4),
+            "armor_piercing": _linear(14.0, 0.0),
+            "range_min": _linear(200.0, 0.0),
+            "range_max": _linear(1200.0, 0.0),
+            "optimal_range": _linear(650.0, 26.0),
+            "accuracy": _linear(410.0, 0.0),
+            "critical_offense": _linear(110.0, 0.0),
+            "reload": _linear(2.2, -0.05),
+            "power": _linear(6.0, 0.0),
+            "firing_arc": _linear(120.0, 0.0),
+            "durability": _linear(2500.0, 0.0),
+        },
+        steps={
+            level: UpgradeStep(
+                level=level,
+                costs={"tylium": 1700.0 + 500.0 * (level - 2)},
+                requirement=UpgradeRequirement("Gunnery", 1 if level <= 5 else 2 if level <= 10 else 3),
+                success_chance=1.0 if level <= 10 else 0.7,
+                tuning_kits=1 if level > 10 else None,
+                guarantee_kits=3 if level > 10 else None,
+            )
+            for level in range(2, 16)
+        },
+    ),
     "strike_composite_plating": EquipmentUpgradeSpec(
         item_id="strike_composite_plating",
         name="Strike Composite Plating",
@@ -474,6 +608,82 @@ EQUIPMENT_UPGRADE_SPECS: Dict[str, EquipmentUpgradeSpec] = {
             level: UpgradeStep(
                 level=level,
                 costs={"cubits": 900.0 + 180.0 * (level - 2)},
+                requirement=UpgradeRequirement("Engineering", 1 if level <= 5 else 2 if level <= 10 else 3),
+                success_chance=1.0 if level <= 10 else 0.75,
+                tuning_kits=1 if level > 10 else None,
+                guarantee_kits=2 if level > 10 else None,
+            )
+            for level in range(2, 16)
+        },
+    ),
+    "strike_ablative_lattice": EquipmentUpgradeSpec(
+        item_id="strike_ablative_lattice",
+        name="Strike Ablative Lattice",
+        slot="hull",
+        effect="Heavier ablative mesh; Armor and Hull bonuses scale together.",
+        level_cap=15,
+        upgrade_axes=("armor", "hull_hp"),
+        curves={
+            "armor": _linear(6.0, 0.6),
+            "hull_hp": _linear(10.0, 1.0),
+            "acceleration": _linear(-0.5, 0.0),
+            "turn_accel": _linear(-0.3, 0.0),
+            "durability": _linear(2500.0, 0.0),
+        },
+        steps={
+            level: UpgradeStep(
+                level=level,
+                costs={"cubits": 1_000.0 + 200.0 * (level - 2)},
+                requirement=UpgradeRequirement("Engineering", 1 if level <= 5 else 2 if level <= 10 else 3),
+                success_chance=1.0 if level <= 10 else 0.75,
+                tuning_kits=1 if level > 10 else None,
+                guarantee_kits=2 if level > 10 else None,
+            )
+            for level in range(2, 16)
+        },
+    ),
+    "strike_bulkhead_reinforcement": EquipmentUpgradeSpec(
+        item_id="strike_bulkhead_reinforcement",
+        name="Strike Bulkhead Reinforcement",
+        slot="hull",
+        effect="Maximises hull buffering; penalties remain constant.",
+        level_cap=15,
+        upgrade_axes=("hull_hp",),
+        curves={
+            "hull_hp": _linear(70.0, 7.0),
+            "acceleration": _linear(-0.3, 0.0),
+            "turn_accel": _linear(-1.2, 0.0),
+            "durability": _linear(2500.0, 0.0),
+        },
+        steps={
+            level: UpgradeStep(
+                level=level,
+                costs={"cubits": 1_000.0 + 200.0 * (level - 2)},
+                requirement=UpgradeRequirement("Engineering", 1 if level <= 5 else 2 if level <= 10 else 3),
+                success_chance=1.0 if level <= 10 else 0.75,
+                tuning_kits=1 if level > 10 else None,
+                guarantee_kits=2 if level > 10 else None,
+            )
+            for level in range(2, 16)
+        },
+    ),
+    "strike_reactive_plating": EquipmentUpgradeSpec(
+        item_id="strike_reactive_plating",
+        name="Strike Reactive Plating",
+        slot="hull",
+        effect="Reactive armor skin; Armor and Avoidance scale modestly.",
+        level_cap=15,
+        upgrade_axes=("armor", "avoidance"),
+        curves={
+            "armor": _linear(3.0, 0.3),
+            "avoidance_rating": _linear(5.0, 0.5),
+            "acceleration": _linear(-0.2, 0.0),
+            "durability": _linear(2500.0, 0.0),
+        },
+        steps={
+            level: UpgradeStep(
+                level=level,
+                costs={"cubits": 1_100.0 + 220.0 * (level - 2)},
                 requirement=UpgradeRequirement("Engineering", 1 if level <= 5 else 2 if level <= 10 else 3),
                 success_chance=1.0 if level <= 10 else 0.75,
                 tuning_kits=1 if level > 10 else None,
@@ -581,6 +791,114 @@ EQUIPMENT_UPGRADE_SPECS: Dict[str, EquipmentUpgradeSpec] = {
             level: UpgradeStep(
                 level=level,
                 costs={"merits": 10.0 + 2.0 * (level - 2)},
+                requirement=UpgradeRequirement("Propulsion", 1 if level <= 5 else 2 if level <= 10 else 3),
+                success_chance=1.0 if level <= 10 else 0.8,
+                tuning_kits=1 if level > 10 else None,
+                guarantee_kits=2 if level > 10 else None,
+            )
+            for level in range(2, 16)
+        },
+    ),
+    "light_afterburn_coupling": EquipmentUpgradeSpec(
+        item_id="light_afterburn_coupling",
+        name="Light Afterburn Coupling",
+        slot="engine",
+        effect="Prioritises sprint speed; Boost and acceleration scale with upgrades.",
+        level_cap=15,
+        upgrade_axes=("boost_speed", "acceleration"),
+        curves={
+            "max_speed": _linear(0.5, 0.0),
+            "boost_speed": _linear(3.5, 0.3),
+            "acceleration": _linear(0.5, 0.05),
+            "turn_rate": _linear(0.0, 0.0),
+            "turn_accel": _linear(0.0, 0.0),
+            "avoidance_rating": _linear(0.0, 0.0),
+            "durability": _linear(2500.0, 0.0),
+        },
+        steps={
+            level: UpgradeStep(
+                level=level,
+                costs={"merits": 13.0 + 2.2 * (level - 2)},
+                requirement=UpgradeRequirement("Propulsion", 1 if level <= 5 else 2 if level <= 10 else 3),
+                success_chance=1.0 if level <= 10 else 0.8,
+                tuning_kits=1 if level > 10 else None,
+                guarantee_kits=2 if level > 10 else None,
+            )
+            for level in range(2, 16)
+        },
+    ),
+    "light_vectoring_nozzles": EquipmentUpgradeSpec(
+        item_id="light_vectoring_nozzles",
+        name="Light Vectoring Nozzles",
+        slot="engine",
+        effect="Vectoring jets for sharper turns; penalties stay fixed.",
+        level_cap=15,
+        upgrade_axes=("turn_rate", "turn_accel"),
+        curves={
+            "max_speed": _linear(0.0, 0.0),
+            "boost_speed": _linear(0.0, 0.0),
+            "acceleration": _linear(-0.2, 0.0),
+            "turn_rate": _linear(3.5, 0.28),
+            "turn_accel": _linear(3.0, 0.24),
+            "avoidance_rating": _linear(0.0, 0.0),
+            "durability": _linear(2500.0, 0.0),
+        },
+        steps={
+            level: UpgradeStep(
+                level=level,
+                costs={"merits": 13.0 + 2.2 * (level - 2)},
+                requirement=UpgradeRequirement("Propulsion", 1 if level <= 5 else 2 if level <= 10 else 3),
+                success_chance=1.0 if level <= 10 else 0.8,
+                tuning_kits=1 if level > 10 else None,
+                guarantee_kits=2 if level > 10 else None,
+            )
+            for level in range(2, 16)
+        },
+    ),
+    "light_inertial_dampeners": EquipmentUpgradeSpec(
+        item_id="light_inertial_dampeners",
+        name="Light Inertial Dampeners",
+        slot="engine",
+        effect="Improves responsiveness; Acceleration stats increase while speed penalty holds.",
+        level_cap=15,
+        upgrade_axes=("acceleration", "turn_accel"),
+        curves={
+            "max_speed": _linear(-0.5, 0.0),
+            "boost_speed": _linear(0.0, 0.0),
+            "acceleration": _linear(1.5, 0.12),
+            "turn_rate": _linear(0.0, 0.0),
+            "turn_accel": _linear(1.0, 0.08),
+            "avoidance_rating": _linear(0.0, 0.0),
+            "durability": _linear(2500.0, 0.0),
+        },
+        steps={
+            level: UpgradeStep(
+                level=level,
+                costs={"merits": 12.0 + 2.0 * (level - 2)},
+                requirement=UpgradeRequirement("Propulsion", 1 if level <= 5 else 2 if level <= 10 else 3),
+                success_chance=1.0 if level <= 10 else 0.8,
+                tuning_kits=1 if level > 10 else None,
+                guarantee_kits=2 if level > 10 else None,
+            )
+            for level in range(2, 16)
+        },
+    ),
+    "light_ecm_weave": EquipmentUpgradeSpec(
+        item_id="light_ecm_weave",
+        name="Light ECM Weave",
+        slot="engine",
+        effect="Engine-hugging ECM mesh; Avoidance improves with level.",
+        level_cap=15,
+        upgrade_axes=("avoidance",),
+        curves={
+            "avoidance_rating": _linear(12.0, 1.2),
+            "turn_rate": _linear(1.0, 0.0),
+            "durability": _linear(2500.0, 0.0),
+        },
+        steps={
+            level: UpgradeStep(
+                level=level,
+                costs={"merits": 14.0 + 2.4 * (level - 2)},
                 requirement=UpgradeRequirement("Propulsion", 1 if level <= 5 else 2 if level <= 10 else 3),
                 success_chance=1.0 if level <= 10 else 0.8,
                 tuning_kits=1 if level > 10 else None,
