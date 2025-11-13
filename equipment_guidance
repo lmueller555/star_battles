@@ -43,7 +43,7 @@ STRIKE CLASS EQUIPMENT
 
 Light, fast attack craft emphasizing agility, precision, and low durability.
 
-Weapons
+Strike Weapons
 
 Weapons (Light Hardpoints – Strike Only)
 
@@ -167,7 +167,7 @@ Durability: 2500 / 2500
 Upgrade Model: Damage and (optionally) Reload.
 Notes: Guided missile with soft-lock tracking.
 
-Hulls
+Strike Hulls
 
 Hull Systems (Strike / Light Hull Slot, Passive)
 
@@ -182,50 +182,86 @@ Effect: Balanced armor + hull with mild maneuver penalties.
 Upgrade Axis: Armor and Hull scale.
 
 Strike Hull Plating (L1)
-Hull Points: +45
+Hull Points: +45 → +108 (upgrades)
 Acceleration: −0.2
 Turn Acceleration: −1.0 deg/s²
 Cost: 8,000
-Durability: 2500 / 2500
-Effect: Greater hull padding, slightly heavier penalty.
-Upgrade Axis: Hull Points scale.
+Durability: 6,000 / 6,000
+Effect: Baseline hull module for Strike-class ships that increases maximum Hull Points at the expense of slightly reduced linear acceleration and noticeably reduced turn acceleration. Provides a straightforward survivability boost for fragile Strike hulls without altering Armor Value.
+Upgrade Axis: Hull Points scale with item level from +45 at L1 up to +108 at L15. Acceleration and turn-acceleration penalties remain fixed at all levels.
 
 Strike Armor Plating (L1)
-Armor Value: +4.5
+Armor Value: +4.5 → +10.8 (upgrades)
 Acceleration: −0.4
 Turn Acceleration: −0.5 deg/s²
 Cost: 8,000
-Durability: 2500 / 2500
-Effect: Strong armor boost, biggest accel penalty.
-Upgrade Axis: Armor Value scales.
+Durability: 6,000 / 6,000
+Effect: Strike-class armor module that significantly increases Armor Value while slightly reducing linear acceleration and modestly reducing turn acceleration. Focused on raw damage mitigation rather than extra hull padding.
+Upgrade Axis: Armor Value scales with item level from +4.5 at L1 up to +10.8 at L15. Acceleration and turn-acceleration penalties remain fixed at all levels.
 
-Strike Ablative Lattice (L1)
-Armor Value: +6.0
-Hull Points: +10
-Acceleration: −0.5
-Turn Acceleration: −0.3 deg/s²
-Cost: 10,000
-Durability: 2500 / 2500
-Effect: Heavier armor focus; reduced accel.
-Upgrade Axis: Armor scales strongly; Hull modestly.
+Strike HT Plating (L1)
+Critical Defense: +7.5 → +18 (upgrades)
+Cost: 8,000
+Durability: 6,000 / 6,000
+Effect: Specialized Strike-class hull module that boosts Critical Defense, reducing the chance and/or severity of incoming critical hits. Does not modify Armor, Hull Points, or maneuvering stats, making it ideal for pilots who want extra protection against burst damage without sacrificing handling.
+Upgrade Axis: Critical Defense scales with item level from +7.5 at L1 up to +18 at L15. All other attributes remain fixed at all levels.
 
-Strike Bulkhead Reinforcement (L1)
-Hull Points: +70
+Strike Composite Plating (L1)
+Armor Value: +2.25 → +5.4 (upgrades)
+Hull Points: +22.5 → +54 (upgrades)
 Acceleration: −0.3
-Turn Acceleration: −1.2 deg/s²
-Cost: 10,000
-Durability: 2500 / 2500
-Effect: High hull buffer with noticeable handling penalty.
-Upgrade Axis: Hull Points scale.
+Turn Acceleration: −0.75 deg/s²
+Cost: 8,000
+Durability: 6,000 / 6,000
+Effect: Balanced composite hull module for Strike-class ships that increases both Armor Value and Hull Points, at the cost of reduced linear and turn acceleration. Good “all-rounder” survivability upgrade for fragile craft.
+Upgrade Axis: Armor Value scales from +2.25 at L1 to +5.4 at L15; Hull Points scale from +22.5 at L1 to +54 at L15. Acceleration and turn-acceleration penalties remain fixed.
 
-Strike Reactive Plating (L1)
-Armor Value: +3.0
-Avoidance: +5
-Acceleration: −0.2
-Cost: 12,000
-Durability: 2500 / 2500
-Effect: Reactive armor layer adds modest Avoidance.
-Upgrade Axis: Armor and Avoidance scale modestly.
+Strike HT Hull Plating (L1)
+Critical Defense: +2.5 → +6 (upgrades)
+Hull Points: +30 → +72 (upgrades)
+Acceleration: −0.13
+Turn Acceleration: −0.67 deg/s²
+Cost: 8,000
+Durability: 6,000 / 6,000
+Effect: Heavy-tuned hull plating for Strike-class ships that boosts both Hull Points and Critical Defense, making the ship tougher against burst crit damage while only slightly degrading linear and rotational acceleration.
+Upgrade Axis: Critical Defense scales from +2.5 at L1 to +6 at L15; Hull Points scale from +30 at L1 to +72 at L15. Acceleration and turn-acceleration penalties remain fixed.
+
+Strike HT Armor Plating (L1)
+Armor Value: +3 → +7.2 (upgrades)
+Critical Defense: +2.5 → +6 (upgrades)
+Acceleration: −0.27
+Turn Acceleration: −0.33 deg/s²
+Cost: 8,000
+Durability: 6,000 / 6,000
+Effect: Heavy-tuned armor plating that increases both Armor Value and Critical Defense for Strike-class ships, improving mitigation and resistance to critical hits while moderately reducing linear acceleration and slightly reducing turn acceleration.
+Upgrade Axis: Armor Value scales from +3 at L1 to +7.2 at L15; Critical Defense scales from +2.5 at L1 to +6 at L15. Acceleration and turn-acceleration penalties remain fixed.
+
+Strike HT Composite Plating (L1)
+Armor Value: +1.8 → +4.32 (upgrades)
+Critical Defense: +1.5 → +3.6 (upgrades)
+Hull Points: +18 → +43.2 (upgrades)
+Acceleration: −0.24
+Turn Acceleration: −0.6 deg/s²
+Cost: 8,000
+Durability: 6,000 / 6,000
+Effect: Composite heavy-tuned hull module that provides a mixed boost to Armor Value, Critical Defense, and Hull Points. Offers broad survivability improvements with moderate penalties to acceleration and turn acceleration, ideal for generalist defensive builds.
+Upgrade Axis: Armor Value scales from +1.8 at L1 to +4.32 at L15; Critical Defense scales from +1.5 at L1 to +3.6 at L15; Hull Points scale from +18 at L1 to +43.2 at L15. Acceleration and turn-acceleration penalties remain fixed.
+
+Strike System Redundancy (L1) – Passive
+Hull Recovery: +0.5 /sec → +1.2 /sec (upgrades)
+Cost: 5,000
+Durability: 6,000 / 6,000
+Effect: Passive hull module that increases the natural Hull Point recovery rate of Strike-class ships. Provides sustained survivability over time without affecting Armor, Hull cap, or maneuvering stats.
+Upgrade Axis: Hull Recovery rate scales from +0.5 HP/sec at L1 up to +1.2 HP/sec at L15. No other stats are modified.
+
+Strike Damage Control (L1) – Active
+Hullpoint Restore: +50 → +120 (upgrades)
+Reload: 30 s
+Power Cost: 50
+Cost: 8,000
+Durability: 6,000 / 6,000
+Effect: Active hull repair system for Strike-class ships. On activation, instantly restores a chunk of Hull Points, consuming ship Power and triggering a 30-second cooldown. Best used reactively to survive burst damage or disengage.
+Upgrade Axis: Hullpoint Restore scales from +50 at L1 up to +120 at L15. Reload time and Power Cost remain fixed at all levels.
 
 Engines
 
@@ -262,41 +298,6 @@ Durability: 2500 / 2500
 Effect: Increases Avoidance (harder to hit).
 Upgrade Axis: Avoidance scales.
 
-Light Afterburn Coupling (L1)
-Speed: +0.5 m/s
-Boost Speed: +3.5 m/s (upgrades)
-Acceleration: +0.5
-Cost: 7,500
-Durability: 2500 / 2500
-Effect: Prioritizes sprint speed.
-Upgrade Axis: Boost Speed & Accel scale.
-
-Light Vectoring Nozzles (L1)
-Turn Speed: +3.5 deg/s
-Turn Acceleration: +3.0 deg/s²
-Acceleration: −0.2
-Cost: 7,500
-Durability: 2500 / 2500
-Effect: Improves turning, minor accel tradeoff.
-Upgrade Axis: Turn stats scale; penalty fixed.
-
-Light Inertial Dampeners (L1)
-Acceleration: +1.5
-Turn Acceleration: +1.0 deg/s²
-Speed: −0.5 m/s
-Cost: 6,500
-Durability: 2500 / 2500
-Effect: Snappier handling; slightly lower top speed.
-Upgrade Axis: Accel & Turn Accel scale.
-
-Light ECM Weave (L1)
-Avoidance: +12 (upgrades)
-Turn Speed: +1.0 deg/s
-Cost: 9,000
-Durability: 2500 / 2500
-Effect: Reduced tracking signature; complements RCS Ducting.
-Upgrade Axis: Avoidance scales.
-
 Module Application Order (Strike Engines):
 
 max_speed += sum(speed_bonus)
@@ -306,13 +307,13 @@ turn_rate += sum(turn_speed_bonus)
 turn_accel += sum(turn_accel_bonus)
 avoidance += sum(avoidance_bonus)
 
-Computers
+Strike Computers
 
-Ammo
+Strike Ammo
 
 ESCORT CLASS EQUIPMENT
 
-Weapons
+Escort Weapons
 
 Weapons (Medium Hardpoints – Escort Only)
 
@@ -561,19 +562,101 @@ Restricted to Escort-class hardpoints — enforce requirement in Store and Fitti
 
 Consider distinct missile trail color and targeting reticle for identification.
 
-Hulls
+Escort Hulls
 
-Engines
+Escort Hull Plating (L1) – Passive
+Hull Points: +165 → +396 (upgrades)
+Acceleration: −0.1
+Turn Acceleration: −0.5 deg/s²
+Cost: 12,000
+Durability: 18,000 / 18,000
+Effect: Baseline hull module for Escort-class ships that significantly increases maximum Hull Points at the cost of slightly reduced linear acceleration and moderate turn acceleration. Straightforward survivability boost for medium hulls.
+Upgrade Axis: Hull Points scale from +165 at L1 up to +396 at L15. Acceleration and turn-acceleration penalties remain fixed.
 
-Computers
+Escort Armor Plating (L1) – Passive
+Armor Value: +4.25 → +10.2 (upgrades)
+Acceleration: −0.2
+Turn Acceleration: −0.25 deg/s²
+Cost: 12,000
+Durability: 18,000 / 18,000
+Effect: Armor-focused Escort hull plating that boosts Armor Value while modestly reducing both linear and turn acceleration. Emphasizes damage mitigation over handling.
+Upgrade Axis: Armor Value scales from +4.25 at L1 to +10.2 at L15. Acceleration and turn-acceleration penalties remain fixed.
 
-Ammo
+Escort HT Plating (L1) – Passive
+Critical Defense: +7.5 → +18 (upgrades)
+Cost: 12,000
+Durability: 18,000 / 18,000
+Effect: Heavy-tuned Escort hull plating that boosts Critical Defense, reducing the frequency/impact of incoming critical hits. Does not affect Armor, Hull Points, or maneuvering, making it ideal for anti-burst defensive builds.
+Upgrade Axis: Critical Defense scales from +7.5 at L1 to +18 at L15. All other stats remain unchanged.
+
+Escort Composite Plating (L1) – Passive
+Armor Value: +2.13 → +5.1 (upgrades)
+Hull Points: +82.5 → +198 (upgrades)
+Acceleration: −0.15
+Turn Acceleration: −0.38 deg/s²
+Cost: 12,000
+Durability: 18,000 / 18,000
+Effect: Composite plating that increases both Armor Value and Hull Points for Escort-class ships, with moderate penalties to linear and turn acceleration. A balanced defensive option combining mitigation and raw HP.
+Upgrade Axis: Armor Value scales from +2.13 at L1 to +5.1 at L15; Hull Points scale from +82.5 at L1 to +198 at L15. Acceleration and turn-acceleration penalties remain fixed.
+
+Escort HT Hull Plating (L1) – Passive
+Critical Defense: +2.5 → +6 (upgrades)
+Hull Points: +110 → +264 (upgrades)
+Acceleration: −0.07
+Turn Acceleration: −0.33 deg/s²
+Cost: 12,000
+Durability: 18,000 / 18,000
+Effect: Heavy-tuned hull plating variant that boosts both Hull Points and Critical Defense for Escorts. Offers strong general toughness and crit resistance with relatively light penalties to maneuverability.
+Upgrade Axis: Critical Defense scales from +2.5 at L1 to +6 at L15; Hull Points scale from +110 at L1 to +264 at L15. Acceleration and turn-acceleration penalties remain fixed.
+
+Escort HT Armor Plating (L1) – Passive
+Armor Value: +2.83 → +6.8 (upgrades)
+Critical Defense: +2.5 → +6 (upgrades)
+Acceleration: −0.13
+Turn Acceleration: −0.17 deg/s²
+Cost: 12,000
+Durability: 18,000 / 18,000
+Effect: Heavy-tuned armor plating that raises both Armor Value and Critical Defense, enhancing mitigation and crit resistance while only slightly compromising acceleration and turn performance.
+Upgrade Axis: Armor Value scales from +2.83 at L1 to +6.8 at L15; Critical Defense scales from +2.5 at L1 to +6 at L15. Acceleration and turn-acceleration penalties remain fixed.
+
+Escort HT Composite Plating (L1) – Passive
+Armor Value: +1.7 → +4.08 (upgrades)
+Critical Defense: +1.5 → +3.6 (upgrades)
+Hull Points: +66 → +158.4 (upgrades)
+Acceleration: −0.12
+Turn Acceleration: −0.3 deg/s²
+Cost: 12,000
+Durability: 18,000 / 18,000
+Effect: Composite heavy-tuned hull module that simultaneously increases Armor Value, Critical Defense, and Hull Points on Escort-class ships. Provides well-rounded defensive gains with moderate penalties to speed and turning.
+Upgrade Axis: Armor Value scales from +1.7 at L1 to +4.08 at L15; Critical Defense scales from +1.5 at L1 to +3.6 at L15; Hull Points scale from +66 at L1 to +158.4 at L15. Acceleration and turn-acceleration penalties remain fixed.
+
+Escort System Redundancy (L1) – Passive
+Hull Recovery: +1.5 /sec → +3.6 /sec (upgrades)
+Cost: 7,500
+Durability: 18,000 / 18,000
+Effect: Passive Escort hull module that increases natural Hull Point recovery over time, improving sustain between or during engagements without altering Armor, Hull cap, or movement stats.
+Upgrade Axis: Hull Recovery scales from +1.5 HP/sec at L1 to +3.6 HP/sec at L15. No other stats are modified.
+
+Escort Damage Control (L1) – Active
+Hullpoint Restore: +150 → +360 (upgrades)
+Reload: 30 s
+Power Cost: 100
+Cost: 12,000
+Durability: 18,000 / 18,000
+Effect: Active hull repair system for Escort-class ships. On activation, instantly restores a chunk of Hull Points at the cost of ship Power and a 30-second cooldown. Best used to survive heavy burst damage or during tactical disengagements.
+Upgrade Axis: Hullpoint Restore scales from +150 at L1 to +360 at L15. Reload time and Power Cost remain fixed at all levels.
+
+Escort Engines
+
+Escort Computers
+
+Escort Ammo
 
 LINE CLASS EQUIPMENT
 
 Durable gunships designed for sustained frontline combat.
 
-Weapons
+Line Weapons
 
 Weapons (Medium / Heavy Hardpoints – Line Only)
 
@@ -866,17 +949,99 @@ Restricted to Line-class hardpoints — enforce requirement in Store and Fitting
 
 Works well when paired with Stormstrike batteries for mixed-range salvos.
 
-Hulls
+Line Hulls
 
-Engines
+Line Hull Plating (L1) – Passive
+Hull Points: +350 → +840 (upgrades)
+Acceleration: −0.05
+Turn Acceleration: −0.2 deg/s²
+Cost: 16,000
+Durability: 42,000 / 42,000
+Effect: Baseline hull module for Line-class ships that substantially increases maximum Hull Points with only minor penalties to linear and turn acceleration. Straightforward durability upgrade for frontline gunships.
+Upgrade Axis: Hull Points scale from +350 at L1 up to +840 at L15. Acceleration and turn-acceleration penalties remain fixed.
 
-Computers
+Line Armor Plating (L1) – Passive
+Armor Value: +3.5 → +8.4 (upgrades)
+Acceleration: −0.1
+Turn Acceleration: −0.1 deg/s²
+Cost: 16,000
+Durability: 42,000 / 42,000
+Effect: Armor-focused plating for Line-class ships that increases Armor Value while modestly reducing both linear and turn acceleration. Emphasizes damage mitigation over maneuverability.
+Upgrade Axis: Armor Value scales from +3.5 at L1 to +8.4 at L15. Acceleration and turn-acceleration penalties remain fixed.
 
-Ammo
+Line HT Plating (L1) – Passive
+Critical Defense: +7.5 → +18 (upgrades)
+Cost: 16,000
+Durability: 42,000 / 42,000
+Effect: Heavy-tuned hull plating that boosts Critical Defense on Line-class ships, reducing the likelihood and impact of incoming critical hits. Does not affect Armor, Hull Points, or handling.
+Upgrade Axis: Critical Defense scales from +7.5 at L1 to +18 at L15. All other stats remain constant.
+
+Line Composite Plating (L1) – Passive
+Armor Value: +1.75 → +4.2 (upgrades)
+Hull Points: +175 → +420 (upgrades)
+Acceleration: −0.08
+Turn Acceleration: −0.15 deg/s²
+Cost: 16,000
+Durability: 42,000 / 42,000
+Effect: Composite plating that provides a balanced boost to both Armor Value and Hull Points for Line-class ships, at the cost of moderate reductions in acceleration and turn acceleration. Good general-purpose defensive option.
+Upgrade Axis: Armor Value scales from +1.75 at L1 to +4.2 at L15; Hull Points scale from +175 at L1 to +420 at L15. Acceleration and turn-acceleration penalties remain fixed.
+
+Line HT Hull Plating (L1) – Passive
+Critical Defense: +2.5 → +6 (upgrades)
+Hull Points: +233.33 → +560 (upgrades)
+Acceleration: −0.03
+Turn Acceleration: −0.13 deg/s²
+Cost: 16,000
+Durability: 42,000 / 42,000
+Effect: Heavy-tuned hull plating variant that significantly increases Hull Points and adds a Critical Defense bonus for Line-class ships, with very light penalties to acceleration and turning. Optimized for brawling survivability and crit resistance.
+Upgrade Axis: Critical Defense scales from +2.5 at L1 to +6 at L15; Hull Points scale from +233.33 at L1 to +560 at L15. Acceleration and turn-acceleration penalties remain fixed.
+
+Line HT Armor Plating (L1) – Passive
+Armor Value: +2.33 → +5.6 (upgrades)
+Critical Defense: +2.5 → +6 (upgrades)
+Acceleration: −0.07
+Turn Acceleration: −0.07 deg/s²
+Cost: 16,000
+Durability: 42,000 / 42,000
+Effect: Heavy-tuned armor plating that raises both Armor Value and Critical Defense, improving overall mitigation and resilience against crits while only modestly impacting maneuverability.
+Upgrade Axis: Armor Value scales from +2.33 at L1 to +5.6 at L15; Critical Defense scales from +2.5 at L1 to +6 at L15. Acceleration and turn-acceleration penalties remain fixed.
+
+Line HT Composite Plating (L1) – Passive
+Armor Value: +1.4 → +3.36 (upgrades)
+Critical Defense: +1.5 → +3.6 (upgrades)
+Hull Points: +140 → +336 (upgrades)
+Acceleration: −0.05
+Turn Acceleration: −0.1 deg/s²
+Cost: 16,000
+Durability: 42,000 / 42,000
+Effect: Composite heavy-tuned module that simultaneously boosts Armor Value, Critical Defense, and Hull Points for Line-class ships. Provides broad defensive coverage with moderate but manageable penalties to acceleration and turning.
+Upgrade Axis: Armor Value scales from +1.4 at L1 to +3.36 at L15; Critical Defense scales from +1.5 at L1 to +3.6 at L15; Hull Points scale from +140 at L1 to +336 at L15. Acceleration and turn-acceleration penalties remain fixed.
+
+Line System Redundancy (L1) – Passive
+Hull Recovery: +3.5 /sec → +8.4 /sec (upgrades)
+Cost: 10,000
+Durability: 42,000 / 42,000
+Effect: Passive hull system for Line-class ships that increases natural Hull Point recovery over time, improving sustain without altering Armor, Hull capacity, or movement stats.
+Upgrade Axis: Hull Recovery scales from +3.5 HP/sec at L1 up to +8.4 HP/sec at L15. No other attributes are modified.
+
+Line Damage Control (L1) – Active
+Hullpoint Restore: +350 → +840 (upgrades)
+Reload: 30 s
+Power Cost: 250
+Cost: 16,000
+Durability: 42,000 / 42,000
+Effect: Active hull repair system for Line-class ships. When activated, instantly restores a large chunk of Hull Points at the cost of ship Power and a 30-second cooldown. Ideal for weathering heavy alpha strikes or buying time to disengage.
+Upgrade Axis: Hullpoint Restore scales from +350 at L1 to +840 at L15. Reload and Power Cost remain fixed at all levels.
+
+Line Engines
+
+Line Computers
+
+Line Ammo
 
 CAPITAL CLASS EQUIPMENT
 
-Weapons
+Capital Weapons
 
 Weapons (Heavy / Siege Hardpoints – Capital Only)
 
@@ -1126,13 +1291,13 @@ Restricted to Capital-class hardpoints — enforce in Store and Fitting UI.
 
 Consider adding visible lock-on indicator and long-trail missile effects for cinematic clarity.
 
-Hulls
+Capital Hulls
 
-Engines
+Capital Engines
 
-Computers
+Capital Computers
 
-Ammo
+Capital Ammo
 
 General Store / Fitting Rules
 
