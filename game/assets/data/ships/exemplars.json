@@ -1778,6 +1778,112 @@
     "notes": "Mobile fleet anchor designed to project command and logistics support."
   },
   {
+    "id": "thorim_siege",
+    "name": "Thorim",
+    "role": "Siege",
+    "size": "Capital",
+    "level_requirement": 45,
+    "faction": "Colonial Fleet",
+    "counterpart": null,
+    "upgrade_to": null,
+    "stats": {
+      "hull_points": 9000,
+      "hull_recovery_per_sec": 32,
+      "durability": 120000,
+      "armor_value": 45,
+      "critical_defense": 165,
+      "avoidance_rating": 12,
+      "avoidance_fading": 0.75,
+      "speed": 16,
+      "boost_speed": 24,
+      "acceleration": 2.6,
+      "boost_acceleration": 1.2,
+      "strafe_speed": 0,
+      "strafe_acceleration": 0,
+      "turn_rate": 6,
+      "turn_accel": 7,
+      "pitch_speed": 6,
+      "yaw_speed": 6,
+      "roll_speed": 5,
+      "pitch_acceleration": 7,
+      "yaw_acceleration": 7,
+      "roll_acceleration": 5,
+      "inertial_compensation": 40,
+      "boost_cost": 0,
+      "power_points": 1200,
+      "power_recovery_per_sec": 45,
+      "firewall_rating": 220,
+      "emitter_rating": 260,
+      "dradis_range_base": 1800,
+      "dradis_range_max": 4200,
+      "visual_range": 1600,
+      "ftl_range": 11,
+      "ftl_charge_time": 32,
+      "ftl_cooldown": 36,
+      "ftl_cost": 30,
+      "transponder_power_cost": 0,
+      "durability_bonus": 0.4,
+      "max_radiation_level": 250,
+      "radioactive_decay": 1.4,
+      "radioresistance": 0
+    },
+    "slots": {
+      "weapons": {
+        "guns": 0,
+        "launcher": 1,
+        "defensive": 0,
+        "special": 0
+      },
+      "hull": 1,
+      "engine": 2,
+      "computer": 2,
+      "utility": 2
+    },
+    "hardpoints": [
+      {
+        "id": "hp_thorim_core",
+        "slot": "launcher",
+        "position": [
+          0.0,
+          0.0,
+          5.2
+        ],
+        "gimbal": 25,
+        "tracking_speed": 60,
+        "group": "primary",
+        "facing": "forward"
+      }
+    ],
+    "economy": {
+      "purchase": {
+        "tylium": 550000
+      },
+      "upgrade": {},
+      "operating": {
+        "boost": 0,
+        "ftl": 30
+      }
+    },
+    "equipment": {
+      "modules": {
+        "computer": [],
+        "utility": []
+      },
+      "weapons": {
+        "hp_thorim_core": "plasma_orb_launcher"
+      }
+    },
+    "role_bonuses": [
+      "Siege fire control increases damage against stations and capitals by 10%."
+    ],
+    "traits": [
+      "Engines draw directly from ship power reserves instead of Tylium, and booster activation doubles ongoing energy drain.",
+      "Plasma Orb Launcher requires full energy to fire and expends the entire pool on release.",
+      "Tempest-inspired hull silhouette with concentric wings and ventral pylons."
+    ],
+    "notes": "Purpose-built siege capital that relies on escorts for screening while the orb launcher charges."
+  },
+  {
     "id": "outpost_regular",
     "name": "Aegis System Outpost",
     "role": "Station",
