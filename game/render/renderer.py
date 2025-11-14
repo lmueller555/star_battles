@@ -2228,28 +2228,6 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
                 ]
             )
 
-    arm_support_offset = math.radians(8.0)
-    arm_support_angles = (
-        gap_center + gap_half_angle + arm_support_offset,
-        gap_center - gap_half_angle - arm_support_offset,
-    )
-
-    for angle in arm_support_angles:
-        outer_top = _ring_point(angle, outer_radius_x, outer_radius_z, ring_height)
-        outer_bottom = _ring_point(angle, outer_radius_x, outer_radius_z, -ring_height)
-        inner_top = _ring_point(angle, inner_radius_x, inner_radius_z, ring_height * 0.6)
-        inner_bottom = _ring_point(angle, inner_radius_x, inner_radius_z, -ring_height * 0.6)
-
-        segments.extend(
-            [
-                (outer_top, inner_top),
-                (outer_bottom, inner_bottom),
-                (outer_top, inner_bottom),
-                (outer_bottom, inner_top),
-                (inner_top, inner_bottom),
-            ]
-        )
-
     # Central weapon hardpoint
     weapon_base = Vector3(0.0, 0.0, -inner_radius_z * 0.15)
     weapon_tip = Vector3(0.0, 0.0, inner_radius_z * 0.55)
@@ -2271,8 +2249,6 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
             (engine_bottom_left, engine_bottom_right),
             (engine_top_left, engine_bottom_left),
             (engine_top_right, engine_bottom_right),
-            (engine_top_left, engine_bottom_right),
-            (engine_bottom_left, engine_top_right),
         ]
     )
 
