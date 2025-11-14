@@ -1,12 +1,12 @@
 """Vector renderer built on pygame."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from math import ceil, floor
 import logging
 import math
 import random
-from typing import Dict, Iterable, List, Sequence, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 import pygame
 from pygame.math import Vector3
@@ -64,8 +64,20 @@ ENGINE_LAYOUTS: dict[str, list[Vector3]] = {
 class ShipGeometry:
     vertices: List[Vector3]
     edges: List[Tuple[int, int]]
+    strips: List[List[int]]
     radius: float
     length: float
+
+
+@dataclass
+class AsteroidScreenCache:
+    camera_revision: int = -1
+    world_revision: int = -1
+    center: tuple[float, float] = (0.0, 0.0)
+    polygon_points: list[tuple[int, int]] = field(default_factory=list)
+    polygon_outline: list[tuple[float, float]] = field(default_factory=list)
+    radius_horizontal: float = 0.0
+    radius_vertical: float = 0.0
 
 
 LOGGER = logging.getLogger(__name__)
@@ -99,6 +111,72 @@ def _vertex_key(vector: Vector3) -> Tuple[float, float, float]:
     return (round(vector.x, 6), round(vector.y, 6), round(vector.z, 6))
 
 
+def _build_edge_strips(index_edges: Sequence[Tuple[int, int]]) -> list[list[int]]:
+    """Group unordered edge pairs into drawable polyline strips."""
+
+    adjacency: Dict[int, Dict[int, int]] = {}
+
+    def _link(a: int, b: int) -> None:
+        neighbors = adjacency.setdefault(a, {})
+        neighbors[b] = neighbors.get(b, 0) + 1
+
+    for start, end in index_edges:
+        if start == end:
+            continue
+        _link(start, end)
+        _link(end, start)
+
+    def _remove_edge(a: int, b: int) -> None:
+        neighbors = adjacency.get(a)
+        if not neighbors:
+            return
+        count = neighbors.get(b, 0)
+        if count <= 1:
+            neighbors.pop(b, None)
+        else:
+            neighbors[b] = count - 1
+        if not neighbors:
+            adjacency.pop(a, None)
+
+    def _select_neighbor(vertex: int, previous: Optional[int]) -> Optional[int]:
+        neighbors = adjacency.get(vertex)
+        if not neighbors:
+            return None
+        # Prefer continuing forward instead of immediately doubling back when possible.
+        for target, count in neighbors.items():
+            if count > 0 and target != previous:
+                return target
+        for target, count in neighbors.items():
+            if count > 0:
+                return target
+        return None
+
+    strips: list[list[int]] = []
+
+    while adjacency:
+        start_vertex, neighbors = next(iter(adjacency.items()))
+        if not neighbors:
+            adjacency.pop(start_vertex)
+            continue
+        strip: list[int] = [start_vertex]
+        current = start_vertex
+        previous: Optional[int] = None
+        while True:
+            next_vertex = _select_neighbor(current, previous)
+            if next_vertex is None:
+                break
+            _remove_edge(current, next_vertex)
+            _remove_edge(next_vertex, current)
+            strip.append(next_vertex)
+            previous, current = current, next_vertex
+        if len(strip) > 1:
+            strips.append(strip)
+        else:
+            # No edges remain touching this vertex; discard the singleton.
+            adjacency.pop(start_vertex, None)
+    return strips
+
+
 def _ship_geometry_from_edges(edges: Sequence[tuple[Vector3, Vector3]]) -> ShipGeometry:
     vertex_map: Dict[Tuple[float, float, float], int] = {}
     vertices: List[Vector3] = []
@@ -126,7 +204,14 @@ def _ship_geometry_from_edges(edges: Sequence[tuple[Vector3, Vector3]]) -> ShipG
         length = 0.0
     else:
         length = max(0.0, max_z - min_z)
-    return ShipGeometry(vertices=vertices, edges=index_edges, radius=max_radius, length=length)
+    strips = _build_edge_strips(index_edges)
+    return ShipGeometry(
+        vertices=vertices,
+        edges=index_edges,
+        strips=strips,
+        radius=max_radius,
+        length=length,
+    )
 
 
 def _build_ship_geometry_cache() -> Dict[str, ShipGeometry]:
@@ -2032,6 +2117,7 @@ class VectorRenderer:
         self._rng = random.Random()
         self._ship_geometry_cache: Dict[str, ShipGeometry] = dict(SHIP_GEOMETRY_CACHE)
         self._vertex_cache: Dict[int, ProjectedVertexCache] = {}
+        self._asteroid_screen_cache: Dict[int, AsteroidScreenCache] = {}
         self._frame_counters = TelemetryCounters()
         self._telemetry_accum = TelemetryCounters()
         self._frame_active = False
@@ -2133,13 +2219,13 @@ class VectorRenderer:
         basis: tuple[Vector3, Vector3, Vector3],
         *,
         scale: float,
-    ) -> tuple[List[tuple[float, float]], List[bool]]:
+    ) -> ProjectedVertexCache:
         cache = self._vertex_cache.setdefault(id(ship), ProjectedVertexCache())
         if (
             cache.camera_revision == frame.revision
             and cache.world_revision == state.world_revision
         ):
-            return cache.vertices, cache.visibility
+            return cache
         right, up, forward = basis
         vertices_2d: List[tuple[float, float]] = []
         visibility: List[bool] = []
@@ -2158,7 +2244,41 @@ class VectorRenderer:
                 max_x = max(max_x, screen.x)
                 min_y = min(min_y, screen.y)
                 max_y = max(max_y, screen.y)
-        cache.update(frame.revision, state.world_revision, vertices_2d, visibility)
+        aaline_strips: list[list[tuple[float, float]]] = []
+        line_strips: list[list[tuple[int, int]]] = []
+        for strip in geometry.strips:
+            if len(strip) < 2:
+                continue
+            current_float: list[tuple[float, float]] = []
+            for index in range(len(strip) - 1):
+                a_idx = strip[index]
+                b_idx = strip[index + 1]
+                if visibility[a_idx] and visibility[b_idx]:
+                    ax, ay = vertices_2d[a_idx]
+                    bx, by = vertices_2d[b_idx]
+                    if not current_float:
+                        current_float.append((ax, ay))
+                    current_float.append((bx, by))
+                elif len(current_float) >= 2:
+                    aaline_strips.append(current_float)
+                    line_strips.append(
+                        [(int(round(px)), int(round(py))) for px, py in current_float]
+                    )
+                    current_float = []
+            if len(current_float) >= 2:
+                aaline_strips.append(current_float)
+                line_strips.append(
+                    [(int(round(px)), int(round(py))) for px, py in current_float]
+                )
+
+        cache.update(
+            frame.revision,
+            state.world_revision,
+            vertices_2d,
+            visibility,
+            aaline_strips,
+            line_strips,
+        )
         if min_x <= max_x and min_y <= max_y:
             state.cached_screen_rect = (min_x, min_y, max_x, max_y)
             state.cached_camera_revision = frame.revision
@@ -2166,7 +2286,7 @@ class VectorRenderer:
             state.clear_cached_projection()
         self._frame_counters.vertices_projected_total += len(geometry.vertices)
         self._frame_counters.objects_projected += 1
-        return vertices_2d, visibility
+        return cache
 
     @staticmethod
     def _local_to_world(
@@ -2624,74 +2744,111 @@ class VectorRenderer:
             if not visible:
                 continue
 
-            center, vis_center = frame.project_point(asteroid.position)
-            if not vis_center:
-                state.clear_cached_projection()
+            cache = self._asteroid_screen_cache.setdefault(
+                id(asteroid), AsteroidScreenCache()
+            )
+            needs_update = (
+                cache.camera_revision != frame.revision
+                or cache.world_revision != state.world_revision
+            )
+            if needs_update:
+                center_vec, vis_center = frame.project_point(asteroid.position)
+                if not vis_center:
+                    state.clear_cached_projection()
+                    cache.polygon_points.clear()
+                    cache.polygon_outline.clear()
+                    cache.camera_revision = frame.revision
+                    cache.world_revision = state.world_revision
+                    continue
+
+                radius_vectors = [
+                    asteroid.position + frame.up * asteroid.radius,
+                    asteroid.position - frame.up * asteroid.radius,
+                    asteroid.position + frame.right * asteroid.radius,
+                    asteroid.position - frame.right * asteroid.radius,
+                ]
+                radii: List[float] = []
+                projection_count = 1  # center
+                for world_point in radius_vectors:
+                    projected, visible_point = frame.project_point(world_point)
+                    if not visible_point:
+                        radii.append(0.0)
+                    else:
+                        dx = projected.x - center_vec.x
+                        dy = projected.y - center_vec.y
+                        radii.append(math.hypot(dx, dy))
+                    projection_count += 1
+                radius_vertical = max(radii[0], radii[1])
+                radius_horizontal = max(radii[2], radii[3])
+                if radius_vertical <= 0.0 and radius_horizontal <= 0.0:
+                    radius_vertical = radius_horizontal = 2.0
+                radius_vertical = max(2.0, radius_vertical)
+                radius_horizontal = max(2.0, radius_horizontal)
+
+                profile = asteroid.render_profile()
+                if not profile.point_angles:
+                    state.clear_cached_projection()
+                    cache.polygon_points.clear()
+                    cache.polygon_outline.clear()
+                    cache.camera_revision = frame.revision
+                    cache.world_revision = state.world_revision
+                    continue
+
+                points: List[tuple[float, float]] = []
+                for angle, offset, h_scale, v_scale in zip(
+                    profile.point_angles,
+                    profile.point_offsets,
+                    profile.horizontal_scale,
+                    profile.vertical_scale,
+                ):
+                    x = center_vec.x + math.cos(angle) * radius_horizontal * h_scale * offset
+                    y = center_vec.y + math.sin(angle) * radius_vertical * v_scale * offset
+                    points.append((x, y))
+
+                if len(points) < 3:
+                    state.clear_cached_projection()
+                    cache.polygon_points.clear()
+                    cache.polygon_outline.clear()
+                    cache.camera_revision = frame.revision
+                    cache.world_revision = state.world_revision
+                    continue
+
+                polygon_points = [(int(round(px)), int(round(py))) for px, py in points]
+                xs = [px for px, _ in points]
+                ys = [py for _, py in points]
+                state.cached_screen_rect = (min(xs), min(ys), max(xs), max(ys))
+                state.cached_camera_revision = frame.revision
+
+                cache.center = (center_vec.x, center_vec.y)
+                cache.radius_horizontal = radius_horizontal
+                cache.radius_vertical = radius_vertical
+                cache.polygon_points = polygon_points
+                cache.polygon_outline = points
+                cache.camera_revision = frame.revision
+                cache.world_revision = state.world_revision
+
+                self._frame_counters.vertices_projected_total += projection_count
+                self._frame_counters.objects_projected += 1
+            else:
+                radius_horizontal = cache.radius_horizontal
+                radius_vertical = cache.radius_vertical
+
+            if not cache.polygon_points or not cache.polygon_outline:
                 continue
 
-            radius_vectors = [
-                asteroid.position + frame.up * asteroid.radius,
-                asteroid.position - frame.up * asteroid.radius,
-                asteroid.position + frame.right * asteroid.radius,
-                asteroid.position - frame.right * asteroid.radius,
-            ]
-            radii: List[float] = []
-            projection_count = 1  # center
-            for world_point in radius_vectors:
-                projected, visible_point = frame.project_point(world_point)
-                if not visible_point:
-                    radii.append(0.0)
-                else:
-                    dx = projected.x - center.x
-                    dy = projected.y - center.y
-                    radii.append(math.hypot(dx, dy))
-                projection_count += 1
-            radius_vertical = max(radii[0], radii[1])
-            radius_horizontal = max(radii[2], radii[3])
-            if radius_vertical <= 0.0 and radius_horizontal <= 0.0:
-                radius_vertical = radius_horizontal = 2.0
-            radius_vertical = max(2.0, radius_vertical)
-            radius_horizontal = max(2.0, radius_horizontal)
-
-            profile = asteroid.render_profile()
-            if not profile.point_angles:
-                state.clear_cached_projection()
-                continue
-
-            points: List[tuple[float, float]] = []
-            for angle, offset, h_scale, v_scale in zip(
-                profile.point_angles,
-                profile.point_offsets,
-                profile.horizontal_scale,
-                profile.vertical_scale,
-            ):
-                x = center.x + math.cos(angle) * radius_horizontal * h_scale * offset
-                y = center.y + math.sin(angle) * radius_vertical * v_scale * offset
-                points.append((x, y))
-
-            if len(points) < 3:
-                state.clear_cached_projection()
-                continue
-
-            self._frame_counters.vertices_projected_total += projection_count
-            self._frame_counters.objects_projected += 1
-
-            polygon_points = [(int(round(px)), int(round(py))) for px, py in points]
-            xs = [px for px, _ in points]
-            ys = [py for _, py in points]
-            state.cached_screen_rect = (min(xs), min(ys), max(xs), max(ys))
-            state.cached_camera_revision = frame.revision
-
+            center_x, center_y = cache.center
             color = asteroid.display_color
-            pygame.draw.polygon(self.surface, color, polygon_points)
+            pygame.draw.polygon(self.surface, color, cache.polygon_points)
 
             outline_color = _darken(color, 0.45)
             line_mode = "line" if distance > 7500.0 else "aaline"
             if line_mode == "line":
-                pygame.draw.lines(self.surface, outline_color, True, polygon_points, 1)
+                pygame.draw.lines(self.surface, outline_color, True, cache.polygon_points, 1)
                 self._frame_counters.objects_drawn_line += 1
             else:
-                pygame.draw.aalines(self.surface, outline_color, True, points, blend=1)
+                pygame.draw.aalines(
+                    self.surface, outline_color, True, cache.polygon_outline, blend=1
+                )
                 self._frame_counters.objects_drawn_aaline += 1
 
             if radius_horizontal > 3.0 or radius_vertical > 3.0:
@@ -2701,9 +2858,10 @@ class VectorRenderer:
                     1,
                     int(round((radius_horizontal + radius_vertical) * 0.05)),
                 )
+                profile = asteroid.render_profile()
                 for accent in profile.accents:
-                    px = center.x + math.cos(accent.angle) * radius_horizontal * accent.distance * accent.horizontal_scale
-                    py = center.y + math.sin(accent.angle) * radius_vertical * accent.distance * accent.vertical_scale
+                    px = center_x + math.cos(accent.angle) * radius_horizontal * accent.distance * accent.horizontal_scale
+                    py = center_y + math.sin(accent.angle) * radius_vertical * accent.distance * accent.vertical_scale
                     pygame.draw.circle(
                         self.surface,
                         highlight_color if accent.highlight else shadow_color,
@@ -2714,8 +2872,8 @@ class VectorRenderer:
                 crater_fill = _darken(color, 0.55)
                 crater_rim = _lighten(color, 0.2)
                 for crater in profile.craters:
-                    px = center.x + math.cos(crater.angle) * radius_horizontal * crater.distance
-                    py = center.y + math.sin(crater.angle) * radius_vertical * crater.distance
+                    px = center_x + math.cos(crater.angle) * radius_horizontal * crater.distance
+                    py = center_y + math.sin(crater.angle) * radius_vertical * crater.distance
                     crater_radius = max(
                         1,
                         int(round((radius_horizontal + radius_vertical) * crater.radius_scale)),
@@ -2755,7 +2913,7 @@ class VectorRenderer:
 
         origin = ship.kinematics.position
         right, up, forward = _ship_axes(ship)
-        projected, visibility = self._project_ship_vertices(
+        cache = self._project_ship_vertices(
             ship,
             geometry,
             frame,
@@ -2766,28 +2924,19 @@ class VectorRenderer:
         )
         color = SHIP_COLOR if ship.team == "player" else ENEMY_COLOR
         line_mode = "line" if distance > 7500.0 else "aaline"
-        drawn_edges = False
-        for idx_a, idx_b in geometry.edges:
-            if not (visibility[idx_a] and visibility[idx_b]):
-                continue
-            ax, ay = projected[idx_a]
-            bx, by = projected[idx_b]
-            if line_mode == "line":
-                pygame.draw.line(
-                    self.surface,
-                    color,
-                    (int(round(ax)), int(round(ay))),
-                    (int(round(bx)), int(round(by))),
-                    1,
-                )
-            else:
-                pygame.draw.aaline(self.surface, color, (ax, ay), (bx, by), blend=1)
-            drawn_edges = True
-
-        if drawn_edges:
-            if line_mode == "line":
+        if line_mode == "line":
+            strips = cache.line_strips
+            for strip in strips:
+                if len(strip) >= 2:
+                    pygame.draw.lines(self.surface, color, False, strip, 1)
+            if strips:
                 self._frame_counters.objects_drawn_line += 1
-            else:
+        else:
+            strips = cache.aaline_strips
+            for strip in strips:
+                if len(strip) >= 2:
+                    pygame.draw.aalines(self.surface, color, False, strip, blend=1)
+            if strips:
                 self._frame_counters.objects_drawn_aaline += 1
 
         speed = ship.kinematics.velocity.length()
