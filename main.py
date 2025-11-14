@@ -19,7 +19,6 @@ from game.ui.outpost_scene import OutpostInteriorScene
 from game.ui.sandbox_scene import SandboxScene
 from game.ui.title_scene import TitleScene
 from game.ui.ship_selection_scene import ShipSelectionScene
-from game.render.renderer import VectorRenderer
 
 
 SETTINGS_PATH = Path("settings.json")
@@ -47,10 +46,7 @@ def main() -> None:
     pygame.init()
     resolution = settings.get("resolution", [1920, 1080])
 
-    display_flags = pygame.OPENGL | pygame.DOUBLEBUF | pygame.FULLSCREEN
-    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MAJOR_VERSION, 3)
-    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MINOR_VERSION, 3)
-    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_PROFILE_MASK, pygame.GL_CONTEXT_PROFILE_CORE)
+    display_flags = pygame.SCALED | pygame.FULLSCREEN
     if resolution == [0, 0] or resolution == (0, 0):
         display_info = pygame.display.Info()
         resolution = (display_info.current_w, display_info.current_h)
@@ -58,8 +54,6 @@ def main() -> None:
     screen = pygame.display.set_mode(resolution, display_flags)
     pygame.display.set_caption("Star Battles Prototype")
     clock = pygame.time.Clock()
-    overlay_renderer = VectorRenderer(screen)
-    ui_surface = pygame.Surface(resolution, pygame.SRCALPHA)
 
     logger = init_logger(SETTINGS_PATH)
     input_mapper = InputMapper(InputBindings.load(SETTINGS_PATH))
@@ -87,14 +81,7 @@ def main() -> None:
         manager.update(dt)
 
     def render(alpha: float) -> None:
-        nonlocal ui_surface
-        current_surface = pygame.display.get_surface() or screen
-        overlay_renderer.surface = current_surface
-        if ui_surface.get_size() != current_surface.get_size():
-            ui_surface = pygame.Surface(current_surface.get_size(), pygame.SRCALPHA)
-        ui_surface.fill((0, 0, 0, 0))
-        manager.render(ui_surface, alpha)
-        overlay_renderer.draw_overlay(ui_surface)
+        manager.render(screen, alpha)
         pygame.display.flip()
         clock.tick(settings.get("maxFps", 120))
 

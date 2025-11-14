@@ -95,56 +95,6 @@ class CameraFrameData:
         screen_y = (-ndc_y * 0.5 + 0.5) * self.screen_size[1]
         return Vector3(screen_x, screen_y, depth), True
 
-    def view_matrix(self) -> list[float]:
-        right = self.right
-        up = self.up
-        forward = self.forward
-        position = self.position
-        return [
-            right.x,
-            right.y,
-            right.z,
-            0.0,
-            up.x,
-            up.y,
-            up.z,
-            0.0,
-            -forward.x,
-            -forward.y,
-            -forward.z,
-            0.0,
-            -right.dot(position),
-            -up.dot(position),
-            forward.dot(position),
-            1.0,
-        ]
-
-    def projection_matrix(self) -> list[float]:
-        near = max(1e-5, self.near)
-        far = max(near + 1e-3, self.far)
-        f = self.fov_factor
-        aspect = max(1e-5, self.aspect)
-        m22 = (far + near) / (near - far)
-        m32 = (2.0 * far * near) / (near - far)
-        return [
-            f / aspect,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            f,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            m22,
-            m32,
-            0.0,
-            0.0,
-            -1.0,
-            0.0,
-        ]
-
 
 class ChaseCamera:
     """Third-person chase camera with freelook, look-ahead, and lock framing."""
