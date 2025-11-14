@@ -2390,12 +2390,6 @@ class VectorRenderer:
         view_model = self._matrix_multiply(view, model_matrix)
         return self._matrix_multiply(projection, view_model)
 
-    @staticmethod
-    def _to_gl_float_array(values: Sequence[float]) -> ctypes.Array:
-        data = tuple(values)
-        buffer_type = ctypes.c_float * len(data)
-        return buffer_type(*data)
-
     def _set_color(self, color: tuple[int, int, int], alpha: float = 1.0) -> None:
         if self._line_color_location is None or self._line_program is None:
             return
@@ -2427,12 +2421,11 @@ class VectorRenderer:
         GL.glUseProgram(self._line_program)
         self._set_color(color, alpha)
         mvp = self._compute_mvp(frame, model)
-        mvp_buffer = self._to_gl_float_array(mvp)
         GL.glUniformMatrix4fv(
             self._line_mvp_location,
             1,
             GL.GL_FALSE,
-            mvp_buffer,
+            array('f', mvp),
         )
         GL.glBindVertexArray(self._dynamic_vao)
         GL.glBindBuffer(GL.GL_ARRAY_BUFFER, self._dynamic_vbo)
@@ -2489,12 +2482,11 @@ class VectorRenderer:
         GL.glUseProgram(self._line_program)
         self._set_color(color)
         mvp = self._compute_mvp(frame, model)
-        mvp_buffer = self._to_gl_float_array(mvp)
         GL.glUniformMatrix4fv(
             self._line_mvp_location,
             1,
             GL.GL_FALSE,
-            mvp_buffer,
+            array('f', mvp),
         )
         GL.glBindVertexArray(buffer.vao)
         GL.glDrawArrays(GL.GL_LINES, 0, buffer.vertex_count)
