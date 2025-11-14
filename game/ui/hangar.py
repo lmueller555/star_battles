@@ -2664,6 +2664,19 @@ class HangarView:
             return True
         if target in {"guns", "gun"}:
             return slot in {"guns", "gun"}
+        if target in {"weapon", "weapons"}:
+            return slot in {
+                "weapon",
+                "weapons",
+                "cannon",
+                "launcher",
+                "gun",
+                "guns",
+                "defensive",
+                "defensive_weapon",
+                "special",
+                "special_weapon",
+            }
         return False
 
     def _wrap_text(self, text: str, font: pygame.font.Font, max_width: int) -> List[str]:
