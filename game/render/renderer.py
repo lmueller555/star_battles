@@ -2153,6 +2153,85 @@ def _build_brimir_wireframe() -> list[tuple[Vector3, Vector3]]:
     return segments
 
 
+def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
+    segments: list[tuple[Vector3, Vector3]] = []
+
+    ring_sides = 12
+    outer_radius = 6.5
+    outer_length = 7.4
+    inner_radius = 2.6
+    upper_y = 2.1
+    lower_y = -2.3
+
+    main_ring = []
+    upper_ring = []
+    lower_ring = []
+    inner_ring = []
+
+    for index in range(ring_sides):
+        angle = (math.tau / ring_sides) * index
+        cos_angle = math.cos(angle)
+        sin_angle = math.sin(angle)
+        main_point = Vector3(cos_angle * outer_radius, 0.0, sin_angle * outer_length)
+        main_ring.append(main_point)
+        upper_ring.append(Vector3(main_point.x * 0.68, upper_y, main_point.z * 0.68))
+        lower_ring.append(Vector3(main_point.x * 0.68, lower_y, main_point.z * 0.68))
+        inner_ring.append(Vector3(cos_angle * inner_radius, 0.0, sin_angle * inner_radius))
+
+    _loop_segments(segments, main_ring)
+    _loop_segments(segments, upper_ring)
+    _loop_segments(segments, lower_ring)
+    _loop_segments(segments, inner_ring)
+
+    for outer, inner in zip(main_ring, inner_ring):
+        segments.append((outer, inner))
+    for upper, lower in zip(upper_ring, lower_ring):
+        segments.append((upper, lower))
+
+    nose = Vector3(0.0, 0.4, outer_length * 1.6)
+    tail = Vector3(0.0, -1.8, -outer_length * 1.75)
+    dorsal_spire = Vector3(0.0, upper_y * 2.4, -outer_length * 0.1)
+    ventral_pylon = Vector3(0.0, lower_y * 2.6, -outer_length * 0.2)
+
+    for index in range(0, ring_sides, 3):
+        segments.append((main_ring[index], nose))
+    for index in range(1, ring_sides, 3):
+        segments.append((main_ring[index], tail))
+
+    segments.append((nose, dorsal_spire))
+    segments.append((tail, ventral_pylon))
+    segments.append((dorsal_spire, ventral_pylon))
+
+    wing_span = outer_radius * 1.35
+    wing_forward = outer_length * 0.45
+    wing_aft = -outer_length * 0.6
+    port_wing_tip = Vector3(-wing_span, 0.9, wing_forward)
+    starboard_wing_tip = Vector3(wing_span, 0.9, wing_forward)
+    port_ventral_tip = Vector3(-wing_span * 0.85, lower_y * 1.4, wing_aft)
+    starboard_ventral_tip = Vector3(wing_span * 0.85, lower_y * 1.4, wing_aft)
+
+    wing_anchor_front = main_ring[0]
+    wing_anchor_back = main_ring[ring_sides // 2]
+
+    for tip in (port_wing_tip, starboard_wing_tip):
+        segments.append((tip, wing_anchor_front))
+        segments.append((tip, wing_anchor_back))
+        segments.append((tip, dorsal_spire))
+
+    for tip, anchor in (
+        (port_ventral_tip, wing_anchor_back),
+        (starboard_ventral_tip, wing_anchor_back),
+    ):
+        segments.append((tip, anchor))
+        segments.append((tip, ventral_pylon))
+
+    energy_focus = Vector3(0.0, 0.0, 0.0)
+    for ring_point in inner_ring[::2]:
+        segments.append((ring_point, energy_focus))
+
+    return segments
+
+
 WIREFRAMES = {
     "Strike": [
         (Vector3(0, 0.3, 2.5), Vector3(0.9, 0, -2.0)),
@@ -2177,6 +2256,7 @@ WIREFRAMES = {
     "maul_assault": _build_maul_wireframe(),
     "vanir_command": _build_vanir_wireframe(),
     "brimir_carrier": _build_brimir_wireframe(),
+    "thorim_siege": _build_thorim_wireframe(),
 }
 
 SHIP_GEOMETRY_CACHE = _build_ship_geometry_cache()
