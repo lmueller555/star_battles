@@ -273,6 +273,7 @@ class OutpostInteriorScene(Scene):
     def _render_docking_cutscene(self, surface: pygame.Surface) -> None:
         width, height = surface.get_size()
         renderer = VectorRenderer(surface)
+        renderer.set_player_ship(self.player)
         renderer.clear()
 
         if self.cutscene_camera and self.player:

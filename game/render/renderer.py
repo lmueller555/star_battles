@@ -2195,6 +2195,13 @@ class VectorRenderer:
         self._last_report_ms = pygame.time.get_ticks()
         self._telemetry_interval_ms = 2500
         self._current_camera_frame: CameraFrameData | None = None
+        self._frame_index = 0
+        self._player_ship: Ship | None = None
+
+    def set_player_ship(self, ship: Ship | None) -> None:
+        """Designate the player's ship for distance-based redraw scheduling."""
+
+        self._player_ship = ship
 
     def _flush_frame_counters(self) -> None:
         if (
@@ -2230,6 +2237,7 @@ class VectorRenderer:
             self._flush_frame_counters()
         else:
             self._frame_counters.reset()
+        self._frame_index += 1
         self._frame_active = True
         self._current_camera_frame = None
 
@@ -2244,6 +2252,22 @@ class VectorRenderer:
             return self._current_camera_frame
         self._current_camera_frame = frame
         return frame
+
+    def _ship_redraw_interval(self, ship: Ship, camera: ChaseCamera) -> int:
+        player = self._player_ship
+        if player is not None:
+            try:
+                distance = ship.kinematics.position.distance_to(
+                    player.kinematics.position
+                )
+            except AttributeError:
+                distance = (ship.kinematics.position - camera.position).length()
+        else:
+            distance = (ship.kinematics.position - camera.position).length()
+        if not math.isfinite(distance):
+            distance = 0.0
+        interval = 1 + int(distance // 1000.0)
+        return max(1, interval)
 
     def _evaluate_visibility(
         self,
@@ -2984,15 +3008,25 @@ class VectorRenderer:
 
         origin = ship.kinematics.position
         right, up, forward = _ship_axes(ship)
-        cache = self._project_ship_vertices(
-            ship,
-            geometry,
-            frame,
-            state,
-            origin,
-            (right, up, forward),
-            scale=scale,
+        cache = self._vertex_cache.setdefault(id(ship), ProjectedVertexCache())
+        interval = self._ship_redraw_interval(ship, camera)
+        state.redraw_interval_frames = interval
+        needs_refresh = (
+            cache.camera_revision != frame.revision
+            or state.last_render_frame < 0
+            or (self._frame_index - state.last_render_frame) >= interval
         )
+        if needs_refresh or (not cache.aaline_strips and not cache.line_strips):
+            cache = self._project_ship_vertices(
+                ship,
+                geometry,
+                frame,
+                state,
+                origin,
+                (right, up, forward),
+                scale=scale,
+            )
+            state.last_render_frame = self._frame_index
         color = SHIP_COLOR if ship.team == "player" else ENEMY_COLOR
         detail = _ship_detail_factor(ship, distance)
         line_mode = "line" if distance > 7500.0 else "aaline"

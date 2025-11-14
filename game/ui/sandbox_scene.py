@@ -663,6 +663,7 @@ class SandboxScene(Scene):
         if not self.renderer or not self.camera or not self.player or not self.hud or not self.world:
             return
         self.renderer.surface = surface
+        self.renderer.set_player_ship(self.player)
         self.hud.surface = surface
         self.renderer.clear()
         self.renderer.draw_grid(self.camera, self.player.kinematics.position)
