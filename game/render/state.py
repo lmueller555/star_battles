@@ -22,6 +22,8 @@ class RenderSpatialState:
     _last_position: Vector3 = field(default_factory=Vector3, repr=False)
     _last_rotation: Optional[Vector3] = field(default=None, repr=False)
     random_seed: int = field(default_factory=lambda: random.randrange(0, 1 << 30), repr=False)
+    last_render_frame: int = -1
+    redraw_interval_frames: int = 1
 
     def ensure_current(self, position: Vector3, rotation: Optional[Vector3] = None) -> None:
         """Update the cached transform and advance the revision when it changes."""
