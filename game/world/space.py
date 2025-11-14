@@ -488,13 +488,20 @@ class SpaceWorld:
         weapon = self.weapons.get(mount.weapon_id)
         if mount.cooldown > 0.0:
             return None
-        power_cost = weapon.power_cost
+        requires_full_power = getattr(weapon, "requires_full_power", False)
         is_strike = _is_strike_ship(ship)
-        if is_strike:
-            power_cost = 1.2
+        if requires_full_power:
+            max_power = ship.stats.power_points
+            if ship.power + 1e-3 < max_power:
+                return None
+            power_cost = max_power
+        else:
+            power_cost = weapon.power_cost
+            if is_strike:
+                power_cost = 1.2
         if ship.power < power_cost:
             return None
-        ship.power -= power_cost
+        ship.power = max(0.0, ship.power - power_cost)
         mount.cooldown = weapon.cooldown
         if is_strike:
             mount.cooldown = 0.6

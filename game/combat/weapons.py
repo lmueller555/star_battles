@@ -90,6 +90,7 @@ class WeaponData:
     ammo: int
     reload: float
     gimbal: float
+    requires_full_power: bool = False
 
     @classmethod
     def from_dict(cls, data: Dict) -> "WeaponData":
@@ -137,6 +138,7 @@ class WeaponData:
             ammo=int(data.get("ammo", 0)),
             reload=float(data.get("reload", 0.0)),
             gimbal=gimbal,
+            requires_full_power=bool(data.get("requiresFullPower", False)),
         )
         if weapon.wclass == "missile":
             weapon.projectile_speed = 100.0

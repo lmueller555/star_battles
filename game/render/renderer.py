@@ -24,6 +24,8 @@ GRID_MAJOR_COLOR = (34, 52, 72)
 SHIP_COLOR = (120, 220, 255)
 ENEMY_COLOR = (255, 80, 100)
 PROJECTILE_COLOR = (255, 200, 80)
+PLASMA_ORB_COLOR = (180, 120, 255)
+PLASMA_ORB_OUTER = (90, 50, 170)
 MISSILE_COLOR = (255, 255, 255)
 MISSILE_SMOKE_COLOR = (200, 200, 200)
 PROJECTILE_RENDER_DISTANCE = 3000.0
@@ -3172,7 +3174,10 @@ class VectorRenderer:
             ).length_squared() > PROJECTILE_RENDER_DISTANCE_SQR:
                 continue
             is_missile = projectile.weapon.wclass == "missile"
+            is_plasma_orb = projectile.weapon.id == "plasma_orb_launcher"
             color = MISSILE_COLOR if is_missile else PROJECTILE_COLOR
+            if is_plasma_orb:
+                color = PLASMA_ORB_COLOR
             screen_pos, visible = camera.project(projectile.position, self.surface.get_size())
             if not visible:
                 continue
@@ -3194,12 +3199,24 @@ class VectorRenderer:
                             radius,
                             0,
                         )
+            radius = 3
+            thickness = 0 if is_missile else 1
+            if is_plasma_orb:
+                radius = 9
+                thickness = 0
+                pygame.draw.circle(
+                    self.surface,
+                    PLASMA_ORB_OUTER,
+                    (int(screen_pos.x), int(screen_pos.y)),
+                    radius + 2,
+                    2,
+                )
             pygame.draw.circle(
                 self.surface,
                 color,
                 (int(screen_pos.x), int(screen_pos.y)),
-                3,
-                0 if is_missile else 1,
+                radius,
+                thickness,
             )
 
 

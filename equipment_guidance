@@ -1545,13 +1545,15 @@ Power Cost: 100% current energy reserve (requires full energy to arm)
 
 Firing Arc: 30°
 
+Projectile Speed: 500 m/s (large purple orb)
+
 Cost: 650,000
 
 Durability: 30,000 / 30,000
 
 Effect:
-Thorim-exclusive siege launcher that forms a massive plasma orb from the ship’s entire energy pool.
-Fires a slow, devastating projectile capable of crippling Line and Capital hulls but unable to lock onto Strike-class ships.
+Thorim-exclusive siege launcher that forms a massive purple plasma orb from the ship’s entire energy pool.
+Fires a 500 m/s orb capable of crippling Line and Capital hulls but unable to lock onto Strike-class ships.
 Energy gating demands meticulous timing — firing drains all energy, disabling active systems until power regenerates.
 
 Upgrade Model:

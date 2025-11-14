@@ -1783,10 +1783,10 @@ EQUIPMENT_ITEMS: List[EquipmentDefinition] = [
             "accuracy": 150.0,
             "critical_offense": 120.0,
             "reload": 60.0,
-            "power": 1_000.0,
+            "power": 0.0,
             "firing_arc": 30.0,
             "turn_speed": 12.0,
-            "projectile_speed": 180.0,
+            "projectile_speed": 500.0,
         },
         upgrades=("damage", "reload"),
         description=(
@@ -1794,7 +1794,7 @@ EQUIPMENT_ITEMS: List[EquipmentDefinition] = [
             "plasma orb. Requires full energy reserves, consumes the entire pool on "
             "fire, and cannot lock Strike-class hulls."
         ),
-        tags=("siege", "exclusive:thorim_siege"),
+        tags=("siege", "exclusive:thorim_siege", "full_energy_cost"),
     ),
     _weapon(
         id="hag_mk16a",

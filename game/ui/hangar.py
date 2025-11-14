@@ -1024,7 +1024,10 @@ class HangarView:
                     f"Range {stats['range_min']:.0f}–{stats['range_max']:.0f} m"
                 )
             lines.append(f"Reload {stats.get('reload', 0.0):.2f} s")
-            lines.append(f"Power {stats.get('power', 0.0):.0f}")
+            if "full_energy_cost" in data.tags:
+                lines.append("Power Full reserve")
+            else:
+                lines.append(f"Power {stats.get('power', 0.0):.0f}")
             lines.append(f"Accuracy {stats.get('accuracy', 0.0):.0f}")
             lines.append(f"Crit Offense {stats.get('critical_offense', 0.0):.0f}")
             lines.append(f"Firing Arc {stats.get('firing_arc', 0.0):.0f}°")

@@ -78,6 +78,7 @@ class ShipStats:
     roll_acceleration: float
     inertial_compensation: float
     boost_cost: float
+    boost_consumes_power: bool
     power_points: float
     power_recovery_per_sec: float
     firewall_rating: float
@@ -274,6 +275,7 @@ class ShipStats:
         )
         if boost_cost_up:
             upgrades["boost_cost"] = boost_cost_up
+        boost_consumes_power = bool(data.get("boost_consumes_power", False))
         power_points, power_points_up = _extract_stat(
             data, "power_points", "power_cap", default=150.0
         )
@@ -380,6 +382,7 @@ class ShipStats:
             roll_acceleration=roll_accel,
             inertial_compensation=inertial_comp,
             boost_cost=boost_cost,
+            boost_consumes_power=boost_consumes_power,
             power_points=power_points,
             power_recovery_per_sec=power_recovery,
             firewall_rating=firewall_rating,

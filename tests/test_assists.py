@@ -41,6 +41,7 @@ def _make_test_ship() -> Ship:
         roll_acceleration=300.0,
         inertial_compensation=0.8,
         boost_cost=15.0,
+        boost_consumes_power=False,
         power_points=150.0,
         power_recovery_per_sec=40.0,
         firewall_rating=120.0,
