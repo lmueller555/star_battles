@@ -2180,6 +2180,9 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
     inner_mid: list[Vector3] = []
     underside: list[Vector3] = []
 
+    gap_split_index: int | None = None
+    in_gap = False
+
     def _ring_point(angle: float, radius_x: float, radius_z: float, height: float) -> Vector3:
         return Vector3(
             math.cos(angle) * radius_x,
@@ -2191,21 +2194,46 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
         angle = (math.tau / ring_sides) * index
         adjusted = (angle - gap_center + math.pi) % math.tau - math.pi
         if abs(adjusted) <= gap_half_angle:
+            in_gap = True
             continue
 
+        if in_gap:
+            if gap_split_index is None:
+                gap_split_index = len(outer_top)
+            in_gap = False
+
         outer_top.append(_ring_point(angle, outer_radius_x, outer_radius_z, top_y))
-        outer_bottom.append(_ring_point(angle, outer_radius_x * 0.98, outer_radius_z * 0.98, bottom_y))
+        outer_bottom.append(
+            _ring_point(angle, outer_radius_x * 0.98, outer_radius_z * 0.98, bottom_y)
+        )
         inner_top.append(_ring_point(angle, inner_radius_x, inner_radius_z, inner_top_y))
-        inner_bottom.append(_ring_point(angle, inner_radius_x * 0.99, inner_radius_z * 0.99, inner_bottom_y))
+        inner_bottom.append(
+            _ring_point(angle, inner_radius_x * 0.99, inner_radius_z * 0.99, inner_bottom_y)
+        )
         inner_mid.append(_ring_point(angle, inner_radius_x * 0.94, inner_radius_z * 0.94, 0.0))
-        underside.append(_ring_point(angle, outer_radius_x * 0.82, outer_radius_z * 0.76, underside_y))
+        underside.append(
+            _ring_point(angle, outer_radius_x * 0.82, outer_radius_z * 0.76, underside_y)
+        )
+
+    def _connect_sections(points: Sequence[Vector3]) -> None:
+        if not points:
+            return
+        if gap_split_index is None or gap_split_index <= 0 or gap_split_index >= len(points):
+            for idx in range(len(points) - 1):
+                segments.append((points[idx], points[idx + 1]))
+            return
+
+        for idx in range(gap_split_index - 1):
+            segments.append((points[idx], points[idx + 1]))
+        for idx in range(gap_split_index, len(points) - 1):
+            segments.append((points[idx], points[idx + 1]))
+
+    for ring in (outer_top, outer_bottom, inner_top, inner_bottom, inner_mid, underside):
+        _connect_sections(ring)
 
     def _connect_strip(points: Sequence[Vector3]) -> None:
         for idx in range(len(points) - 1):
             segments.append((points[idx], points[idx + 1]))
-
-    for ring in (outer_top, outer_bottom, inner_top, inner_bottom, inner_mid, underside):
-        _connect_strip(ring)
 
     for port, starboard in (
         (outer_top, inner_top),
@@ -2249,16 +2277,22 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
     )
 
     if outer_top:
+        starboard_front_index = (gap_split_index - 1) if gap_split_index else len(outer_top) - 1
+        port_front_index = gap_split_index if gap_split_index else 0
+
+        starboard_front_index = max(0, min(starboard_front_index, len(outer_top) - 1))
+        port_front_index = max(0, min(port_front_index, len(outer_top) - 1))
+
         segments.extend(
             [
-                (outer_top[0], starboard_front_top),
-                (outer_bottom[0], starboard_front_bottom),
-                (inner_top[0], starboard_front_inner),
-                (inner_bottom[0], starboard_front_inner),
-                (outer_top[-1], port_front_top),
-                (outer_bottom[-1], port_front_bottom),
-                (inner_top[-1], port_front_inner),
-                (inner_bottom[-1], port_front_inner),
+                (outer_top[starboard_front_index], starboard_front_top),
+                (outer_bottom[starboard_front_index], starboard_front_bottom),
+                (inner_top[starboard_front_index], starboard_front_inner),
+                (inner_bottom[starboard_front_index], starboard_front_inner),
+                (outer_top[port_front_index], port_front_top),
+                (outer_bottom[port_front_index], port_front_bottom),
+                (inner_top[port_front_index], port_front_inner),
+                (inner_bottom[port_front_index], port_front_inner),
             ]
         )
 
@@ -2315,9 +2349,10 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
     # Interior orange channel struts along the arms.
     channel_port: list[tuple[int, Vector3]] = []
     channel_starboard: list[tuple[int, Vector3]] = []
+    split_index = gap_split_index if gap_split_index is not None else len(inner_mid)
     for idx, point in enumerate(inner_mid):
         highlight = Vector3(point.x, inner_top_y * 0.85, point.z * 0.96)
-        if idx < len(inner_mid) // 2:
+        if idx < split_index:
             channel_starboard.append((idx, highlight))
         else:
             channel_port.append((idx, highlight))
@@ -2381,6 +2416,18 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
                 (aft_inner_right, inner_top[len(inner_top) // 2 - 1]),
             ]
         )
+
+    scale = 0.6
+    if abs(scale - 1.0) > 1e-6:
+        scaled_segments: list[tuple[Vector3, Vector3]] = []
+        for start, end in segments:
+            scaled_segments.append(
+                (
+                    Vector3(start.x * scale, start.y * scale, start.z * scale),
+                    Vector3(end.x * scale, end.y * scale, end.z * scale),
+                )
+            )
+        return scaled_segments
 
     return segments
 
