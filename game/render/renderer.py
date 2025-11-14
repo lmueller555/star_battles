@@ -243,6 +243,69 @@ def _estimate_ship_radius(ship: Ship, geometry: ShipGeometry, scale: float) -> f
     return radius + 2.5
 
 
+def _ship_detail_factor(ship: Ship, distance: float) -> float:
+    if getattr(ship.frame, "size", "") == "Strike":
+        return 1.0
+    if distance <= 2500.0:
+        return 1.0
+    if distance >= 5000.0:
+        return 0.5
+    blend = (distance - 2500.0) / 2500.0
+    return max(0.5, min(1.0, 1.0 - 0.5 * blend))
+
+
+def _resample_polyline(
+    points: Sequence[tuple[float, float]], fraction: float
+) -> list[tuple[float, float]]:
+    if fraction >= 0.999 or len(points) <= 2:
+        return list(points)
+    segment_count = len(points) - 1
+    target_segments = max(1, int(math.ceil(segment_count * fraction)))
+    if target_segments >= segment_count:
+        return list(points)
+    cumulative: list[float] = [0.0]
+    total_length = 0.0
+    for index in range(1, len(points)):
+        ax, ay = points[index - 1]
+        bx, by = points[index]
+        seg_len = math.hypot(bx - ax, by - ay)
+        total_length += seg_len
+        cumulative.append(total_length)
+    if total_length <= 1e-6:
+        return [points[0], points[-1]]
+    spacing = total_length / target_segments
+    sample_count = target_segments + 1
+    result: list[tuple[float, float]] = []
+    segment_index = 0
+    for sample in range(sample_count):
+        if sample == sample_count - 1:
+            result.append(points[-1])
+            continue
+        target_distance = spacing * sample
+        while (
+            segment_index < segment_count - 1
+            and cumulative[segment_index + 1] < target_distance - 1e-6
+        ):
+            segment_index += 1
+        start_x, start_y = points[segment_index]
+        end_x, end_y = points[segment_index + 1]
+        seg_start = cumulative[segment_index]
+        seg_end = cumulative[segment_index + 1]
+        seg_length = seg_end - seg_start
+        if seg_length <= 1e-6:
+            result.append((end_x, end_y))
+            continue
+        t = (target_distance - seg_start) / seg_length
+        t = max(0.0, min(1.0, t))
+        result.append(
+            (
+                start_x + (end_x - start_x) * t,
+                start_y + (end_y - start_y) * t,
+            )
+        )
+    return result
+
+
 def _rect_intersects(rect: tuple[float, float, float, float], width: int, height: int) -> bool:
     left, top, right, bottom = rect
     return not (right < 0 or bottom < 0 or left >= width or top >= height)
@@ -2931,19 +2994,28 @@ class VectorRenderer:
             scale=scale,
         )
         color = SHIP_COLOR if ship.team == "player" else ENEMY_COLOR
+        detail = _ship_detail_factor(ship, distance)
         line_mode = "line" if distance > 7500.0 else "aaline"
         if line_mode == "line":
-            strips = cache.line_strips
+            strips_float = self._prepare_ship_strips(
+                cache.line_strips,
+                detail,
+            )
+            strips = [
+                [(int(round(px)), int(round(py))) for px, py in strip]
+                for strip in strips_float
+            ]
             for strip in strips:
-                if len(strip) >= 2:
-                    pygame.draw.lines(self.surface, color, False, strip, 1)
+                pygame.draw.lines(self.surface, color, False, strip, 1)
             if strips:
                 self._frame_counters.objects_drawn_line += 1
         else:
-            strips = cache.aaline_strips
+            strips = self._prepare_ship_strips(
+                cache.aaline_strips,
+                detail,
+            )
             for strip in strips:
-                if len(strip) >= 2:
-                    pygame.draw.aalines(self.surface, color, False, strip, blend=1)
+                pygame.draw.aalines(self.surface, color, False, strip, blend=1)
             if strips:
                 self._frame_counters.objects_drawn_aaline += 1
 
@@ -2956,6 +3028,28 @@ class VectorRenderer:
 
         self._draw_hardpoints(frame, origin, right, up, forward, ship, color, scale=scale)
         self._draw_engines(frame, origin, right, up, forward, ship, color, scale=scale)
+
+    @staticmethod
+    def _prepare_ship_strips(
+        strips: Sequence[Sequence[tuple[float, float]]],
+        detail: float,
+    ) -> list[list[tuple[float, float]]]:
+        if detail >= 0.999:
+            return [
+                [(float(x), float(y)) for x, y in strip]
+                for strip in strips
+                if len(strip) >= 2
+            ]
+        prepared: list[list[tuple[float, float]]] = []
+        for strip in strips:
+            if len(strip) < 2:
+                continue
+            float_points = [(float(x), float(y)) for x, y in strip]
+            reduced = _resample_polyline(float_points, detail)
+            if len(reduced) < 2:
+                continue
+            prepared.append(reduced)
+        return prepared
 
     def draw_projectiles(self, camera: ChaseCamera, projectiles: Iterable[Projectile]) -> None:
         for projectile in projectiles:
