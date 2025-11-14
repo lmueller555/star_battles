@@ -2158,19 +2158,34 @@ def _build_brimir_wireframe() -> list[tuple[Vector3, Vector3]]:
 def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
     segments: list[tuple[Vector3, Vector3]] = []
 
-    ring_sides = 32
-    outer_radius_x = 6.6
-    outer_radius_z = 4.9
-    top_y = 0.85
-    bottom_y = -0.85
-
-    gap_fraction = 0.25
+    ring_sides = 48
     gap_center = math.pi / 2.0
-    gap_half_angle = math.tau * gap_fraction / 2.0
+    gap_half_angle = math.radians(32.0)
 
-    rim_mid: list[Vector3] = []
-    rim_top: list[Vector3] = []
-    rim_bottom: list[Vector3] = []
+    outer_radius_x = 6.8
+    outer_radius_z = 5.35
+    inner_radius_x = 4.85
+    inner_radius_z = 3.95
+
+    top_y = 1.18
+    bottom_y = -1.18
+    inner_top_y = 0.68
+    inner_bottom_y = -0.68
+    underside_y = -1.78
+
+    outer_top: list[Vector3] = []
+    outer_bottom: list[Vector3] = []
+    inner_top: list[Vector3] = []
+    inner_bottom: list[Vector3] = []
+    inner_mid: list[Vector3] = []
+    underside: list[Vector3] = []
+
+    def _ring_point(angle: float, radius_x: float, radius_z: float, height: float) -> Vector3:
+        return Vector3(
+            math.cos(angle) * radius_x,
+            height,
+            math.sin(angle) * radius_z,
+        )
 
     for index in range(ring_sides):
         angle = (math.tau / ring_sides) * index
@@ -2178,174 +2193,192 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
         if abs(adjusted) <= gap_half_angle:
             continue
 
-        cos_angle = math.cos(angle)
-        sin_angle = math.sin(angle)
-        mid_point = Vector3(cos_angle * outer_radius_x, 0.0, sin_angle * outer_radius_z)
-        rim_mid.append(mid_point)
-        rim_top.append(Vector3(mid_point.x * 0.97, top_y, mid_point.z * 0.97))
-        rim_bottom.append(Vector3(mid_point.x * 0.97, bottom_y, mid_point.z * 0.97))
+        outer_top.append(_ring_point(angle, outer_radius_x, outer_radius_z, top_y))
+        outer_bottom.append(_ring_point(angle, outer_radius_x * 0.98, outer_radius_z * 0.98, bottom_y))
+        inner_top.append(_ring_point(angle, inner_radius_x, inner_radius_z, inner_top_y))
+        inner_bottom.append(_ring_point(angle, inner_radius_x * 0.99, inner_radius_z * 0.99, inner_bottom_y))
+        inner_mid.append(_ring_point(angle, inner_radius_x * 0.94, inner_radius_z * 0.94, 0.0))
+        underside.append(_ring_point(angle, outer_radius_x * 0.82, outer_radius_z * 0.76, underside_y))
 
-    for ring in (rim_mid, rim_top, rim_bottom):
-        for idx in range(len(ring) - 1):
-            segments.append((ring[idx], ring[idx + 1]))
+    def _connect_strip(points: Sequence[Vector3]) -> None:
+        for idx in range(len(points) - 1):
+            segments.append((points[idx], points[idx + 1]))
 
-    for mid_point, top_point, bottom_point in zip(rim_mid, rim_top, rim_bottom):
-        segments.append((top_point, bottom_point))
-        segments.append((top_point, mid_point))
-        segments.append((bottom_point, mid_point))
+    for ring in (outer_top, outer_bottom, inner_top, inner_bottom, inner_mid, underside):
+        _connect_strip(ring)
 
+    for port, starboard in (
+        (outer_top, inner_top),
+        (outer_bottom, inner_bottom),
+        (inner_top, inner_mid),
+        (inner_bottom, inner_mid),
+    ):
+        for outer_point, inner_point in zip(port, starboard):
+            segments.append((outer_point, inner_point))
+
+    for idx in range(0, len(outer_top), 3):
+        segments.append((outer_top[idx], outer_bottom[idx]))
+        segments.append((inner_top[idx], inner_bottom[idx]))
+        segments.append((outer_bottom[idx], underside[idx]))
+
+    # Sculpted leading edges near the gap.
     front_left_angle = gap_center + gap_half_angle
     front_right_angle = gap_center - gap_half_angle
 
-    def _front_edge(angle: float, height: float) -> Vector3:
-        return Vector3(
-            math.cos(angle) * outer_radius_x * 0.98,
-            height,
-            math.sin(angle) * outer_radius_z * 0.98,
-        )
+    port_front_top = _ring_point(front_left_angle, outer_radius_x * 1.02, outer_radius_z * 1.01, top_y * 1.04)
+    port_front_bottom = _ring_point(front_left_angle, outer_radius_x * 0.99, outer_radius_z * 0.99, bottom_y * 1.03)
+    port_front_inner = _ring_point(front_left_angle, inner_radius_x * 0.96, inner_radius_z * 0.96, 0.0)
 
-    port_front_mid = _front_edge(front_left_angle, 0.0)
-    starboard_front_mid = _front_edge(front_right_angle, 0.0)
-    port_front_top = _front_edge(front_left_angle, top_y)
-    port_front_bottom = _front_edge(front_left_angle, bottom_y)
-    starboard_front_top = _front_edge(front_right_angle, top_y)
-    starboard_front_bottom = _front_edge(front_right_angle, bottom_y)
+    starboard_front_top = _ring_point(
+        front_right_angle, outer_radius_x * 1.02, outer_radius_z * 1.01, top_y * 1.04
+    )
+    starboard_front_bottom = _ring_point(
+        front_right_angle, outer_radius_x * 0.99, outer_radius_z * 0.99, bottom_y * 1.03
+    )
+    starboard_front_inner = _ring_point(front_right_angle, inner_radius_x * 0.96, inner_radius_z * 0.96, 0.0)
 
     segments.extend(
         [
             (port_front_top, port_front_bottom),
             (starboard_front_top, starboard_front_bottom),
-            (port_front_top, port_front_mid),
-            (port_front_bottom, port_front_mid),
-            (starboard_front_top, starboard_front_mid),
-            (starboard_front_bottom, starboard_front_mid),
+            (port_front_top, port_front_inner),
+            (starboard_front_top, starboard_front_inner),
+            (port_front_bottom, port_front_inner),
+            (starboard_front_bottom, starboard_front_inner),
         ]
     )
 
-    if rim_mid:
+    if outer_top:
         segments.extend(
             [
-                (rim_mid[0], starboard_front_mid),
-                (rim_top[0], starboard_front_top),
-                (rim_bottom[0], starboard_front_bottom),
-                (rim_mid[-1], port_front_mid),
-                (rim_top[-1], port_front_top),
-                (rim_bottom[-1], port_front_bottom),
+                (outer_top[0], starboard_front_top),
+                (outer_bottom[0], starboard_front_bottom),
+                (inner_top[0], starboard_front_inner),
+                (inner_bottom[0], starboard_front_inner),
+                (outer_top[-1], port_front_top),
+                (outer_bottom[-1], port_front_bottom),
+                (inner_top[-1], port_front_inner),
+                (inner_bottom[-1], port_front_inner),
             ]
         )
 
-    cap_forward_z = outer_radius_z * 0.35
-    cap_back_z = -outer_radius_z * 0.7
-    cap_top_y = top_y * 1.15
-    cap_bottom_y = bottom_y * 1.15
+    # Crown and beak assembly.
+    nose_tip = Vector3(0.0, 0.26, outer_radius_z * 1.52)
+    nose_bridge = Vector3(0.0, 0.82, outer_radius_z * 1.32)
+    lower_jaw = Vector3(0.0, bottom_y * 1.62, outer_radius_z * 1.18)
+    crown_mid = Vector3(0.0, top_y * 1.54, outer_radius_z * 1.18)
+    crown_tip = Vector3(0.0, top_y * 2.05, outer_radius_z * 1.12)
 
-    for x_sign in (-1, 1):
-        cap_x = x_sign * outer_radius_x
-        top_front = Vector3(cap_x, cap_top_y, cap_forward_z)
-        top_back = Vector3(cap_x, cap_top_y, cap_back_z)
-        bottom_front = Vector3(cap_x, cap_bottom_y, cap_forward_z)
-        bottom_back = Vector3(cap_x, cap_bottom_y, cap_back_z)
-        mid_front = Vector3(cap_x, 0.0, cap_forward_z)
-        mid_back = Vector3(cap_x, 0.0, cap_back_z)
+    crown_side_port = Vector3(-outer_radius_x * 0.32, top_y * 1.6, outer_radius_z * 1.16)
+    crown_side_starboard = Vector3(outer_radius_x * 0.32, top_y * 1.6, outer_radius_z * 1.16)
 
+    visor_port = Vector3(-outer_radius_x * 0.46, top_y * 1.18, outer_radius_z * 1.08)
+    visor_starboard = Vector3(outer_radius_x * 0.46, top_y * 1.18, outer_radius_z * 1.08)
+    visor_mid = Vector3(0.0, top_y * 1.05, outer_radius_z * 1.25)
+
+    segments.extend(
+        [
+            (nose_tip, nose_bridge),
+            (nose_tip, crown_mid),
+            (nose_bridge, crown_mid),
+            (crown_mid, crown_tip),
+            (crown_tip, crown_side_port),
+            (crown_tip, crown_side_starboard),
+            (crown_side_port, crown_side_starboard),
+            (visor_port, visor_starboard),
+            (visor_port, visor_mid),
+            (visor_starboard, visor_mid),
+            (visor_mid, nose_bridge),
+        ]
+    )
+
+    segments.extend(
+        [
+            (port_front_top, crown_side_port),
+            (port_front_top, visor_port),
+            (port_front_bottom, lower_jaw),
+            (port_front_inner, nose_bridge),
+            (port_front_inner, nose_tip),
+            (port_front_inner, lower_jaw),
+            (starboard_front_top, crown_side_starboard),
+            (starboard_front_top, visor_starboard),
+            (starboard_front_bottom, lower_jaw),
+            (starboard_front_inner, nose_bridge),
+            (starboard_front_inner, nose_tip),
+            (starboard_front_inner, lower_jaw),
+            (lower_jaw, nose_tip),
+        ]
+    )
+
+    # Interior orange channel struts along the arms.
+    channel_port: list[tuple[int, Vector3]] = []
+    channel_starboard: list[tuple[int, Vector3]] = []
+    for idx, point in enumerate(inner_mid):
+        highlight = Vector3(point.x, inner_top_y * 0.85, point.z * 0.96)
+        if idx < len(inner_mid) // 2:
+            channel_starboard.append((idx, highlight))
+        else:
+            channel_port.append((idx, highlight))
+
+    _connect_strip([point for _, point in channel_starboard])
+    _connect_strip([point for _, point in channel_port])
+
+    for strip in (channel_starboard, channel_port):
+        for idx in range(0, len(strip), 4):
+            source_index, source_point = strip[idx]
+            segments.append((source_point, inner_bottom[source_index]))
+
+    if channel_starboard:
         segments.extend(
             [
-                (top_front, top_back),
-                (bottom_front, bottom_back),
-                (top_front, bottom_front),
-                (top_back, bottom_back),
-                (top_front, mid_front),
-                (bottom_front, mid_front),
-                (top_back, mid_back),
-                (bottom_back, mid_back),
+                (channel_starboard[0][1], starboard_front_inner),
+                (channel_starboard[0][1], visor_starboard),
+            ]
+        )
+    if channel_port:
+        segments.extend(
+            [
+                (channel_port[-1][1], port_front_inner),
+                (channel_port[-1][1], visor_port),
             ]
         )
 
-        if rim_mid:
-            anchor_front = rim_mid[len(rim_mid) // 4] if x_sign < 0 else rim_mid[-(len(rim_mid) // 4 + 1)]
-            segments.extend(
-                [
-                    (mid_front, anchor_front),
-                    (top_front, anchor_front),
-                    (bottom_front, anchor_front),
-                ]
-            )
-
-    engine_front_z = -outer_radius_z * 0.85
-    engine_back_z = -outer_radius_z * 1.35
-    engine_half_width = outer_radius_x * 0.45
-    engine_top = top_y * 1.6
-    engine_bottom = bottom_y * 1.6
-
-    engine_front_left = Vector3(-engine_half_width, 0.0, engine_front_z)
-    engine_front_right = Vector3(engine_half_width, 0.0, engine_front_z)
-    engine_back_left = Vector3(-engine_half_width, 0.0, engine_back_z)
-    engine_back_right = Vector3(engine_half_width, 0.0, engine_back_z)
-
-    engine_front_top = Vector3(0.0, engine_top, engine_front_z)
-    engine_front_bottom = Vector3(0.0, engine_bottom, engine_front_z)
-    engine_back_top = Vector3(0.0, engine_top * 0.85, engine_back_z)
-    engine_back_bottom = Vector3(0.0, engine_bottom * 0.85, engine_back_z)
+    # Rear engine block inspired by the heavy housing in the concept.
+    aft_center_z = -outer_radius_z * 1.22
+    aft_top = Vector3(0.0, top_y * 1.72, aft_center_z)
+    aft_bottom = Vector3(0.0, bottom_y * 1.72, aft_center_z)
+    aft_outer_left = Vector3(-outer_radius_x * 0.54, 0.0, aft_center_z)
+    aft_outer_right = Vector3(outer_radius_x * 0.54, 0.0, aft_center_z)
+    aft_inner_left = Vector3(-inner_radius_x * 0.65, 0.0, aft_center_z * 0.92)
+    aft_inner_right = Vector3(inner_radius_x * 0.65, 0.0, aft_center_z * 0.92)
 
     segments.extend(
         [
-            (engine_front_left, engine_front_right),
-            (engine_back_left, engine_back_right),
-            (engine_front_left, engine_back_left),
-            (engine_front_right, engine_back_right),
-            (engine_front_top, engine_front_bottom),
-            (engine_back_top, engine_back_bottom),
-            (engine_front_top, engine_back_top),
-            (engine_front_bottom, engine_back_bottom),
-            (engine_front_left, engine_front_top),
-            (engine_front_right, engine_front_top),
-            (engine_front_left, engine_front_bottom),
-            (engine_front_right, engine_front_bottom),
-            (engine_back_left, engine_back_top),
-            (engine_back_right, engine_back_top),
-            (engine_back_left, engine_back_bottom),
-            (engine_back_right, engine_back_bottom),
+            (aft_outer_left, aft_outer_right),
+            (aft_outer_left, aft_top),
+            (aft_outer_right, aft_top),
+            (aft_outer_left, aft_bottom),
+            (aft_outer_right, aft_bottom),
+            (aft_inner_left, aft_inner_right),
+            (aft_inner_left, aft_top),
+            (aft_inner_right, aft_top),
+            (aft_inner_left, aft_bottom),
+            (aft_inner_right, aft_bottom),
+            (aft_top, aft_bottom),
         ]
     )
 
-    weapon_focus = Vector3(0.0, 0.0, 0.0)
-    cannon_base = Vector3(0.0, 0.0, engine_front_z)
-    cannon_brace_top = Vector3(0.0, top_y * 0.6, engine_front_z * 0.8)
-    cannon_brace_bottom = Vector3(0.0, bottom_y * 0.6, engine_front_z * 0.8)
-
-    segments.extend(
-        [
-            (cannon_base, weapon_focus),
-            (cannon_brace_top, weapon_focus),
-            (cannon_brace_bottom, weapon_focus),
-            (cannon_base, cannon_brace_top),
-            (cannon_base, cannon_brace_bottom),
-        ]
-    )
-
-    hub_radius = outer_radius_x * 0.35
-    hub_top = Vector3(0.0, top_y * 0.7, 0.0)
-    hub_bottom = Vector3(0.0, bottom_y * 0.7, 0.0)
-
-    hub_points = []
-    for index in range(8):
-        angle = (math.tau / 8) * index
-        hub_points.append(
-            Vector3(
-                math.cos(angle) * hub_radius,
-                0.0,
-                math.sin(angle) * hub_radius * 0.7,
-            )
+    if outer_top:
+        aft_anchor_left = outer_top[len(outer_top) // 2]
+        aft_anchor_right = outer_top[len(outer_top) // 2 - 1]
+        segments.extend(
+            [
+                (aft_outer_left, aft_anchor_left),
+                (aft_outer_right, aft_anchor_right),
+                (aft_inner_left, inner_top[len(inner_top) // 2]),
+                (aft_inner_right, inner_top[len(inner_top) // 2 - 1]),
+            ]
         )
-
-    for idx in range(len(hub_points)):
-        current = hub_points[idx]
-        nxt = hub_points[(idx + 1) % len(hub_points)]
-        segments.append((current, nxt))
-        segments.append((current, hub_top))
-        segments.append((current, hub_bottom))
-
-    segments.append((hub_top, hub_bottom))
 
     return segments
 
