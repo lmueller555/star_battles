@@ -207,12 +207,15 @@ class SandboxScene(Scene):
             raise RuntimeError("SandboxScene requires an active world and player ship")
 
         self.dradis = DradisSystem(self.player)
-        surface = pygame.display.get_surface()
-        aspect = surface.get_width() / surface.get_height()
+        display_surface = pygame.display.get_surface()
+        if not display_surface:
+            raise RuntimeError("SandboxScene requires an active display surface")
+        aspect = display_surface.get_width() / display_surface.get_height()
         self.camera = ChaseCamera(70.0, aspect)
-        self.renderer = VectorRenderer(surface)
-        self.hud = HUD(surface)
-        self.ship_info_panel = ShipInfoPanel(surface, self.content)
+        self.renderer = VectorRenderer(display_surface)
+        ui_surface = pygame.Surface(display_surface.get_size(), pygame.SRCALPHA)
+        self.hud = HUD(ui_surface)
+        self.ship_info_panel = ShipInfoPanel(ui_surface, self.content)
         self.ship_info_open = False
         self._ship_button_hovered = False
         self.map_view = SectorMapView(self.content.sector)
@@ -225,7 +228,7 @@ class SandboxScene(Scene):
         self.station_contact: tuple[DockingStation, float] | None = None
         self.selected_object = None
         self.hangar_open = False
-        self.hangar_view = HangarView(surface, self.content)
+        self.hangar_view = HangarView(ui_surface, self.content)
         self.mining_state = None
         self.mining_feedback = ""
         self.mining_feedback_timer = 0.0
@@ -662,8 +665,15 @@ class SandboxScene(Scene):
     def render(self, surface: pygame.Surface, alpha: float) -> None:
         if not self.renderer or not self.camera or not self.player or not self.hud or not self.world:
             return
-        self.renderer.surface = surface
+        display_surface = pygame.display.get_surface()
+        if display_surface:
+            self.renderer.surface = display_surface
         self.hud.surface = surface
+        if self.ship_info_panel:
+            self.ship_info_panel.surface = surface
+        if self.hangar_view:
+            self.hangar_view.set_surface(surface)
+        surface.fill((0, 0, 0, 0))
         self.renderer.clear()
         self.renderer.draw_grid(self.camera, self.player.kinematics.position)
         asteroids = self.world.asteroids_in_current_system()
@@ -700,7 +710,7 @@ class SandboxScene(Scene):
             visible_ships.sort(key=_ship_depth, reverse=True)
             for ship in visible_ships:
                 self.renderer.draw_ship(self.camera, ship)
-        self.renderer.draw_projectiles(self.camera, self.world.projectiles)
+            self.renderer.draw_projectiles(self.camera, self.world.projectiles)
         projectile_speed = 0.0
         if target and self.content:
             for mount in self.player.mounts:
