@@ -508,6 +508,19 @@ class ShipInfoPanel:
             return True
         if target in {"guns", "gun"}:
             return slot in {"guns", "gun"}
+        if target in {"weapon", "weapons"}:
+            return slot in {
+                "weapon",
+                "weapons",
+                "cannon",
+                "launcher",
+                "gun",
+                "guns",
+                "defensive",
+                "defensive_weapon",
+                "special",
+                "special_weapon",
+            }
         return False
 
     def _position_for_index(self, positions: List[Tuple[float, float]], index: int) -> Tuple[float, float]:
