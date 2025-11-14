@@ -2417,7 +2417,9 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
             ]
         )
 
-    scale = 0.6
+    # Apply an additional 40% reduction so the Thorim sits closer in scale to the
+    # rest of the fleet in UI wireframe renders.
+    scale = 0.36
     if abs(scale - 1.0) > 1e-6:
         scaled_segments: list[tuple[Vector3, Vector3]] = []
         for start, end in segments:
