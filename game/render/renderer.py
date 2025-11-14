@@ -2173,7 +2173,6 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
     ring_sections: list[tuple[list[tuple[Vector3, Vector3]], list[tuple[Vector3, Vector3]]]] = []
     current_outer: list[tuple[Vector3, Vector3]] = []
     current_inner: list[tuple[Vector3, Vector3]] = []
-    arm_candidates: list[tuple[float, Vector3, Vector3, Vector3, Vector3]] = []
 
     def _ring_point(angle: float, radius_x: float, radius_z: float, height: float) -> Vector3:
         return Vector3(
@@ -2199,7 +2198,6 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
 
         current_outer.append((outer_top, outer_bottom))
         current_inner.append((inner_top, inner_bottom))
-        arm_candidates.append((angle, outer_top, outer_bottom, inner_top, inner_bottom))
 
     if current_outer or current_inner:
         ring_sections.append((current_outer, current_inner))
@@ -2235,40 +2233,6 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
     weapon_tip = Vector3(0.0, 0.0, inner_radius_z * 0.55)
     segments.append((weapon_base, weapon_tip))
 
-    # Add structural detail to the two forward arms at the edge of the weapon gap
-    if arm_candidates:
-        def _angle_distance(angle_a: float, angle_b: float) -> float:
-            return abs(((angle_a - angle_b + math.pi) % math.tau) - math.pi)
-
-        front_right_target = (gap_center - gap_half_angle) % math.tau
-        front_left_target = (gap_center + gap_half_angle) % math.tau
-
-        front_right_anchor = min(
-            arm_candidates, key=lambda entry: _angle_distance(entry[0], front_right_target)
-        )
-        front_left_anchor = min(
-            arm_candidates, key=lambda entry: _angle_distance(entry[0], front_left_target)
-        )
-
-        for _, outer_top, outer_bottom, inner_top, inner_bottom in (front_left_anchor, front_right_anchor):
-            arm_mid = Vector3(
-                (inner_top.x + inner_bottom.x) * 0.5,
-                (inner_top.y + inner_bottom.y) * 0.5,
-                (inner_top.z + inner_bottom.z) * 0.5,
-            )
-
-            segments.extend(
-                [
-                    (outer_top, outer_bottom),
-                    (inner_top, inner_bottom),
-                    (inner_top, outer_top),
-                    (inner_bottom, outer_bottom),
-                    (weapon_tip, outer_top),
-                    (weapon_tip, inner_top),
-                    (weapon_base, arm_mid),
-                ]
-            )
-
     # Engine housing at the rear of the crescent
     engine_z = -outer_radius_z * 1.1
     engine_half_width = inner_radius_x * 0.6
@@ -2285,55 +2249,6 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
             (engine_bottom_left, engine_bottom_right),
             (engine_top_left, engine_bottom_left),
             (engine_top_right, engine_bottom_right),
-            (engine_top_left, engine_bottom_right),
-            (engine_top_right, engine_bottom_left),
-        ]
-    )
-
-    engine_mid_left = Vector3(-engine_half_width, 0.0, engine_z)
-    engine_mid_right = Vector3(engine_half_width, 0.0, engine_z)
-    engine_mid_top = Vector3(0.0, engine_half_height, engine_z)
-    engine_mid_bottom = Vector3(0.0, -engine_half_height, engine_z)
-
-    segments.extend(
-        [
-            (engine_mid_top, engine_mid_bottom),
-            (engine_mid_left, engine_mid_right),
-        ]
-    )
-
-    inner_engine_half_width = engine_half_width * 0.55
-    inner_engine_half_height = engine_half_height * 0.6
-    inner_engine_z = engine_z - ring_height * 0.35
-
-    engine_inner_top_left = Vector3(
-        -inner_engine_half_width, inner_engine_half_height, inner_engine_z
-    )
-    engine_inner_top_right = Vector3(
-        inner_engine_half_width, inner_engine_half_height, inner_engine_z
-    )
-    engine_inner_bottom_left = Vector3(
-        -inner_engine_half_width, -inner_engine_half_height, inner_engine_z
-    )
-    engine_inner_bottom_right = Vector3(
-        inner_engine_half_width, -inner_engine_half_height, inner_engine_z
-    )
-
-    segments.extend(
-        [
-            (engine_inner_top_left, engine_inner_top_right),
-            (engine_inner_bottom_left, engine_inner_bottom_right),
-            (engine_inner_top_left, engine_inner_bottom_left),
-            (engine_inner_top_right, engine_inner_bottom_right),
-        ]
-    )
-
-    segments.extend(
-        [
-            (engine_top_left, engine_inner_top_left),
-            (engine_top_right, engine_inner_top_right),
-            (engine_bottom_left, engine_inner_bottom_left),
-            (engine_bottom_right, engine_inner_bottom_right),
         ]
     )
 
