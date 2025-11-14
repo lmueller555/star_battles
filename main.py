@@ -15,6 +15,7 @@ from game.engine.input import InputBindings, InputMapper
 from game.engine.logger import init_logger
 from game.engine.loop import FixedTimestepLoop
 from game.engine.scene import SceneManager
+from game.render.gl_ui import UISurfaceOverlay
 from game.ui.outpost_scene import OutpostInteriorScene
 from game.ui.sandbox_scene import SandboxScene
 from game.ui.title_scene import TitleScene
@@ -46,7 +47,13 @@ def main() -> None:
     pygame.init()
     resolution = settings.get("resolution", [1920, 1080])
 
-    display_flags = pygame.SCALED | pygame.FULLSCREEN
+    pygame.display.gl_set_attribute(
+        pygame.GL_CONTEXT_PROFILE_MASK, pygame.GL_CONTEXT_PROFILE_CORE
+    )
+    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MAJOR_VERSION, 3)
+    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MINOR_VERSION, 3)
+
+    display_flags = pygame.OPENGL | pygame.DOUBLEBUF | pygame.FULLSCREEN
     if resolution == [0, 0] or resolution == (0, 0):
         display_info = pygame.display.Info()
         resolution = (display_info.current_w, display_info.current_h)
@@ -54,6 +61,8 @@ def main() -> None:
     screen = pygame.display.set_mode(resolution, display_flags)
     pygame.display.set_caption("Star Battles Prototype")
     clock = pygame.time.Clock()
+    overlay = UISurfaceOverlay()
+    ui_surface = pygame.Surface(resolution, pygame.SRCALPHA).convert_alpha()
 
     logger = init_logger(SETTINGS_PATH)
     input_mapper = InputMapper(InputBindings.load(SETTINGS_PATH))
@@ -81,7 +90,10 @@ def main() -> None:
         manager.update(dt)
 
     def render(alpha: float) -> None:
-        manager.render(screen, alpha)
+        ui_surface.fill((0, 0, 0, 0))
+        manager.render(ui_surface, alpha)
+        overlay.update(ui_surface)
+        overlay.draw()
         pygame.display.flip()
         clock.tick(settings.get("maxFps", 120))
 
@@ -103,6 +115,7 @@ def main() -> None:
         stats = pstats.Stats(profiler, stream=stats_stream)
         stats.strip_dirs().sort_stats("cumulative").print_stats(25)
 
+        overlay.release()
         pygame.quit()
         print("\nUsage: WASD strafe, mouse to aim, Shift boost, Ctrl brake, Q/E vertical strafe, Z/C roll, LMB cannons, RMB missiles (needs lock), T target nearest, R cycle, F3 debug overlay.")
         print("TODO Milestone 2: add Escort/Line hulls, sector FTL map with 5+ systems, mining gameplay loop, fitting UI, expanded AI behaviours.")
