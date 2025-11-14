@@ -2170,8 +2170,9 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
     inner_radius_z = 3.6
     ring_height = 1.0
 
-    outer_sections: list[tuple[Vector3, Vector3]] = []
-    inner_sections: list[tuple[Vector3, Vector3]] = []
+    ring_sections: list[tuple[list[tuple[Vector3, Vector3]], list[tuple[Vector3, Vector3]]]] = []
+    current_outer: list[tuple[Vector3, Vector3]] = []
+    current_inner: list[tuple[Vector3, Vector3]] = []
 
     def _ring_point(angle: float, radius_x: float, radius_z: float, height: float) -> Vector3:
         return Vector3(
@@ -2184,6 +2185,10 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
         angle = (math.tau / ring_sides) * index
         adjusted = (angle - gap_center + math.pi) % math.tau - math.pi
         if abs(adjusted) <= gap_half_angle:
+            if current_outer or current_inner:
+                ring_sections.append((current_outer, current_inner))
+                current_outer = []
+                current_inner = []
             continue
 
         outer_top = _ring_point(angle, outer_radius_x, outer_radius_z, ring_height)
@@ -2191,33 +2196,37 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
         inner_top = _ring_point(angle, inner_radius_x, inner_radius_z, ring_height * 0.6)
         inner_bottom = _ring_point(angle, inner_radius_x, inner_radius_z, -ring_height * 0.6)
 
-        outer_sections.append((outer_top, outer_bottom))
-        inner_sections.append((inner_top, inner_bottom))
+        current_outer.append((outer_top, outer_bottom))
+        current_inner.append((inner_top, inner_bottom))
+
+    if current_outer or current_inner:
+        ring_sections.append((current_outer, current_inner))
 
     def _connect_sections(sections: Sequence[tuple[Vector3, Vector3]]) -> None:
         for idx in range(len(sections) - 1):
             segments.append((sections[idx][0], sections[idx + 1][0]))
             segments.append((sections[idx][1], sections[idx + 1][1]))
 
-    _connect_sections(outer_sections)
-    _connect_sections(inner_sections)
+    for outer_sections, inner_sections in ring_sections:
+        _connect_sections(outer_sections)
+        _connect_sections(inner_sections)
 
-    if outer_sections:
-        segments.append((outer_sections[0][0], outer_sections[0][1]))
-        segments.append((outer_sections[-1][0], outer_sections[-1][1]))
-    if inner_sections:
-        segments.append((inner_sections[0][0], inner_sections[0][1]))
-        segments.append((inner_sections[-1][0], inner_sections[-1][1]))
+        if outer_sections:
+            segments.append((outer_sections[0][0], outer_sections[0][1]))
+            segments.append((outer_sections[-1][0], outer_sections[-1][1]))
+        if inner_sections:
+            segments.append((inner_sections[0][0], inner_sections[0][1]))
+            segments.append((inner_sections[-1][0], inner_sections[-1][1]))
 
-    if outer_sections and inner_sections:
-        segments.extend(
-            [
-                (outer_sections[0][0], inner_sections[0][0]),
-                (outer_sections[0][1], inner_sections[0][1]),
-                (outer_sections[-1][0], inner_sections[-1][0]),
-                (outer_sections[-1][1], inner_sections[-1][1]),
-            ]
-        )
+        if outer_sections and inner_sections:
+            segments.extend(
+                [
+                    (outer_sections[0][0], inner_sections[0][0]),
+                    (outer_sections[0][1], inner_sections[0][1]),
+                    (outer_sections[-1][0], inner_sections[-1][0]),
+                    (outer_sections[-1][1], inner_sections[-1][1]),
+                ]
+            )
 
     # Central weapon hardpoint
     weapon_base = Vector3(0.0, 0.0, -inner_radius_z * 0.15)
