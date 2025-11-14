@@ -2230,98 +2230,6 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
                 ]
             )
 
-    def _build_arm(side_sign: float) -> None:
-        arm_segments: list[tuple[Vector3, Vector3]] = []
-
-        def _arm_point(
-            inner_offset: float,
-            outer_offset: float,
-            height_scale: float,
-            z_scale: float,
-        ) -> tuple[Vector3, Vector3, Vector3, Vector3]:
-            half_height = ring_height * height_scale
-            inner_x = side_sign * inner_radius_x * inner_offset
-            outer_x = side_sign * inner_radius_x * outer_offset
-            z_pos = outer_radius_z * z_scale
-            return (
-                Vector3(inner_x, half_height, z_pos),
-                Vector3(outer_x, half_height, z_pos),
-                Vector3(inner_x, -half_height, z_pos),
-                Vector3(outer_x, -half_height, z_pos),
-            )
-
-        arm_sections = [
-            _arm_point(0.86, 1.05, 1.18, 0.18),
-            _arm_point(0.82, 1.00, 1.12, 0.32),
-            _arm_point(0.77, 0.94, 1.05, 0.46),
-            _arm_point(0.70, 0.88, 0.96, 0.62),
-            _arm_point(0.64, 0.82, 0.82, 0.78),
-        ]
-
-        base_angle = gap_center + side_sign * gap_half_angle
-        base_outer_top = _ring_point(base_angle, outer_radius_x, outer_radius_z, ring_height)
-        base_outer_bottom = _ring_point(
-            base_angle,
-            outer_radius_x,
-            outer_radius_z,
-            -ring_height,
-        )
-        base_inner_top = _ring_point(
-            base_angle,
-            inner_radius_x,
-            inner_radius_z,
-            ring_height * 0.6,
-        )
-        base_inner_bottom = _ring_point(
-            base_angle,
-            inner_radius_x,
-            inner_radius_z,
-            -ring_height * 0.6,
-        )
-
-        first_section = arm_sections[0]
-        arm_segments.extend(
-            [
-                (base_outer_top, first_section[1]),
-                (base_outer_bottom, first_section[3]),
-                (base_inner_top, first_section[0]),
-                (base_inner_bottom, first_section[2]),
-            ]
-        )
-
-        for inner_top, outer_top, inner_bottom, outer_bottom in arm_sections:
-            arm_segments.extend(
-                [
-                    (inner_top, outer_top),
-                    (inner_bottom, outer_bottom),
-                    (inner_top, inner_bottom),
-                    (outer_top, outer_bottom),
-                    (inner_top, outer_bottom),
-                    (outer_top, inner_bottom),
-                ]
-            )
-
-        for idx in range(len(arm_sections) - 1):
-            current = arm_sections[idx]
-            nxt = arm_sections[idx + 1]
-            arm_segments.extend(
-                [
-                    (current[0], nxt[0]),
-                    (current[1], nxt[1]),
-                    (current[2], nxt[2]),
-                    (current[3], nxt[3]),
-                    (current[1], nxt[2]),
-                    (current[0], nxt[3]),
-                    (current[1], nxt[0]),
-                    (current[3], nxt[2]),
-                ]
-            )
-
-        segments.extend(arm_segments)
-
-    _build_arm(-1.0)
-    _build_arm(1.0)
-
     # Central weapon hardpoint
     weapon_base = Vector3(0.0, 0.0, -inner_radius_z * 0.15)
     weapon_tip = Vector3(0.0, 0.0, inner_radius_z * 0.55)
@@ -2332,89 +2240,19 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
     engine_half_width = inner_radius_x * 0.6
     engine_half_height = ring_height * 1.1
 
-    engine_layers = [
-        (engine_z, engine_half_width, engine_half_height),
-        (engine_z - outer_radius_z * 0.08, engine_half_width * 0.92, engine_half_height * 0.92),
-        (engine_z - outer_radius_z * 0.16, engine_half_width * 0.78, engine_half_height * 0.8),
-    ]
+    engine_top_left = Vector3(-engine_half_width, engine_half_height, engine_z)
+    engine_top_right = Vector3(engine_half_width, engine_half_height, engine_z)
+    engine_bottom_left = Vector3(-engine_half_width, -engine_half_height, engine_z)
+    engine_bottom_right = Vector3(engine_half_width, -engine_half_height, engine_z)
 
-    engine_frames: list[tuple[Vector3, Vector3, Vector3, Vector3]] = []
-
-    for depth, half_width, half_height in engine_layers:
-        engine_frames.append(
-            (
-                Vector3(-half_width, half_height, depth),
-                Vector3(half_width, half_height, depth),
-                Vector3(half_width, -half_height, depth),
-                Vector3(-half_width, -half_height, depth),
-            )
-        )
-
-    for frame in engine_frames:
-        top_left, top_right, bottom_right, bottom_left = frame
-        segments.extend(
-            [
-                (top_left, top_right),
-                (top_right, bottom_right),
-                (bottom_right, bottom_left),
-                (bottom_left, top_left),
-                (top_left, bottom_right),
-                (top_right, bottom_left),
-            ]
-        )
-
-    front_frame = engine_frames[0]
-    engine_top_left = front_frame[0]
-    engine_top_right = front_frame[1]
-    engine_bottom_right = front_frame[2]
-    engine_bottom_left = front_frame[3]
-
-    for idx in range(len(engine_frames) - 1):
-        front = engine_frames[idx]
-        back = engine_frames[idx + 1]
-        segments.extend(
-            [
-                (front[0], back[0]),
-                (front[1], back[1]),
-                (front[2], back[2]),
-                (front[3], back[3]),
-                (front[0], back[1]),
-                (front[1], back[2]),
-                (front[2], back[3]),
-                (front[3], back[0]),
-            ]
-        )
-
-    nozzle_radius = engine_half_width * 0.35
-    nozzle_offset = engine_layers[-1][0] - outer_radius_z * 0.12
-    for x_sign in (-1, 1):
-        center_x = x_sign * engine_half_width * 0.6
-        top = Vector3(center_x, 0.0, nozzle_offset)
-        bottom = Vector3(center_x, 0.0, nozzle_offset - outer_radius_z * 0.12)
-        segments.extend(
-            [
-                (engine_frames[-1][0 if x_sign < 0 else 1], top),
-                (engine_frames[-1][3 if x_sign < 0 else 2], top),
-                (top, bottom),
-            ]
-        )
-        ring_points = [
-            Vector3(
-                center_x + math.cos(angle) * nozzle_radius,
-                math.sin(angle) * nozzle_radius,
-                bottom.z,
-            )
-            for angle in (0.0, math.tau / 3.0, 2.0 * math.tau / 3.0)
+    segments.extend(
+        [
+            (engine_top_left, engine_top_right),
+            (engine_bottom_left, engine_bottom_right),
+            (engine_top_left, engine_bottom_left),
+            (engine_top_right, engine_bottom_right),
         ]
-        for point in ring_points:
-            segments.append((bottom, point))
-        segments.extend(
-            [
-                (ring_points[0], ring_points[1]),
-                (ring_points[1], ring_points[2]),
-                (ring_points[2], ring_points[0]),
-            ]
-        )
+    )
 
     if outer_sections:
         aft_candidates = sorted(outer_sections, key=lambda section: section[0].z)[:4]
