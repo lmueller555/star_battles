@@ -437,10 +437,6 @@ class SpaceWorld:
     def performance_snapshot(self) -> PerformanceSnapshot:
         return self._performance_snapshot
 
-    @property
-    def current_frame_index(self) -> int:
-        return self._current_frame_index
-
     def activate_countermeasure(self, ship: Ship) -> tuple[bool, str]:
         if ship.countermeasure_cooldown > 0.0:
             return False, "Countermeasures recharging"

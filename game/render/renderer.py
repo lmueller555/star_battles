@@ -28,7 +28,6 @@ MISSILE_COLOR = (255, 255, 255)
 MISSILE_SMOKE_COLOR = (200, 200, 200)
 PROJECTILE_RENDER_DISTANCE = 3000.0
 PROJECTILE_RENDER_DISTANCE_SQR = PROJECTILE_RENDER_DISTANCE * PROJECTILE_RENDER_DISTANCE
-SHIP_DISTANCE_SAMPLE_INTERVAL = 5
 
 # Engine layout presets by ship size. These are expressed using the same
 # lightweight local-space units as the wireframe definitions and roughly align
@@ -2196,7 +2195,6 @@ class VectorRenderer:
         self._last_report_ms = pygame.time.get_ticks()
         self._telemetry_interval_ms = 2500
         self._current_camera_frame: CameraFrameData | None = None
-        self._frame_index: int = -1
 
     def _flush_frame_counters(self) -> None:
         if (
@@ -2234,11 +2232,6 @@ class VectorRenderer:
             self._frame_counters.reset()
         self._frame_active = True
         self._current_camera_frame = None
-        self._frame_index += 1
-
-    @property
-    def frame_index(self) -> int:
-        return self._frame_index
 
     def _get_camera_frame(self, camera: ChaseCamera) -> CameraFrameData:
         size = self.surface.get_size()
@@ -2970,39 +2963,7 @@ class VectorRenderer:
                         1,
                     )
 
-    def _should_render_ship(
-        self,
-        state: RenderSpatialState,
-        ship: Ship,
-        player_ship: Ship,
-        frame_index: int,
-    ) -> bool:
-        if frame_index < 0:
-            return True
-        if frame_index >= state.next_distance_sample_frame:
-            player_pos = player_ship.kinematics.position
-            ship_pos = ship.kinematics.position
-            distance = player_pos.distance_to(ship_pos)
-            interval = max(1, int(math.ceil(distance / 1000.0)))
-            if interval != state.render_interval:
-                state.render_interval = interval
-                state.next_render_frame = frame_index
-            state.last_player_distance = distance
-            state.next_distance_sample_frame = frame_index + SHIP_DISTANCE_SAMPLE_INTERVAL
-        if frame_index < state.next_render_frame:
-            return False
-        interval = max(1, state.render_interval)
-        state.next_render_frame = frame_index + interval
-        return True
-
-    def draw_ship(
-        self,
-        camera: ChaseCamera,
-        ship: Ship,
-        *,
-        player_ship: Ship | None = None,
-        frame_index: int | None = None,
-    ) -> None:
+    def draw_ship(self, camera: ChaseCamera, ship: Ship) -> None:
         frame = self._get_camera_frame(camera)
         geometry = self._ship_geometry_cache.get(
             ship.frame.id,
@@ -3017,19 +2978,6 @@ class VectorRenderer:
             ship.render_state = state
         state.set_radius(_estimate_ship_radius(ship, geometry, scale))
         state.ensure_current(ship.kinematics.position, ship.kinematics.rotation)
-        if (
-            player_ship is not None
-            and ship is not player_ship
-            and frame_index is None
-        ):
-            frame_index = self._frame_index
-        if (
-            player_ship is not None
-            and ship is not player_ship
-            and frame_index is not None
-            and not self._should_render_ship(state, ship, player_ship, frame_index)
-        ):
-            return
         visible, distance, _ = self._evaluate_visibility(state, frame)
         if not visible:
             return
