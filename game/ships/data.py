@@ -4,11 +4,12 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, Iterable, List, Mapping
 
 from pygame.math import Vector3
 
 from .stats import ShipSlotLayout, ShipStats
+from .guidance_data import GUIDANCE_SHIP_DATA
 
 
 _FACING_VECTORS = {
@@ -265,24 +266,38 @@ class ShipFrame:
 
 
 class ShipDatabase:
-    """Loads ship frames from JSON assets."""
+    """Loads ship frames from structured assets or built-in guidance data."""
 
     def __init__(self) -> None:
         self.frames: Dict[str, ShipFrame] = {}
 
+    def _load_entries(self, entries: Iterable[Mapping]) -> bool:
+        loaded = False
+        for entry in entries:
+            frame = ShipFrame.from_dict(entry)
+            self.frames[frame.id] = frame
+            loaded = True
+        return loaded
+
+    def _load_guidance(self) -> None:
+        """Populate the database using the guidance-backed ship definitions."""
+
+        self._load_entries(GUIDANCE_SHIP_DATA)
+
     def load_directory(self, directory: Path) -> None:
-        if not directory.exists():
-            return
-        for path in directory.glob("*.json"):
-            try:
-                data = json.loads(path.read_text())
-            except json.JSONDecodeError:
-                continue
-            if isinstance(data, dict):
-                data = [data]
-            for entry in data:
-                frame = ShipFrame.from_dict(entry)
-                self.frames[frame.id] = frame
+        loaded_any = False
+        if directory.exists():
+            for path in directory.glob("*.json"):
+                try:
+                    data = json.loads(path.read_text())
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(data, dict):
+                    data = [data]
+                if self._load_entries(data):
+                    loaded_any = True
+        if not loaded_any:
+            self._load_guidance()
 
     def get(self, frame_id: str) -> ShipFrame:
         return self.frames[frame_id]
