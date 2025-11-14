@@ -32,6 +32,7 @@ _MID_DISTANCE = 6000.0
 _FAR_SENTINEL_DISTANCE = 6000.0
 
 _AI_LOOK_SCALE = 6.0  # matches player keyboard look scaling
+_SENTRY_AGGRO_INTERVAL_FRAMES = 20
 
 class ShipAI:
     """Base AI controller that manages throttle and weapon firing."""
@@ -56,6 +57,7 @@ class ShipAI:
         self._last_bucket: str = "near"
         self._pending_post_update: bool = False
         self._last_update_frame: int = -1
+        self._next_sentry_update_frame: int = 0
 
     # ------------------------------------------------------------------
     # Public hooks
@@ -64,7 +66,18 @@ class ShipAI:
         if not self.ship.is_alive():
             return
         self._ensure_ranges(world)
-        self._update_sentry_state(world, dt)
+        frame_index = getattr(world, "current_frame_index", -1)
+        run_sentry = False
+        if frame_index < 0:
+            run_sentry = True
+        else:
+            if self._next_sentry_update_frame <= 0:
+                self._next_sentry_update_frame = frame_index
+            while frame_index >= self._next_sentry_update_frame:
+                run_sentry = True
+                self._next_sentry_update_frame += _SENTRY_AGGRO_INTERVAL_FRAMES
+        if run_sentry:
+            self._update_sentry_state(world, dt)
         self._reset_controls()
         if self.target and self.target.is_alive():
             self.ship.target_id = id(self.target)
