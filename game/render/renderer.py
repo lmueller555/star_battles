@@ -2228,6 +2228,27 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
                 ]
             )
 
+            # Add internal supports for each siege arm without bridging the central gap.
+            section_length = len(outer_sections)
+            if section_length > 2:
+                support_indices: set[int] = set()
+                for fraction in (1.0 / 3.0, 2.0 / 3.0):
+                    index = round((section_length - 1) * fraction)
+                    index = max(1, min(section_length - 2, index))
+                    support_indices.add(index)
+
+                for index in sorted(support_indices):
+                    outer_top, outer_bottom = outer_sections[index]
+                    inner_top, inner_bottom = inner_sections[index]
+                    segments.extend(
+                        [
+                            (outer_top, inner_top),
+                            (outer_bottom, inner_bottom),
+                            (outer_top, inner_bottom),
+                            (outer_bottom, inner_top),
+                        ]
+                    )
+
     # Central weapon hardpoint
     weapon_base = Vector3(0.0, 0.0, -inner_radius_z * 0.15)
     weapon_tip = Vector3(0.0, 0.0, inner_radius_z * 0.55)
@@ -2271,6 +2292,22 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
                 (engine_bottom_left, left_anchor[1]),
                 (engine_top_right, right_anchor[0]),
                 (engine_bottom_right, right_anchor[1]),
+            ]
+        )
+
+        engine_center = Vector3(0.0, 0.0, engine_z)
+        segments.extend(
+            [
+                (engine_top_left, engine_bottom_right),
+                (engine_top_right, engine_bottom_left),
+                (engine_center, engine_top_left),
+                (engine_center, engine_top_right),
+                (engine_center, engine_bottom_left),
+                (engine_center, engine_bottom_right),
+                (engine_center, left_anchor[0]),
+                (engine_center, left_anchor[1]),
+                (engine_center, right_anchor[0]),
+                (engine_center, right_anchor[1]),
             ]
         )
 
