@@ -2262,51 +2262,53 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
             ]
         )
 
-    # Crown and beak assembly.
-    nose_tip = Vector3(0.0, 0.26, outer_radius_z * 1.52)
-    nose_bridge = Vector3(0.0, 0.82, outer_radius_z * 1.32)
-    lower_jaw = Vector3(0.0, bottom_y * 1.62, outer_radius_z * 1.18)
-    crown_mid = Vector3(0.0, top_y * 1.54, outer_radius_z * 1.18)
-    crown_tip = Vector3(0.0, top_y * 2.05, outer_radius_z * 1.12)
+    # Sculpted prow details for each crescent arm to keep the front open.
+    port_cusp_peak = Vector3(
+        port_front_top.x * 1.05,
+        top_y * 1.62,
+        port_front_top.z * 1.04,
+    )
+    port_cusp_lower = Vector3(
+        port_front_bottom.x * 1.03,
+        bottom_y * 1.48,
+        port_front_bottom.z * 1.03,
+    )
+    port_cusp_inner = Vector3(
+        port_front_inner.x * 1.04,
+        inner_top_y * 0.92,
+        port_front_inner.z * 1.06,
+    )
 
-    crown_side_port = Vector3(-outer_radius_x * 0.32, top_y * 1.6, outer_radius_z * 1.16)
-    crown_side_starboard = Vector3(outer_radius_x * 0.32, top_y * 1.6, outer_radius_z * 1.16)
-
-    visor_port = Vector3(-outer_radius_x * 0.46, top_y * 1.18, outer_radius_z * 1.08)
-    visor_starboard = Vector3(outer_radius_x * 0.46, top_y * 1.18, outer_radius_z * 1.08)
-    visor_mid = Vector3(0.0, top_y * 1.05, outer_radius_z * 1.25)
-
-    segments.extend(
-        [
-            (nose_tip, nose_bridge),
-            (nose_tip, crown_mid),
-            (nose_bridge, crown_mid),
-            (crown_mid, crown_tip),
-            (crown_tip, crown_side_port),
-            (crown_tip, crown_side_starboard),
-            (crown_side_port, crown_side_starboard),
-            (visor_port, visor_starboard),
-            (visor_port, visor_mid),
-            (visor_starboard, visor_mid),
-            (visor_mid, nose_bridge),
-        ]
+    starboard_cusp_peak = Vector3(
+        starboard_front_top.x * 1.05,
+        top_y * 1.62,
+        starboard_front_top.z * 1.04,
+    )
+    starboard_cusp_lower = Vector3(
+        starboard_front_bottom.x * 1.03,
+        bottom_y * 1.48,
+        starboard_front_bottom.z * 1.03,
+    )
+    starboard_cusp_inner = Vector3(
+        starboard_front_inner.x * 1.04,
+        inner_top_y * 0.92,
+        starboard_front_inner.z * 1.06,
     )
 
     segments.extend(
         [
-            (port_front_top, crown_side_port),
-            (port_front_top, visor_port),
-            (port_front_bottom, lower_jaw),
-            (port_front_inner, nose_bridge),
-            (port_front_inner, nose_tip),
-            (port_front_inner, lower_jaw),
-            (starboard_front_top, crown_side_starboard),
-            (starboard_front_top, visor_starboard),
-            (starboard_front_bottom, lower_jaw),
-            (starboard_front_inner, nose_bridge),
-            (starboard_front_inner, nose_tip),
-            (starboard_front_inner, lower_jaw),
-            (lower_jaw, nose_tip),
+            (port_front_top, port_cusp_peak),
+            (port_front_bottom, port_cusp_lower),
+            (port_front_inner, port_cusp_inner),
+            (port_cusp_peak, port_cusp_lower),
+            (port_cusp_peak, port_cusp_inner),
+            (port_cusp_lower, port_cusp_inner),
+            (starboard_front_top, starboard_cusp_peak),
+            (starboard_front_bottom, starboard_cusp_lower),
+            (starboard_front_inner, starboard_cusp_inner),
+            (starboard_cusp_peak, starboard_cusp_lower),
+            (starboard_cusp_peak, starboard_cusp_inner),
+            (starboard_cusp_lower, starboard_cusp_inner),
         ]
     )
 
@@ -2332,14 +2334,14 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
         segments.extend(
             [
                 (channel_starboard[0][1], starboard_front_inner),
-                (channel_starboard[0][1], visor_starboard),
+                (channel_starboard[0][1], starboard_cusp_inner),
             ]
         )
     if channel_port:
         segments.extend(
             [
                 (channel_port[-1][1], port_front_inner),
-                (channel_port[-1][1], visor_port),
+                (channel_port[-1][1], port_cusp_inner),
             ]
         )
 
