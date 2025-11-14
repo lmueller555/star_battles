@@ -63,6 +63,8 @@ class ProjectedVertexCache:
     world_revision: int = -1
     vertices: list[tuple[float, float]] = field(default_factory=list)
     visibility: list[bool] = field(default_factory=list)
+    aaline_strips: list[list[tuple[float, float]]] = field(default_factory=list)
+    line_strips: list[list[tuple[int, int]]] = field(default_factory=list)
 
     def update(
         self,
@@ -70,11 +72,15 @@ class ProjectedVertexCache:
         world_revision: int,
         vertices: Sequence[tuple[float, float]],
         visibility: Sequence[bool],
+        aaline_strips: Sequence[Sequence[tuple[float, float]]],
+        line_strips: Sequence[Sequence[tuple[int, int]]],
     ) -> None:
         self.camera_revision = camera_revision
         self.world_revision = world_revision
         self.vertices = list(vertices)
         self.visibility = list(visibility)
+        self.aaline_strips = [list(strip) for strip in aaline_strips]
+        self.line_strips = [list(strip) for strip in line_strips]
 
 
 @dataclass
