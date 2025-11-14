@@ -2158,78 +2158,194 @@ def _build_brimir_wireframe() -> list[tuple[Vector3, Vector3]]:
 def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
     segments: list[tuple[Vector3, Vector3]] = []
 
-    ring_sides = 12
-    outer_radius = 6.5
-    outer_length = 7.4
-    inner_radius = 2.6
-    upper_y = 2.1
-    lower_y = -2.3
+    ring_sides = 32
+    outer_radius_x = 6.6
+    outer_radius_z = 4.9
+    top_y = 0.85
+    bottom_y = -0.85
 
-    main_ring = []
-    upper_ring = []
-    lower_ring = []
-    inner_ring = []
+    gap_fraction = 0.25
+    gap_center = math.pi / 2.0
+    gap_half_angle = math.tau * gap_fraction / 2.0
+
+    rim_mid: list[Vector3] = []
+    rim_top: list[Vector3] = []
+    rim_bottom: list[Vector3] = []
 
     for index in range(ring_sides):
         angle = (math.tau / ring_sides) * index
+        adjusted = (angle - gap_center + math.pi) % math.tau - math.pi
+        if abs(adjusted) <= gap_half_angle:
+            continue
+
         cos_angle = math.cos(angle)
         sin_angle = math.sin(angle)
-        main_point = Vector3(cos_angle * outer_radius, 0.0, sin_angle * outer_length)
-        main_ring.append(main_point)
-        upper_ring.append(Vector3(main_point.x * 0.68, upper_y, main_point.z * 0.68))
-        lower_ring.append(Vector3(main_point.x * 0.68, lower_y, main_point.z * 0.68))
-        inner_ring.append(Vector3(cos_angle * inner_radius, 0.0, sin_angle * inner_radius))
+        mid_point = Vector3(cos_angle * outer_radius_x, 0.0, sin_angle * outer_radius_z)
+        rim_mid.append(mid_point)
+        rim_top.append(Vector3(mid_point.x * 0.97, top_y, mid_point.z * 0.97))
+        rim_bottom.append(Vector3(mid_point.x * 0.97, bottom_y, mid_point.z * 0.97))
 
-    _loop_segments(segments, main_ring)
-    _loop_segments(segments, upper_ring)
-    _loop_segments(segments, lower_ring)
-    _loop_segments(segments, inner_ring)
+    for ring in (rim_mid, rim_top, rim_bottom):
+        for idx in range(len(ring) - 1):
+            segments.append((ring[idx], ring[idx + 1]))
 
-    for outer, inner in zip(main_ring, inner_ring):
-        segments.append((outer, inner))
-    for upper, lower in zip(upper_ring, lower_ring):
-        segments.append((upper, lower))
+    for mid_point, top_point, bottom_point in zip(rim_mid, rim_top, rim_bottom):
+        segments.append((top_point, bottom_point))
+        segments.append((top_point, mid_point))
+        segments.append((bottom_point, mid_point))
 
-    nose = Vector3(0.0, 0.4, outer_length * 1.6)
-    tail = Vector3(0.0, -1.8, -outer_length * 1.75)
-    dorsal_spire = Vector3(0.0, upper_y * 2.4, -outer_length * 0.1)
-    ventral_pylon = Vector3(0.0, lower_y * 2.6, -outer_length * 0.2)
+    front_left_angle = gap_center + gap_half_angle
+    front_right_angle = gap_center - gap_half_angle
 
-    for index in range(0, ring_sides, 3):
-        segments.append((main_ring[index], nose))
-    for index in range(1, ring_sides, 3):
-        segments.append((main_ring[index], tail))
+    def _front_edge(angle: float, height: float) -> Vector3:
+        return Vector3(
+            math.cos(angle) * outer_radius_x * 0.98,
+            height,
+            math.sin(angle) * outer_radius_z * 0.98,
+        )
 
-    segments.append((nose, dorsal_spire))
-    segments.append((tail, ventral_pylon))
-    segments.append((dorsal_spire, ventral_pylon))
+    port_front_mid = _front_edge(front_left_angle, 0.0)
+    starboard_front_mid = _front_edge(front_right_angle, 0.0)
+    port_front_top = _front_edge(front_left_angle, top_y)
+    port_front_bottom = _front_edge(front_left_angle, bottom_y)
+    starboard_front_top = _front_edge(front_right_angle, top_y)
+    starboard_front_bottom = _front_edge(front_right_angle, bottom_y)
 
-    wing_span = outer_radius * 1.35
-    wing_forward = outer_length * 0.45
-    wing_aft = -outer_length * 0.6
-    port_wing_tip = Vector3(-wing_span, 0.9, wing_forward)
-    starboard_wing_tip = Vector3(wing_span, 0.9, wing_forward)
-    port_ventral_tip = Vector3(-wing_span * 0.85, lower_y * 1.4, wing_aft)
-    starboard_ventral_tip = Vector3(wing_span * 0.85, lower_y * 1.4, wing_aft)
+    segments.extend(
+        [
+            (port_front_top, port_front_bottom),
+            (starboard_front_top, starboard_front_bottom),
+            (port_front_top, port_front_mid),
+            (port_front_bottom, port_front_mid),
+            (starboard_front_top, starboard_front_mid),
+            (starboard_front_bottom, starboard_front_mid),
+        ]
+    )
 
-    wing_anchor_front = main_ring[0]
-    wing_anchor_back = main_ring[ring_sides // 2]
+    if rim_mid:
+        segments.extend(
+            [
+                (rim_mid[0], starboard_front_mid),
+                (rim_top[0], starboard_front_top),
+                (rim_bottom[0], starboard_front_bottom),
+                (rim_mid[-1], port_front_mid),
+                (rim_top[-1], port_front_top),
+                (rim_bottom[-1], port_front_bottom),
+            ]
+        )
 
-    for tip in (port_wing_tip, starboard_wing_tip):
-        segments.append((tip, wing_anchor_front))
-        segments.append((tip, wing_anchor_back))
-        segments.append((tip, dorsal_spire))
+    cap_forward_z = outer_radius_z * 0.35
+    cap_back_z = -outer_radius_z * 0.7
+    cap_top_y = top_y * 1.15
+    cap_bottom_y = bottom_y * 1.15
 
-    for tip, anchor in (
-        (port_ventral_tip, wing_anchor_back),
-        (starboard_ventral_tip, wing_anchor_back),
-    ):
-        segments.append((tip, anchor))
-        segments.append((tip, ventral_pylon))
+    for x_sign in (-1, 1):
+        cap_x = x_sign * outer_radius_x
+        top_front = Vector3(cap_x, cap_top_y, cap_forward_z)
+        top_back = Vector3(cap_x, cap_top_y, cap_back_z)
+        bottom_front = Vector3(cap_x, cap_bottom_y, cap_forward_z)
+        bottom_back = Vector3(cap_x, cap_bottom_y, cap_back_z)
+        mid_front = Vector3(cap_x, 0.0, cap_forward_z)
+        mid_back = Vector3(cap_x, 0.0, cap_back_z)
 
-    energy_focus = Vector3(0.0, 0.0, 0.0)
-    for ring_point in inner_ring[::2]:
-        segments.append((ring_point, energy_focus))
+        segments.extend(
+            [
+                (top_front, top_back),
+                (bottom_front, bottom_back),
+                (top_front, bottom_front),
+                (top_back, bottom_back),
+                (top_front, mid_front),
+                (bottom_front, mid_front),
+                (top_back, mid_back),
+                (bottom_back, mid_back),
+            ]
+        )
+
+        if rim_mid:
+            anchor_front = rim_mid[len(rim_mid) // 4] if x_sign < 0 else rim_mid[-(len(rim_mid) // 4 + 1)]
+            segments.extend(
+                [
+                    (mid_front, anchor_front),
+                    (top_front, anchor_front),
+                    (bottom_front, anchor_front),
+                ]
+            )
+
+    engine_front_z = -outer_radius_z * 0.85
+    engine_back_z = -outer_radius_z * 1.35
+    engine_half_width = outer_radius_x * 0.45
+    engine_top = top_y * 1.6
+    engine_bottom = bottom_y * 1.6
+
+    engine_front_left = Vector3(-engine_half_width, 0.0, engine_front_z)
+    engine_front_right = Vector3(engine_half_width, 0.0, engine_front_z)
+    engine_back_left = Vector3(-engine_half_width, 0.0, engine_back_z)
+    engine_back_right = Vector3(engine_half_width, 0.0, engine_back_z)
+
+    engine_front_top = Vector3(0.0, engine_top, engine_front_z)
+    engine_front_bottom = Vector3(0.0, engine_bottom, engine_front_z)
+    engine_back_top = Vector3(0.0, engine_top * 0.85, engine_back_z)
+    engine_back_bottom = Vector3(0.0, engine_bottom * 0.85, engine_back_z)
+
+    segments.extend(
+        [
+            (engine_front_left, engine_front_right),
+            (engine_back_left, engine_back_right),
+            (engine_front_left, engine_back_left),
+            (engine_front_right, engine_back_right),
+            (engine_front_top, engine_front_bottom),
+            (engine_back_top, engine_back_bottom),
+            (engine_front_top, engine_back_top),
+            (engine_front_bottom, engine_back_bottom),
+            (engine_front_left, engine_front_top),
+            (engine_front_right, engine_front_top),
+            (engine_front_left, engine_front_bottom),
+            (engine_front_right, engine_front_bottom),
+            (engine_back_left, engine_back_top),
+            (engine_back_right, engine_back_top),
+            (engine_back_left, engine_back_bottom),
+            (engine_back_right, engine_back_bottom),
+        ]
+    )
+
+    weapon_focus = Vector3(0.0, 0.0, 0.0)
+    cannon_base = Vector3(0.0, 0.0, engine_front_z)
+    cannon_brace_top = Vector3(0.0, top_y * 0.6, engine_front_z * 0.8)
+    cannon_brace_bottom = Vector3(0.0, bottom_y * 0.6, engine_front_z * 0.8)
+
+    segments.extend(
+        [
+            (cannon_base, weapon_focus),
+            (cannon_brace_top, weapon_focus),
+            (cannon_brace_bottom, weapon_focus),
+            (cannon_base, cannon_brace_top),
+            (cannon_base, cannon_brace_bottom),
+        ]
+    )
+
+    hub_radius = outer_radius_x * 0.35
+    hub_top = Vector3(0.0, top_y * 0.7, 0.0)
+    hub_bottom = Vector3(0.0, bottom_y * 0.7, 0.0)
+
+    hub_points = []
+    for index in range(8):
+        angle = (math.tau / 8) * index
+        hub_points.append(
+            Vector3(
+                math.cos(angle) * hub_radius,
+                0.0,
+                math.sin(angle) * hub_radius * 0.7,
+            )
+        )
+
+    for idx in range(len(hub_points)):
+        current = hub_points[idx]
+        nxt = hub_points[(idx + 1) % len(hub_points)]
+        segments.append((current, nxt))
+        segments.append((current, hub_top))
+        segments.append((current, hub_bottom))
+
+    segments.append((hub_top, hub_bottom))
 
     return segments
 
