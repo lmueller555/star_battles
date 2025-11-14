@@ -2164,11 +2164,13 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
     gap_center = math.pi / 2.0
     gap_half_angle = math.radians(36.0)
 
-    outer_radius_x = 6.5
-    outer_radius_z = 5.2
-    inner_radius_x = 4.3
-    inner_radius_z = 3.6
-    ring_height = 1.0
+    size_scale = 95.8
+
+    outer_radius_x = 6.5 * size_scale
+    outer_radius_z = 5.2 * size_scale
+    inner_radius_x = 4.3 * size_scale
+    inner_radius_z = 3.6 * size_scale
+    ring_height = 1.0 * size_scale
 
     ring_sections: list[tuple[list[tuple[Vector3, Vector3]], list[tuple[Vector3, Vector3]]]] = []
     current_outer: list[tuple[Vector3, Vector3]] = []
@@ -2273,18 +2275,6 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
                 (engine_bottom_right, right_anchor[1]),
             ]
         )
-
-    scale = 0.36
-    if abs(scale - 1.0) > 1e-6:
-        scaled_segments: list[tuple[Vector3, Vector3]] = []
-        for start, end in segments:
-            scaled_segments.append(
-                (
-                    Vector3(start.x * scale, start.y * scale, start.z * scale),
-                    Vector3(end.x * scale, end.y * scale, end.z * scale),
-                )
-            )
-        return scaled_segments
 
     return segments
 
