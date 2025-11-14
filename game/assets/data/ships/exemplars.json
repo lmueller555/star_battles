@@ -1486,10 +1486,7 @@
     },
     "slots": {
       "weapons": {
-        "guns": 9,
-        "launcher": 2,
-        "defensive": 4,
-        "special": 4
+        "guns": 9
       },
       "hull": 0,
       "engine": 2,
@@ -1613,126 +1610,6 @@
         "tracking_speed": 105,
         "group": "primary",
         "facing": "right"
-      },
-      {
-        "id": "hp_brimir_launcher_port",
-        "slot": "launcher",
-        "position": [
-          -2.6,
-          -0.8,
-          3.0
-        ],
-        "gimbal": 180,
-        "tracking_speed": 120,
-        "group": "aux"
-      },
-      {
-        "id": "hp_brimir_launcher_starboard",
-        "slot": "launcher",
-        "position": [
-          2.6,
-          -0.8,
-          3.0
-        ],
-        "gimbal": 120,
-        "tracking_speed": 120,
-        "group": "aux"
-      },
-      {
-        "id": "hp_brimir_pd_port",
-        "slot": "defensive",
-        "position": [
-          -4.2,
-          1.2,
-          -1.0
-        ],
-        "gimbal": 180,
-        "tracking_speed": 200,
-        "group": "defense"
-      },
-      {
-        "id": "hp_brimir_pd_starboard",
-        "slot": "defensive",
-        "position": [
-          4.2,
-          1.2,
-          -1.0
-        ],
-        "gimbal": 180,
-        "tracking_speed": 200,
-        "group": "defense"
-      },
-      {
-        "id": "hp_brimir_pd_dorsal",
-        "slot": "defensive",
-        "position": [
-          0.0,
-          2.6,
-          -1.5
-        ],
-        "gimbal": 180,
-        "tracking_speed": 220,
-        "group": "defense"
-      },
-      {
-        "id": "hp_brimir_pd_ventral",
-        "slot": "defensive",
-        "position": [
-          0.0,
-          -2.6,
-          -1.5
-        ],
-        "gimbal": 180,
-        "tracking_speed": 220,
-        "group": "defense"
-      },
-      {
-        "id": "hp_brimir_special_port_forward",
-        "slot": "special",
-        "position": [
-          -3.6,
-          1.2,
-          7.5
-        ],
-        "gimbal": 120,
-        "tracking_speed": 110,
-        "group": "aux"
-      },
-      {
-        "id": "hp_brimir_special_starboard_forward",
-        "slot": "special",
-        "position": [
-          3.6,
-          1.2,
-          7.5
-        ],
-        "gimbal": 120,
-        "tracking_speed": 110,
-        "group": "aux"
-      },
-      {
-        "id": "hp_brimir_special_port_aft",
-        "slot": "special",
-        "position": [
-          -3.0,
-          0.9,
-          -2.5
-        ],
-        "gimbal": 140,
-        "tracking_speed": 105,
-        "group": "aux"
-      },
-      {
-        "id": "hp_brimir_special_starboard_aft",
-        "slot": "special",
-        "position": [
-          3.0,
-          0.9,
-          -2.5
-        ],
-        "gimbal": 140,
-        "tracking_speed": 105,
-        "group": "aux"
       }
     ],
     "economy": {
@@ -1763,9 +1640,9 @@
         "hp_brimir_port_fore": "mec_l31",
         "hp_brimir_starboard_fore": "mec_l31",
         "hp_brimir_port_mid": "m_39f",
-        "hp_brimir_launcher_port": "ram_179a",
-        "hp_brimir_launcher_starboard": "hd_h40",
-        "hp_brimir_pd_dorsal": "pd_x30p"
+        "hp_brimir_port_aft": "mec_l39f",
+        "hp_brimir_starboard_mid": "m_39f",
+        "hp_brimir_starboard_aft": "mec_l39f"
       }
     },
     "role_bonuses": [
