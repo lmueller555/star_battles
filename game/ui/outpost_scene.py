@@ -283,24 +283,12 @@ class OutpostInteriorScene(Scene):
                 for ship in self.world.ships:
                     if ship is self.player:
                         continue
-                    renderer.draw_ship(
-                        self.cutscene_camera,
-                        ship,
-                        player_ship=self.player,
-                    )
+                    renderer.draw_ship(self.cutscene_camera, ship)
 
             if self.cutscene_station_ship and self._proxy_station_ship:
-                renderer.draw_ship(
-                    self.cutscene_camera,
-                    self.cutscene_station_ship,
-                    player_ship=self.player,
-                )
+                renderer.draw_ship(self.cutscene_camera, self.cutscene_station_ship)
 
-            renderer.draw_ship(
-                self.cutscene_camera,
-                self.player,
-                player_ship=self.player,
-            )
+            renderer.draw_ship(self.cutscene_camera, self.player)
 
             if self._docking_sequence:
                 dock_target = self._docking_sequence.dock

@@ -699,7 +699,7 @@ class SandboxScene(Scene):
             visible_ships = [ship for ship in self.world.ships if ship.is_alive()]
             visible_ships.sort(key=_ship_depth, reverse=True)
             for ship in visible_ships:
-                self.renderer.draw_ship(self.camera, ship, player_ship=self.player)
+                self.renderer.draw_ship(self.camera, ship)
         self.renderer.draw_projectiles(self.camera, self.world.projectiles)
         projectile_speed = 0.0
         if target and self.content:
