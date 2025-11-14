@@ -46,17 +46,27 @@ def update_ship_flight(ship: Ship, dt: float, logger=None) -> None:
     # Regenerate ship power for other systems.
     ship.power = min(stats.power_points, ship.power + stats.power_recovery_per_sec * dt)
 
-    # Thruster engagement and tylium drain.
+    # Thruster engagement and resource drain.
     thrusters_requested = bool(ctrl.boost)
     thrusters_active = False
-    if thrusters_requested and ship.resources.tylium > 0.0:
-        drain = THRUSTER_TYLIUM_DRAIN * dt
-        if ship.resources.tylium >= drain:
-            ship.resources.tylium -= drain
-            thrusters_active = True
-        else:
-            ship.resources.tylium = 0.0
-            thrusters_active = False
+    uses_power_thrusters = getattr(stats, "boost_consumes_power", False)
+    boost_cost_rate = max(0.0, stats.boost_cost)
+    if thrusters_requested:
+        if uses_power_thrusters:
+            drain = boost_cost_rate * dt
+            if drain <= 0.0 or ship.power >= drain:
+                if drain > 0.0:
+                    ship.power = max(0.0, ship.power - drain)
+                thrusters_active = True
+        elif ship.resources.tylium > 0.0:
+            tylium_drain_rate = boost_cost_rate if boost_cost_rate > 0.0 else THRUSTER_TYLIUM_DRAIN
+            drain = tylium_drain_rate * dt
+            if ship.resources.tylium >= drain:
+                ship.resources.tylium -= drain
+                thrusters_active = True
+            else:
+                ship.resources.tylium = 0.0
+                thrusters_active = False
     if not thrusters_active:
         ctrl.boost = False
 
@@ -160,7 +170,7 @@ def update_ship_flight(ship: Ship, dt: float, logger=None) -> None:
         ship.hull = min(
             ship.stats.hull_points, ship.hull + ship.stats.hull_recovery_per_sec * dt
         )
-    ship.boost_meter = ship.resources.tylium
+    ship.boost_meter = ship.power if uses_power_thrusters else ship.resources.tylium
 
 
 __all__ = ["effective_thruster_speed", "update_ship_flight"]

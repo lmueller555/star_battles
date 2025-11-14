@@ -1036,7 +1036,14 @@ class SandboxScene(Scene):
             return
         if mount.cooldown > 0.0:
             return
-        power_cost = weapon.power_cost
+        requires_full_power = getattr(weapon, "requires_full_power", False)
+        if requires_full_power:
+            max_power = self.player.stats.power_points
+            if self.player.power + 1e-3 < max_power:
+                return
+            power_cost = max_power
+        else:
+            power_cost = weapon.power_cost
         if self.player.power < power_cost:
             return
         target = self._select_weapon_target(mount, weapon, preferred_target, enemies)

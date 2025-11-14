@@ -1423,7 +1423,7 @@ Economy
 
 Purchase Cost: 550,000 (confirm currency icon — Tylium)
 
-Operating: Boost Cost 0 Tyl/s (engines consume ship energy instead) · FTL Cost 30 Tyl
+Operating: Boost Cost 30 energy/s (engines consume ship reserves instead of Tylium) · FTL Cost 30 Tyl
 
 Upgrade Cost (→ Advanced): TBD
 
@@ -1527,7 +1527,7 @@ Radioresistance: 0
 
 Pre-installed Systems
 
-P-01 “Plasma Orb Launcher” (Capital launcher; consumes all ship energy on fire, requires full energy reserve; cannot target Strike-class hulls).
+P-01 “Plasma Orb Launcher” (Capital launcher; consumes all ship energy on fire, requires full energy reserve; launches a large purple orb at 500 m/s; cannot target Strike-class hulls).
 
 Traits & Role Notes
 

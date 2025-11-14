@@ -1464,7 +1464,7 @@ EQUIPMENT_UPGRADE_SPECS: Dict[str, EquipmentUpgradeSpec] = {
             "power": _linear(1000.0, 0.0),
             "firing_arc": _linear(30.0, 0.0),
             "turn_speed": _linear(12.0, 0.0),
-            "projectile_speed": _linear(180.0, 0.0),
+            "projectile_speed": _linear(500.0, 0.0),
             "durability": _linear(30000.0, 0.0),
         },
         steps=_weapon_steps(4000.0, 1200.0),
