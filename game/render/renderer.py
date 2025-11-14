@@ -363,7 +363,7 @@ def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
         (560.0, 120.0, 70.0),
     ]
 
-    ring_sides = 18
+    ring_sides = 14
     previous_ring: list[Vector3] | None = None
     hull_sections: list[tuple[float, list[Vector3]]] = []
     for z_pos, half_width, half_height in hull_profile:
@@ -373,7 +373,7 @@ def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
         if previous_ring is not None:
             for current, previous in zip(ring, previous_ring):
                 segments.append((current, previous))
-            for offset in range(0, ring_sides, 3):
+            for offset in range(0, ring_sides, 4):
                 segments.append((ring[offset], ring[(offset + 6) % ring_sides]))
                 segments.append((previous_ring[offset], previous_ring[(offset + 6) % ring_sides]))
                 segments.append((ring[offset], previous_ring[(offset + 3) % ring_sides]))
@@ -458,8 +458,9 @@ def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
             )
             ring: list[Vector3] = []
             nozzle_ring: list[Vector3] = []
-            for step in range(12):
-                angle = step * (2.0 * math.pi / 12)
+            engine_sides = 8
+            for step in range(engine_sides):
+                angle = step * (2.0 * math.pi / engine_sides)
                 ring.append(
                     Vector3(
                         center.x + math.cos(angle) * engine_radius_x,
@@ -502,8 +503,8 @@ def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
     docking_arm_offset_y = -58.0
     docking_arm_radius = 38.0
     docking_arm_vertical_radius = docking_arm_radius * 0.78
-    docking_arm_ring_sides = 14
-    docking_arm_sections = 7
+    docking_arm_ring_sides = 10
+    docking_arm_sections = 6
 
     def _nearest_hull_ring(z_value: float) -> list[Vector3]:
         return min(hull_sections, key=lambda entry: abs(entry[0] - z_value))[1]
@@ -1072,7 +1073,7 @@ def _build_raven_wireframe() -> list[tuple[Vector3, Vector3]]:
 def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
     segments: list[tuple[Vector3, Vector3]] = []
 
-    oval_sides = 20
+    oval_sides = 12
 
     midplane_y = 0.9
     compression_factor = 0.75
@@ -1272,13 +1273,24 @@ def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
         stern_lower_loop,
     ]
 
+    def _connect_sparse(ring_a: Sequence[Vector3], ring_b: Sequence[Vector3], step: int = 2) -> None:
+        if not ring_a or not ring_b:
+            return
+        limit = min(len(ring_a), len(ring_b))
+        for index in range(0, limit, step):
+            segments.append((ring_a[index], ring_b[index]))
+        offset = step // 2
+        if offset:
+            for index in range(offset, limit, step):
+                segments.append((ring_a[index], ring_b[index]))
+
     for upper_ring, lower_ring in zip(upper_loops, lower_loops):
         _connect_rings(segments, upper_ring, lower_ring)
 
     for previous, nxt in zip(upper_loops, upper_loops[1:]):
-        _connect_rings(segments, previous, nxt)
+        _connect_sparse(previous, nxt)
     for previous, nxt in zip(lower_loops, lower_loops[1:]):
-        _connect_rings(segments, previous, nxt)
+        _connect_sparse(previous, nxt)
 
     dorsal_spine = [
         prow_tip,
@@ -1304,9 +1316,7 @@ def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
     module_ridges = _compress_loop(
         [
             Vector3(-1.35, 1.5, 0.9),
-            Vector3(-1.35, 1.4, -0.1),
             Vector3(-1.35, 1.4, -1.2),
-            Vector3(-1.35, 1.5, -2.0),
         ]
     )
     for point in module_ridges:
@@ -1318,8 +1328,7 @@ def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
     strake_points = _compress_loop(
         [
             Vector3(-3.1, 1.8, 3.1),
-            Vector3(-3.3, 1.5, 2.2),
-            Vector3(-3.1, 1.2, 1.0),
+            Vector3(-3.2, 1.3, 1.6),
         ]
     )
     for point in strake_points:
@@ -1331,8 +1340,7 @@ def _build_glaive_wireframe() -> list[tuple[Vector3, Vector3]]:
     thruster_points = _compress_loop(
         [
             Vector3(-1.4, 0.6, -4.2),
-            Vector3(-0.4, 0.6, -4.2),
-            Vector3(0.4, 0.6, -4.2),
+            Vector3(0.0, 0.6, -4.2),
             Vector3(1.4, 0.6, -4.2),
         ]
     )
@@ -1777,7 +1785,7 @@ def _build_brimir_wireframe() -> list[tuple[Vector3, Vector3]]:
         (560.0, 120.0, 70.0),
     ]
 
-    ring_sides = 18
+    ring_sides = 12
     hull_sections: list[tuple[float, float, float, list[Vector3]]] = []
     previous_section: tuple[float, float, float, list[Vector3]] | None = None
 
@@ -1792,7 +1800,7 @@ def _build_brimir_wireframe() -> list[tuple[Vector3, Vector3]]:
             previous_ring = previous_section[3]
             for current, previous in zip(ring, previous_ring):
                 segments.append((current, previous))
-            for offset in range(0, ring_sides, 6):
+            for offset in range(0, ring_sides, 7):
                 segments.append((ring[offset], ring[(offset + 3) % ring_sides]))
         previous_section = (z, half_width, half_height, ring)
 
@@ -2021,7 +2029,7 @@ def _build_brimir_wireframe() -> list[tuple[Vector3, Vector3]]:
     thruster_radius_y = tail_section[2] * 0.34
     nozzle_radius_x = thruster_radius_x * 0.78
     nozzle_radius_y = thruster_radius_y * 0.74
-    thruster_sides = 10
+    thruster_sides = 8
 
     def thruster_ring(
         center_x: float,
