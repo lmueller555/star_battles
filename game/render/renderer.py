@@ -2156,32 +2156,22 @@ def _build_brimir_wireframe() -> list[tuple[Vector3, Vector3]]:
 
 
 def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
+    """Simplified Thorim silhouette with only core structural elements."""
+
     segments: list[tuple[Vector3, Vector3]] = []
 
-    ring_sides = 48
+    ring_sides = 40
     gap_center = math.pi / 2.0
-    gap_half_angle = math.radians(32.0)
+    gap_half_angle = math.radians(36.0)
 
-    outer_radius_x = 6.8
-    outer_radius_z = 5.35
-    inner_radius_x = 4.85
-    inner_radius_z = 3.95
+    outer_radius_x = 6.5
+    outer_radius_z = 5.2
+    inner_radius_x = 4.3
+    inner_radius_z = 3.6
+    ring_height = 1.0
 
-    top_y = 1.18
-    bottom_y = -1.18
-    inner_top_y = 0.68
-    inner_bottom_y = -0.68
-    underside_y = -1.78
-
-    outer_top: list[Vector3] = []
-    outer_bottom: list[Vector3] = []
-    inner_top: list[Vector3] = []
-    inner_bottom: list[Vector3] = []
-    inner_mid: list[Vector3] = []
-    underside: list[Vector3] = []
-
-    gap_split_index: int | None = None
-    in_gap = False
+    outer_sections: list[tuple[Vector3, Vector3]] = []
+    inner_sections: list[tuple[Vector3, Vector3]] = []
 
     def _ring_point(angle: float, radius_x: float, radius_z: float, height: float) -> Vector3:
         return Vector3(
@@ -2190,235 +2180,91 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
             math.sin(angle) * radius_z,
         )
 
-    for index in range(ring_sides):
+    for index in range(ring_sides + 1):
         angle = (math.tau / ring_sides) * index
         adjusted = (angle - gap_center + math.pi) % math.tau - math.pi
         if abs(adjusted) <= gap_half_angle:
-            in_gap = True
             continue
 
-        if in_gap:
-            if gap_split_index is None:
-                gap_split_index = len(outer_top)
-            in_gap = False
+        outer_top = _ring_point(angle, outer_radius_x, outer_radius_z, ring_height)
+        outer_bottom = _ring_point(angle, outer_radius_x, outer_radius_z, -ring_height)
+        inner_top = _ring_point(angle, inner_radius_x, inner_radius_z, ring_height * 0.6)
+        inner_bottom = _ring_point(angle, inner_radius_x, inner_radius_z, -ring_height * 0.6)
 
-        outer_top.append(_ring_point(angle, outer_radius_x, outer_radius_z, top_y))
-        outer_bottom.append(
-            _ring_point(angle, outer_radius_x * 0.98, outer_radius_z * 0.98, bottom_y)
+        outer_sections.append((outer_top, outer_bottom))
+        inner_sections.append((inner_top, inner_bottom))
+
+    def _connect_sections(sections: Sequence[tuple[Vector3, Vector3]]) -> None:
+        for idx in range(len(sections) - 1):
+            segments.append((sections[idx][0], sections[idx + 1][0]))
+            segments.append((sections[idx][1], sections[idx + 1][1]))
+
+    _connect_sections(outer_sections)
+    _connect_sections(inner_sections)
+
+    if outer_sections:
+        segments.append((outer_sections[0][0], outer_sections[0][1]))
+        segments.append((outer_sections[-1][0], outer_sections[-1][1]))
+    if inner_sections:
+        segments.append((inner_sections[0][0], inner_sections[0][1]))
+        segments.append((inner_sections[-1][0], inner_sections[-1][1]))
+
+    if outer_sections and inner_sections:
+        segments.extend(
+            [
+                (outer_sections[0][0], inner_sections[0][0]),
+                (outer_sections[0][1], inner_sections[0][1]),
+                (outer_sections[-1][0], inner_sections[-1][0]),
+                (outer_sections[-1][1], inner_sections[-1][1]),
+            ]
         )
-        inner_top.append(_ring_point(angle, inner_radius_x, inner_radius_z, inner_top_y))
-        inner_bottom.append(
-            _ring_point(angle, inner_radius_x * 0.99, inner_radius_z * 0.99, inner_bottom_y)
-        )
-        inner_mid.append(_ring_point(angle, inner_radius_x * 0.94, inner_radius_z * 0.94, 0.0))
-        underside.append(
-            _ring_point(angle, outer_radius_x * 0.82, outer_radius_z * 0.76, underside_y)
-        )
 
-    def _connect_sections(points: Sequence[Vector3]) -> None:
-        if not points:
-            return
-        if gap_split_index is None or gap_split_index <= 0 or gap_split_index >= len(points):
-            for idx in range(len(points) - 1):
-                segments.append((points[idx], points[idx + 1]))
-            return
+    # Central weapon hardpoint
+    weapon_base = Vector3(0.0, 0.0, -inner_radius_z * 0.15)
+    weapon_tip = Vector3(0.0, 0.0, inner_radius_z * 0.55)
+    segments.append((weapon_base, weapon_tip))
 
-        for idx in range(gap_split_index - 1):
-            segments.append((points[idx], points[idx + 1]))
-        for idx in range(gap_split_index, len(points) - 1):
-            segments.append((points[idx], points[idx + 1]))
+    # Engine housing at the rear of the crescent
+    engine_z = -outer_radius_z * 1.1
+    engine_half_width = inner_radius_x * 0.6
+    engine_half_height = ring_height * 1.1
 
-    for ring in (outer_top, outer_bottom, inner_top, inner_bottom, inner_mid, underside):
-        _connect_sections(ring)
-
-    def _connect_strip(points: Sequence[Vector3]) -> None:
-        for idx in range(len(points) - 1):
-            segments.append((points[idx], points[idx + 1]))
-
-    for port, starboard in (
-        (outer_top, inner_top),
-        (outer_bottom, inner_bottom),
-        (inner_top, inner_mid),
-        (inner_bottom, inner_mid),
-    ):
-        for outer_point, inner_point in zip(port, starboard):
-            segments.append((outer_point, inner_point))
-
-    for idx in range(0, len(outer_top), 3):
-        segments.append((outer_top[idx], outer_bottom[idx]))
-        segments.append((inner_top[idx], inner_bottom[idx]))
-        segments.append((outer_bottom[idx], underside[idx]))
-
-    # Sculpted leading edges near the gap.
-    front_left_angle = gap_center + gap_half_angle
-    front_right_angle = gap_center - gap_half_angle
-
-    port_front_top = _ring_point(front_left_angle, outer_radius_x * 1.02, outer_radius_z * 1.01, top_y * 1.04)
-    port_front_bottom = _ring_point(front_left_angle, outer_radius_x * 0.99, outer_radius_z * 0.99, bottom_y * 1.03)
-    port_front_inner = _ring_point(front_left_angle, inner_radius_x * 0.96, inner_radius_z * 0.96, 0.0)
-
-    starboard_front_top = _ring_point(
-        front_right_angle, outer_radius_x * 1.02, outer_radius_z * 1.01, top_y * 1.04
-    )
-    starboard_front_bottom = _ring_point(
-        front_right_angle, outer_radius_x * 0.99, outer_radius_z * 0.99, bottom_y * 1.03
-    )
-    starboard_front_inner = _ring_point(front_right_angle, inner_radius_x * 0.96, inner_radius_z * 0.96, 0.0)
+    engine_top_left = Vector3(-engine_half_width, engine_half_height, engine_z)
+    engine_top_right = Vector3(engine_half_width, engine_half_height, engine_z)
+    engine_bottom_left = Vector3(-engine_half_width, -engine_half_height, engine_z)
+    engine_bottom_right = Vector3(engine_half_width, -engine_half_height, engine_z)
 
     segments.extend(
         [
-            (port_front_top, port_front_bottom),
-            (starboard_front_top, starboard_front_bottom),
-            (port_front_top, port_front_inner),
-            (starboard_front_top, starboard_front_inner),
-            (port_front_bottom, port_front_inner),
-            (starboard_front_bottom, starboard_front_inner),
+            (engine_top_left, engine_top_right),
+            (engine_bottom_left, engine_bottom_right),
+            (engine_top_left, engine_bottom_left),
+            (engine_top_right, engine_bottom_right),
         ]
     )
 
-    if outer_top:
-        starboard_front_index = (gap_split_index - 1) if gap_split_index else len(outer_top) - 1
-        port_front_index = gap_split_index if gap_split_index else 0
-
-        starboard_front_index = max(0, min(starboard_front_index, len(outer_top) - 1))
-        port_front_index = max(0, min(port_front_index, len(outer_top) - 1))
+    if outer_sections:
+        aft_candidates = sorted(outer_sections, key=lambda section: section[0].z)[:4]
+        left_anchor = min(
+            (section for section in aft_candidates if section[0].x <= 0),
+            key=lambda section: section[0].x,
+            default=aft_candidates[0] if aft_candidates else outer_sections[0],
+        )
+        right_anchor = max(
+            (section for section in aft_candidates if section[0].x >= 0),
+            key=lambda section: section[0].x,
+            default=aft_candidates[-1] if aft_candidates else outer_sections[-1],
+        )
 
         segments.extend(
             [
-                (outer_top[starboard_front_index], starboard_front_top),
-                (outer_bottom[starboard_front_index], starboard_front_bottom),
-                (inner_top[starboard_front_index], starboard_front_inner),
-                (inner_bottom[starboard_front_index], starboard_front_inner),
-                (outer_top[port_front_index], port_front_top),
-                (outer_bottom[port_front_index], port_front_bottom),
-                (inner_top[port_front_index], port_front_inner),
-                (inner_bottom[port_front_index], port_front_inner),
+                (engine_top_left, left_anchor[0]),
+                (engine_bottom_left, left_anchor[1]),
+                (engine_top_right, right_anchor[0]),
+                (engine_bottom_right, right_anchor[1]),
             ]
         )
 
-    # Sculpted prow details for each crescent arm to keep the front open.
-    port_cusp_peak = Vector3(
-        port_front_top.x * 1.05,
-        top_y * 1.62,
-        port_front_top.z * 1.04,
-    )
-    port_cusp_lower = Vector3(
-        port_front_bottom.x * 1.03,
-        bottom_y * 1.48,
-        port_front_bottom.z * 1.03,
-    )
-    port_cusp_inner = Vector3(
-        port_front_inner.x * 1.04,
-        inner_top_y * 0.92,
-        port_front_inner.z * 1.06,
-    )
-
-    starboard_cusp_peak = Vector3(
-        starboard_front_top.x * 1.05,
-        top_y * 1.62,
-        starboard_front_top.z * 1.04,
-    )
-    starboard_cusp_lower = Vector3(
-        starboard_front_bottom.x * 1.03,
-        bottom_y * 1.48,
-        starboard_front_bottom.z * 1.03,
-    )
-    starboard_cusp_inner = Vector3(
-        starboard_front_inner.x * 1.04,
-        inner_top_y * 0.92,
-        starboard_front_inner.z * 1.06,
-    )
-
-    segments.extend(
-        [
-            (port_front_top, port_cusp_peak),
-            (port_front_bottom, port_cusp_lower),
-            (port_front_inner, port_cusp_inner),
-            (port_cusp_peak, port_cusp_lower),
-            (port_cusp_peak, port_cusp_inner),
-            (port_cusp_lower, port_cusp_inner),
-            (starboard_front_top, starboard_cusp_peak),
-            (starboard_front_bottom, starboard_cusp_lower),
-            (starboard_front_inner, starboard_cusp_inner),
-            (starboard_cusp_peak, starboard_cusp_lower),
-            (starboard_cusp_peak, starboard_cusp_inner),
-            (starboard_cusp_lower, starboard_cusp_inner),
-        ]
-    )
-
-    # Interior orange channel struts along the arms.
-    channel_port: list[tuple[int, Vector3]] = []
-    channel_starboard: list[tuple[int, Vector3]] = []
-    split_index = gap_split_index if gap_split_index is not None else len(inner_mid)
-    for idx, point in enumerate(inner_mid):
-        highlight = Vector3(point.x, inner_top_y * 0.85, point.z * 0.96)
-        if idx < split_index:
-            channel_starboard.append((idx, highlight))
-        else:
-            channel_port.append((idx, highlight))
-
-    _connect_strip([point for _, point in channel_starboard])
-    _connect_strip([point for _, point in channel_port])
-
-    for strip in (channel_starboard, channel_port):
-        for idx in range(0, len(strip), 4):
-            source_index, source_point = strip[idx]
-            segments.append((source_point, inner_bottom[source_index]))
-
-    if channel_starboard:
-        segments.extend(
-            [
-                (channel_starboard[0][1], starboard_front_inner),
-                (channel_starboard[0][1], starboard_cusp_inner),
-            ]
-        )
-    if channel_port:
-        segments.extend(
-            [
-                (channel_port[-1][1], port_front_inner),
-                (channel_port[-1][1], port_cusp_inner),
-            ]
-        )
-
-    # Rear engine block inspired by the heavy housing in the concept.
-    aft_center_z = -outer_radius_z * 1.22
-    aft_top = Vector3(0.0, top_y * 1.72, aft_center_z)
-    aft_bottom = Vector3(0.0, bottom_y * 1.72, aft_center_z)
-    aft_outer_left = Vector3(-outer_radius_x * 0.54, 0.0, aft_center_z)
-    aft_outer_right = Vector3(outer_radius_x * 0.54, 0.0, aft_center_z)
-    aft_inner_left = Vector3(-inner_radius_x * 0.65, 0.0, aft_center_z * 0.92)
-    aft_inner_right = Vector3(inner_radius_x * 0.65, 0.0, aft_center_z * 0.92)
-
-    segments.extend(
-        [
-            (aft_outer_left, aft_outer_right),
-            (aft_outer_left, aft_top),
-            (aft_outer_right, aft_top),
-            (aft_outer_left, aft_bottom),
-            (aft_outer_right, aft_bottom),
-            (aft_inner_left, aft_inner_right),
-            (aft_inner_left, aft_top),
-            (aft_inner_right, aft_top),
-            (aft_inner_left, aft_bottom),
-            (aft_inner_right, aft_bottom),
-            (aft_top, aft_bottom),
-        ]
-    )
-
-    if outer_top:
-        aft_anchor_left = outer_top[len(outer_top) // 2]
-        aft_anchor_right = outer_top[len(outer_top) // 2 - 1]
-        segments.extend(
-            [
-                (aft_outer_left, aft_anchor_left),
-                (aft_outer_right, aft_anchor_right),
-                (aft_inner_left, inner_top[len(inner_top) // 2]),
-                (aft_inner_right, inner_top[len(inner_top) // 2 - 1]),
-            ]
-        )
-
-    # Apply an additional 40% reduction so the Thorim sits closer in scale to the
-    # rest of the fleet in UI wireframe renders.
     scale = 0.36
     if abs(scale - 1.0) > 1e-6:
         scaled_segments: list[tuple[Vector3, Vector3]] = []
