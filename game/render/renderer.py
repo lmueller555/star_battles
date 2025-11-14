@@ -249,9 +249,9 @@ def _ship_detail_factor(ship: Ship, distance: float) -> float:
     if distance <= 2500.0:
         return 1.0
     if distance >= 5000.0:
-        return 0.5
+        return 0.25
     blend = (distance - 2500.0) / 2500.0
-    return max(0.5, min(1.0, 1.0 - 0.5 * blend))
+    return max(0.25, min(1.0, 1.0 - 0.75 * blend))
 
 
 def _resample_polyline(
