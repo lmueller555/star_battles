@@ -59,7 +59,7 @@ def _make_test_ship() -> Ship:
         radioactive_decay=0.0,
         radioresistance=0.0,
     )
-    slots = ShipSlotLayout(weapon_families={}, hull=0, engine=0, computer=0, utility=0)
+    slots = ShipSlotLayout(weapon_families={}, hull=0, engine=0, computer=0)
     frame = ShipFrame(
         id="test_frame",
         name="Test Frame",

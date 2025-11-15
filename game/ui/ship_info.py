@@ -42,7 +42,6 @@ MODEL_LAYOUTS: Dict[str, Dict[str, object]] = {
             "hull": {"mode": "sym", "y": 16.0, "spacing": 88.0},
             "engine": {"mode": "sym", "y": 108.0, "spacing": 96.0},
             "computer": {"mode": "sym", "y": -118.0, "spacing": 84.0},
-            "utility": {"mode": "sym", "y": 60.0, "spacing": 84.0},
         },
     },
     "Escort": {
@@ -70,7 +69,6 @@ MODEL_LAYOUTS: Dict[str, Dict[str, object]] = {
                 "spacing_y": 40.0,
                 "columns": 3,
             },
-            "utility": {"mode": "sym", "y": 70.0, "spacing": 110.0},
         },
     },
     "Line": {
@@ -100,7 +98,6 @@ MODEL_LAYOUTS: Dict[str, Dict[str, object]] = {
                 "spacing_y": 46.0,
                 "columns": 2,
             },
-            "utility": {"mode": "sym", "y": 120.0, "spacing": 170.0},
         },
     },
     "Capital": {
@@ -138,7 +135,6 @@ MODEL_LAYOUTS: Dict[str, Dict[str, object]] = {
                 "spacing_y": 46.0,
                 "columns": 3,
             },
-            "utility": {"mode": "sym", "y": 118.0, "spacing": 188.0},
         },
     },
     "Outpost": {
@@ -171,7 +167,6 @@ MODEL_LAYOUTS: Dict[str, Dict[str, object]] = {
                 "spacing_y": 56.0,
                 "columns": 3,
             },
-            "utility": {"mode": "sym", "y": 120.0, "spacing": 240.0},
         },
     },
 }
@@ -183,7 +178,6 @@ DEFAULT_ANCHORS: Dict[str, Dict[str, float]] = {
     "hull": {"mode": "sym", "y": 20.0, "spacing": 110.0},
     "engine": {"mode": "sym", "y": 110.0, "spacing": 120.0},
     "computer": {"mode": "sym", "y": -120.0, "spacing": 90.0},
-    "utility": {"mode": "sym", "y": 70.0, "spacing": 100.0},
     "guns": {"mode": "sym", "y": -80.0, "spacing": 180.0},
     "defensive": {"mode": "grid", "y": -140.0, "spacing_x": 150.0, "spacing_y": 60.0, "columns": 2},
 }
@@ -350,7 +344,6 @@ class ShipInfoPanel:
         counts["hull"] = ship.frame.slots.hull
         counts["engine"] = ship.frame.slots.engine
         counts["computer"] = ship.frame.slots.computer
-        counts["utility"] = ship.frame.slots.utility
         return counts
 
     def _generate_positions(
@@ -472,7 +465,6 @@ class ShipInfoPanel:
             ("hull", ship.frame.slots.hull),
             ("engine", ship.frame.slots.engine),
             ("computer", ship.frame.slots.computer),
-            ("utility", ship.frame.slots.utility),
         ]
         for slot_type, capacity in module_slots:
             if capacity <= 0:
@@ -547,7 +539,6 @@ class ShipInfoPanel:
             "hull": "Hull",
             "engine": "Engine",
             "computer": "Computer",
-            "utility": "Utility",
         }
         normalized = slot_type.lower()
         base = mapping.get(normalized, normalized.replace("_", " ").title())
