@@ -1525,47 +1525,6 @@ Restricted to Capital-class hardpoints — enforce requirement in Store and Fitt
 
 Consider adding screen-shake and concussive sound effects for cinematic impact.
 
-P-01 “Plasma Orb Launcher” — Siege Plasma Projector (L1) – Thorim Only
-
-Damage: 1,000 → 2,200 (upgrades)
-
-Armor Piercing: 55
-
-Range: 1,200 – 4,000 m
-
-Optimal Range: 3,600 m
-
-Accuracy: 150
-
-Critical Offense: 120
-
-Reload: 60 s → 30 s (upgrades)
-
-Power Cost: 100% current energy reserve (requires full energy to arm)
-
-Firing Arc: 30°
-
-Projectile Speed: 500 m/s (large purple orb)
-
-Cost: 650,000
-
-Durability: 30,000 / 30,000
-
-Effect:
-Thorim-exclusive siege launcher that forms a massive purple plasma orb from the ship’s entire energy pool.
-Fires a 500 m/s orb capable of crippling Line and Capital hulls but unable to lock onto Strike-class ships.
-Energy gating demands meticulous timing — firing drains all energy, disabling active systems until power regenerates.
-
-Upgrade Model:
-Damage_min/max scale from 1,000 to 2,200 by L15 while reload drops from 60 s to 30 s.
-Range, accuracy, firing arc, and power requirement remain fixed across levels.
-
-Implementation Notes:
-Mark as exclusive to the Thorim (ship tag “exclusive:thorim_siege”).
-Ensure firing logic verifies the ship is at maximum energy before release and empties the pool on shot execution.
-Treat power cost as a full-capacity drain rather than a flat subtraction; boosters doubling energy usage should interact accordingly.
-Prohibit targeting Strike-class hulls through weapon AI/validity checks.
-
 Weapons (Defensive / Support Hardpoints – Capital Only)
 
 PD-X30P “Wildfire” — 25mm Point Defense Battery (L1)
