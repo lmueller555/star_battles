@@ -330,3 +330,38 @@ def test_outpost_weapon_facings_match_orientation():
         assert facing_map[hp_id] == "left"
     for hp_id in right_ids:
         assert facing_map[hp_id] == "right"
+
+
+def test_outpost_zero_orientation_is_treated_as_unset():
+    frame_data = {
+        "id": "outpost_zero_orientation",
+        "name": "Zero Orientation Outpost",
+        "role": "Outpost",
+        "size": "Outpost",
+        "stats": {},
+        "slots": {},
+        "hardpoints": [
+            {
+                "id": "hp_outpost_west",
+                "slot": "launcher",
+                "position": [-248.0, 42.0, -40.0],
+                "gimbal": 42,
+                "tracking_speed": 32,
+                "orientation": [0.0, 0.0, 0.0],
+            },
+            {
+                "id": "hp_outpost_east",
+                "slot": "launcher",
+                "position": [248.0, 42.0, -40.0],
+                "gimbal": 42,
+                "tracking_speed": 32,
+                "orientation": [0.0, 0.0, 0.0],
+            },
+        ],
+    }
+
+    frame = ShipFrame.from_dict(frame_data)
+    facing_map = {hardpoint.id: hardpoint.facing for hardpoint in frame.hardpoints}
+
+    assert facing_map["hp_outpost_west"] == "left"
+    assert facing_map["hp_outpost_east"] == "right"

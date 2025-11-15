@@ -209,6 +209,8 @@ class ShipFrame:
                 and len(orientation_data) >= 3
                 else None
             )
+            if orientation is not None and orientation.length_squared() <= 1e-6:
+                orientation = None
             facing_value = item.get("facing")
             hardpoint = Hardpoint(
                 id=item["id"],
