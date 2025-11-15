@@ -75,7 +75,8 @@ class WeaponData:
     name: str
     slot_type: str
     wclass: str
-    base_damage: float
+    damage_min: float
+    damage_max: float
     base_accuracy: float
     crit_chance: float
     crit_multiplier: float
@@ -100,10 +101,23 @@ class WeaponData:
         firing_arc = data.get("firingArc")
         crit_rating = data.get("critRating")
 
-        damage_value = data.get("damage")
-        base_damage = float(damage_value) if damage_value is not None else float(data.get("damage", 100.0))
-        if damage_value is None and damage_max is not None:
-            base_damage = float(damage_max)
+        if damage_min is None and "damage" in data:
+            damage_min = data.get("damage")
+        if damage_max is None and "damage" in data:
+            damage_max = data.get("damage")
+        if damage_min is None and damage_max is not None:
+            damage_min = damage_max
+        if damage_max is None and damage_min is not None:
+            damage_max = damage_min
+        if damage_min is None:
+            damage_min = 0.0
+        if damage_max is None:
+            damage_max = damage_min
+
+        damage_min = float(damage_min)
+        damage_max = float(damage_max)
+        if damage_min > damage_max:
+            damage_min, damage_max = damage_max, damage_min
 
         base_accuracy = float(data.get("accuracy", 0.75))
         if accuracy_rating is not None:
@@ -127,7 +141,8 @@ class WeaponData:
             name=data.get("name", data["id"]),
             slot_type=data.get("slotType", "cannon"),
             wclass=data.get("class", "hitscan"),
-            base_damage=base_damage,
+            damage_min=damage_min,
+            damage_max=damage_max,
             base_accuracy=base_accuracy,
             crit_chance=crit_chance,
             crit_multiplier=float(data.get("critMult", 1.5)),
@@ -144,6 +159,14 @@ class WeaponData:
             disallow_strike_targets=bool(data.get("disallowStrikeTargets", False)),
         )
         return weapon
+
+    def roll_damage(self, rng) -> float:
+        """Roll a base damage value within the weapon's damage range."""
+
+        if self.damage_max <= self.damage_min:
+            return self.damage_min
+        roll = rng.random()
+        return self.damage_min + (self.damage_max - self.damage_min) * roll
 
     @property
     def cooldown(self) -> float:
@@ -216,7 +239,8 @@ def resolve_hitscan(
     damage = 0.0
     if hit:
         crit = rng.random() <= crit_chance
-        damage = weapon.base_damage * (weapon.crit_multiplier if crit else 1.0)
+        base_damage = weapon.roll_damage(rng)
+        damage = base_damage * (weapon.crit_multiplier if crit else 1.0)
         damage = apply_armor(damage, armor)
     return HitResult(hit, crit, damage, hit_chance, crit_chance)
 
@@ -235,6 +259,7 @@ class Projectile:
         *,
         source_ship: "Ship | None" = None,
         visual_only: bool = False,
+        damage: float | None = None,
     ) -> None:
         self.weapon = weapon
         self.position = position
@@ -245,6 +270,9 @@ class Projectile:
         self.lock_strength = 1.0
         self.visual_only = visual_only
         self.source_ship = source_ship
+        if damage is None:
+            damage = weapon.damage_max
+        self.base_damage = float(damage)
         self._trail_positions: Deque[Vector3] = deque(maxlen=60)
         self._trail_timer = 0.0
         if self.weapon.wclass == "missile":

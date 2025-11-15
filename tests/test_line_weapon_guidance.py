@@ -31,8 +31,10 @@ def _line_weapons() -> dict[str, object]:
 def test_line_weapon_damage_alignment(weapon_id: str, _line_weapons, _line_guidance_data) -> None:
     guidance = _line_guidance_data[weapon_id]
     weapon = _line_weapons[weapon_id]
-    expected_damage = guidance.get("damage", guidance["damageMax"])
-    assert weapon.base_damage == pytest.approx(expected_damage)
+    expected_min = guidance.get("damageMin", guidance.get("damage", weapon.damage_min))
+    expected_max = guidance.get("damageMax", guidance.get("damage", weapon.damage_max))
+    assert weapon.damage_min == pytest.approx(expected_min)
+    assert weapon.damage_max == pytest.approx(expected_max)
 
 
 @pytest.mark.parametrize(
