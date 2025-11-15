@@ -8,12 +8,19 @@ from pygame.math import Vector3
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from game.ships.data import ShipFrame
-from game.ships.flight import THRUSTER_SPEED_MULTIPLIER, update_ship_flight
+from game.assets.content import ItemData
+from game.ships.flight import (
+    THRUSTER_SPEED_MULTIPLIER,
+    effective_thruster_speed,
+    update_ship_flight,
+)
 from game.ships.ship import Ship
 from game.ships.stats import ShipSlotLayout, ShipStats
 
 
-def _make_test_ship(max_speed: float, boost_speed: float) -> Ship:
+def _make_test_ship(
+    max_speed: float, boost_speed: float, frame_id: str = "test_frame", **overrides
+) -> Ship:
     stats = ShipStats(
         hull_points=1000.0,
         hull_recovery_per_sec=5.0,
@@ -57,9 +64,11 @@ def _make_test_ship(max_speed: float, boost_speed: float) -> Ship:
         radioactive_decay=0.0,
         radioresistance=0.0,
     )
+    for key, value in overrides.items():
+        setattr(stats, key, value)
     slots = ShipSlotLayout(weapon_families={}, hull=0, engine=0, computer=0)
     frame = ShipFrame(
-        id="test_frame",
+        id=frame_id,
         name="Test Frame",
         role="Interceptor",
         size="Strike",
@@ -144,3 +153,40 @@ def test_yaw_input_consistent_when_inverted() -> None:
     inverted_pitch.kinematics.rotation = Vector3(180.0, 0.0, 0.0)
     pitch_turn = _apply_yaw_turn(inverted_pitch)
     assert pitch_turn > 0.0
+
+
+def test_thorim_boost_requires_engines() -> None:
+    ship = _make_test_ship(
+        max_speed=20.0,
+        boost_speed=0.0,
+        frame_id="thorim_siege",
+        boost_speed_is_delta=True,
+        boost_consumes_power=True,
+        boost_cost=0.0,
+    )
+    base_tylium = ship.resources.tylium
+    ship.control.throttle = 1.0
+    ship.control.boost = True
+    _advance(ship, dt=0.1, steps=100)
+    flank_speed = ship.stats.speed * ship.stats.flank_speed_ratio
+    assert _forward_speed(ship) <= flank_speed + 0.5
+    assert ship.resources.tylium == base_tylium
+
+    ship.frame.slots.engine = 3
+    module = ItemData(
+        id="thorim_siege_thrusters",
+        slot_type="engine",
+        name="Test Thorim Thruster",
+        tags=["exclusive:thorim_siege"],
+        stats={"boost_speed": 12.5, "boost_cost": 10.0, "boost_consumes_power": 1.0},
+    )
+    assert ship.equip_module(module)
+    thruster_speed = effective_thruster_speed(ship.stats)
+    assert abs(thruster_speed - (flank_speed + 12.5)) < 1e-6
+
+    base_power = ship.power
+    ship.control.boost = True
+    ship.control.throttle = 1.0
+    update_ship_flight(ship, dt=1.0)
+    assert ship.power < base_power
+    assert ship.resources.tylium == base_tylium

@@ -1413,7 +1413,7 @@ class HangarView:
                         amount=float(quantity),
                         icon_key=icon_key if icon_key in self._hold_icons else "module",
                         description=store_item.description,
-                        equippable=True,
+                        equippable=store_item.compatible_with(ship),
                         slot_family=store_item.slot_family,
                         store_item=store_item,
                         item_id=item_id,
@@ -1474,6 +1474,8 @@ class HangarView:
 
     def _can_equip_store_item(self, ship: Ship, item: StoreItem) -> bool:
         family = item.slot_family.lower()
+        if not item.compatible_with(ship):
+            return False
         if family == "weapon":
             return any(not mount.weapon_id for mount in ship.mounts)
         if family in {"hull", "engine", "computer"}:

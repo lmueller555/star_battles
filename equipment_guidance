@@ -1770,6 +1770,18 @@ Capital Hulls
 
 Capital Engines
 
+Thorim Siege Thrusters — Thorim Only (L1)
+Boost Speed: +7.5 m/s → +12.5 m/s (upgrades)
+Boost Cost: 25 energy/s → 10 energy/s (upgrades)
+Cost: 320,000
+Durability: 22,000 / 22,000
+Effect: Thorim-exclusive propulsion array that channels reactor output into siege thrust.
+        Adds additive Boost speed and consumes ship energy instead of Tylium while
+        boosting. Multiple engines stack additively for both speed and energy drain.
+Availability: Usable only by the Thorim Siege Ship; other hulls cannot equip these engines.
+Upgrade Model: Boost Speed increases linearly from +7.5 to +12.5 m/s by Level 15 while
+               Boost Cost decreases linearly from 25 to 10 energy per second.
+
 Capital Computers
 
 Capital Ammo
