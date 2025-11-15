@@ -1423,10 +1423,10 @@ Upgrade Cost (→ Advanced): 150,000 Tylium (placeholder until panel confirms)
 Equipment Slots (Weight: Capital)
 
 Weapons (General): 5 (Capital)
-Guns: 5 (Capital)
+Guns: 0 (Capital)
 Launchers: 0 (Capital)
-Defensive Weapons: 0 (Capital)
-Special Weapons: 0 (Capital)
+Defensive Weapons: 4 (Capital)
+Special Weapons: 1 (Capital)
 Hull: 3 (Capital)
 Engine: 3 (Capital)
 Computer: 2 (Capital)
@@ -1483,7 +1483,7 @@ Radioresistance: 0
 
 Pre-installed Systems
 
-None — all five weapon hardpoints ship empty for mission outfitting.
+POL-X01 'Plasma Orb Launcher', only 1 of these can be installed.
 
 Traits & Role Notes
 
