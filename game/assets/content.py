@@ -26,7 +26,7 @@ class ItemData:
     def from_dict(cls, data: Dict) -> "ItemData":
         return cls(
             id=data["id"],
-            slot_type=data.get("slotType", "utility"),
+            slot_type=data.get("slotType", "computer"),
             name=data.get("name", data["id"]),
             tags=list(data.get("tags", [])),
             stats=data.get("stats", {}),

@@ -416,7 +416,6 @@ class ShipSlotLayout:
     hull: int
     engine: int
     computer: int
-    utility: int
     upgrades: Dict[str, UpgradeValue] = field(default_factory=dict)
     weapon_upgrades: Dict[str, UpgradeValue] = field(default_factory=dict)
 
@@ -454,16 +453,11 @@ class ShipSlotLayout:
         computer_count, computer_upgrade = parse_slot(data.get("computer", 0), 0)
         if computer_upgrade:
             upgrades["computer"] = computer_upgrade
-        utility_count, utility_upgrade = parse_slot(data.get("utility", 0), 0)
-        if utility_upgrade:
-            upgrades["utility"] = utility_upgrade
-
         return cls(
             weapon_families=weapon_families,
             hull=hull_count,
             engine=engine_count,
             computer=computer_count,
-            utility=utility_count,
             upgrades=upgrades,
             weapon_upgrades=weapon_upgrades,
         )

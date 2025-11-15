@@ -318,7 +318,7 @@ EQUIPMENT_ITEMS: List[EquipmentDefinition] = [
         },
         upgrades=("damage", "optimal_range"),
         description="Dual-role mining cannon applying a strong asteroid yield multiplier.",
-        tags=("mining", "utility"),
+        tags=("mining",),
     ),
     _weapon(
         id="dfsr_18_hornet",

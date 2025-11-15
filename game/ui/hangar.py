@@ -1476,7 +1476,7 @@ class HangarView:
         family = item.slot_family.lower()
         if family == "weapon":
             return any(not mount.weapon_id for mount in ship.mounts)
-        if family in {"hull", "engine", "computer", "utility"}:
+        if family in {"hull", "engine", "computer"}:
             capacity = getattr(ship.frame.slots, family, 0)
             return len(ship.modules_by_slot.get(family, [])) < capacity
         return False
@@ -1496,7 +1496,7 @@ class HangarView:
         level = removed_levels[0]
         success = False
         family = store_item.slot_family.lower()
-        if family in {"hull", "engine", "computer", "utility"}:
+        if family in {"hull", "engine", "computer"}:
             module = ItemData(
                 id=store_item.id,
                 slot_type=store_item.slot_family,
@@ -2527,7 +2527,6 @@ class HangarView:
             ("hull", ship.frame.slots.hull),
             ("engine", ship.frame.slots.engine),
             ("computer", ship.frame.slots.computer),
-            ("utility", ship.frame.slots.utility),
         ]
         for slot_type, capacity in module_slots:
             if capacity <= 0:
@@ -2582,7 +2581,6 @@ class HangarView:
         counts["hull"] = ship.frame.slots.hull
         counts["engine"] = ship.frame.slots.engine
         counts["computer"] = ship.frame.slots.computer
-        counts["utility"] = ship.frame.slots.utility
         return counts
 
     def _generate_positions(self, slot_type: str, count: int, layout: Dict[str, object]) -> List[Tuple[float, float]]:
@@ -2824,11 +2822,6 @@ class HangarView:
 
         icons["weapon"] = cannon
 
-        utility = surface()
-        pygame.draw.circle(utility, (220, 180, 90), (20, 20), 6)
-        pygame.draw.rect(utility, (80, 110, 150), pygame.Rect(18, 18, 16, 12))
-        pygame.draw.line(utility, (240, 220, 150), (20, 10), (36, 12), 3)
-        icons["utility"] = utility
 
         computer = surface()
         pygame.draw.rect(computer, (140, 200, 220), pygame.Rect(12, 14, 24, 18))
@@ -2918,11 +2911,6 @@ class HangarView:
             pygame.draw.line(computer, (80, 120, 160), (x, 26), (x, 30), 2)
         icons["computer"] = computer
 
-        utility = base_surface()
-        pygame.draw.circle(utility, (230, 180, 90), (12, 12), 5)
-        pygame.draw.rect(utility, (120, 90, 40), pygame.Rect(15, 15, 12, 10))
-        pygame.draw.line(utility, (240, 220, 150), (20, 4), (28, 12), 3)
-        icons["utility"] = utility
 
         module = base_surface()
         pygame.draw.polygon(module, (150, 210, 230), [(16, 4), (28, 16), (16, 28), (4, 16)])
@@ -2943,7 +2931,7 @@ class HangarView:
         if not widget.filled:
             return "empty"
         normalized = widget.slot_type.lower()
-        module_keys = {"hull", "engine", "computer", "utility"}
+        module_keys = {"hull", "engine", "computer"}
         if normalized in module_keys:
             return normalized
         if normalized in self._slot_icons:
