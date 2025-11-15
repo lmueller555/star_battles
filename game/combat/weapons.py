@@ -25,10 +25,7 @@ if TYPE_CHECKING:
 MAGNETISM_ANGLE = 5.5
 MAGNETISM_STRENGTH = 0.45
 
-GUIDANCE_DAMAGE_SCALE = 12.0
-GUIDANCE_POWER_SCALE = 6.0
 GUIDANCE_ACCURACY_SCALE = 400.0
-GUIDANCE_CRIT_SCALE = 1000.0
 
 
 def _range_accuracy_modifier(distance: float, optimal: float, max_range: float) -> float:
@@ -103,21 +100,23 @@ class WeaponData:
         firing_arc = data.get("firingArc")
         crit_rating = data.get("critRating")
 
-        base_damage = float(data.get("damage", 100.0))
-        if damage_min is not None and damage_max is not None:
-            base_damage = float(damage_max) * GUIDANCE_DAMAGE_SCALE
+        damage_value = data.get("damage")
+        base_damage = float(damage_value) if damage_value is not None else float(data.get("damage", 100.0))
+        if damage_value is None and damage_max is not None:
+            base_damage = float(damage_max)
 
         base_accuracy = float(data.get("accuracy", 0.75))
         if accuracy_rating is not None:
             base_accuracy = min(1.0, float(accuracy_rating) / GUIDANCE_ACCURACY_SCALE)
 
-        power_per_shot = float(data.get("power", 10.0))
-        if power_cost is not None:
-            power_per_shot = float(power_cost) * GUIDANCE_POWER_SCALE
+        power_value = data.get("power")
+        power_per_shot = float(power_value) if power_value is not None else float(data.get("power", 10.0))
+        if power_value is None and power_cost is not None:
+            power_per_shot = float(power_cost)
 
         crit_chance = float(data.get("crit", 0.1))
         if crit_rating is not None:
-            crit_chance = min(1.0, float(crit_rating) / GUIDANCE_CRIT_SCALE)
+            crit_chance = min(1.0, float(crit_rating) / 1000.0)
 
         gimbal = float(data.get("gimbal", 20.0))
         if firing_arc is not None:
