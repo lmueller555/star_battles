@@ -30,6 +30,15 @@ MISSILE_SMOKE_COLOR = (200, 200, 200)
 PROJECTILE_RENDER_DISTANCE = 3000.0
 PROJECTILE_RENDER_DISTANCE_SQR = PROJECTILE_RENDER_DISTANCE * PROJECTILE_RENDER_DISTANCE
 
+THORIM_PROJECTILE_GLOW = (120, 40, 200)
+THORIM_PROJECTILE_CORE = (220, 140, 255)
+THORIM_PROJECTILE_OUTER = (170, 70, 230)
+THORIM_FRAME_IDS: set[str] = {"thorim_siege", "advanced_thorim"}
+THORIM_CHARGE_LOCAL_CENTER = Vector3(0.0, 0.35, 6.2)
+THORIM_CHARGE_MIN_RADIUS = 1.8
+THORIM_CHARGE_MAX_RADIUS = 6.4
+THORIM_LIGHTNING_THRESHOLD = 0.9
+
 # Engine layout presets by ship size. These are expressed using the same
 # lightweight local-space units as the wireframe definitions and roughly align
 # with common tail geometries for each hull class.
@@ -791,6 +800,129 @@ class VectorRenderer:
                     glow_color = _blend((60, 120, 220), (255, 220, 160), flicker * 0.5)
                     pygame.draw.circle(self.surface, glow_color, base_pos, glow_radius, 0)
 
+    def _draw_thorim_charge(
+        self,
+        frame: CameraFrameData,
+        origin: Vector3,
+        right: Vector3,
+        up: Vector3,
+        forward: Vector3,
+        ship: Ship,
+        *,
+        scale: float,
+    ) -> None:
+        max_power = getattr(ship.stats, "power_points", 0.0)
+        if max_power <= 0.0:
+            return
+
+        ratio = max(0.0, min(1.0, ship.power / max_power))
+        if ratio <= 0.0:
+            return
+
+        center_local = THORIM_CHARGE_LOCAL_CENTER * scale
+        center_world = self._local_to_world(origin, right, up, forward, center_local)
+        center_screen, vis_center = frame.project_point(center_world)
+        if not vis_center:
+            return
+
+        local_radius = THORIM_CHARGE_MIN_RADIUS + (
+            THORIM_CHARGE_MAX_RADIUS - THORIM_CHARGE_MIN_RADIUS
+        ) * ratio
+        local_radius = min(THORIM_CHARGE_MAX_RADIUS, max(THORIM_CHARGE_MIN_RADIUS, local_radius))
+        world_radius = local_radius * scale
+
+        radius_world = center_world + right * world_radius
+        radius_screen, vis_radius = frame.project_point(radius_world)
+        if not vis_radius:
+            radius_world = center_world + up * world_radius
+            radius_screen, vis_radius = frame.project_point(radius_world)
+        if not vis_radius:
+            depth = (center_world - frame.position).dot(frame.forward)
+            if depth <= frame.near:
+                return
+            # Approximate the on-screen radius using the projection parameters.
+            pixels_per_unit = (frame.fov_factor / frame.aspect) / depth * frame.screen_size[0] * 0.5
+            screen_radius = max(2, int(round(world_radius * pixels_per_unit)))
+        else:
+            dx = radius_screen.x - center_screen.x
+            dy = radius_screen.y - center_screen.y
+            screen_radius = max(2, int(round(math.hypot(dx, dy))))
+
+        center_pos = (int(round(center_screen.x)), int(round(center_screen.y)))
+        pulse = 0.25 + 0.75 * ratio
+        glow_color = _blend(THORIM_PROJECTILE_GLOW, THORIM_PROJECTILE_OUTER, ratio)
+        core_color = _blend(THORIM_PROJECTILE_OUTER, THORIM_PROJECTILE_CORE, pulse)
+        inner_radius = max(2, int(round(screen_radius * 0.7)))
+        highlight_radius = max(1, int(round(screen_radius * 0.35)))
+
+        pygame.draw.circle(self.surface, glow_color, center_pos, screen_radius, 0)
+        pygame.draw.circle(self.surface, core_color, center_pos, inner_radius, 0)
+        pygame.draw.circle(
+            self.surface,
+            _blend(core_color, (255, 255, 255), 0.35),
+            center_pos,
+            highlight_radius,
+            0,
+        )
+        pygame.draw.circle(
+            self.surface,
+            _blend(glow_color, (255, 255, 255), 0.2 * ratio),
+            center_pos,
+            screen_radius,
+            2,
+        )
+
+        if ratio < THORIM_LIGHTNING_THRESHOLD:
+            return
+
+        intensity = (ratio - THORIM_LIGHTNING_THRESHOLD) / max(
+            1e-6, 1.0 - THORIM_LIGHTNING_THRESHOLD
+        )
+        tick = pygame.time.get_ticks() * 0.001
+        pulse_phase = 0.5 + 0.5 * math.sin(tick * 6.0)
+        lightning_color = _blend(
+            (170, 80, 255),
+            (245, 220, 255),
+            min(1.0, 0.45 + 0.35 * pulse_phase + 0.2 * intensity),
+        )
+        ring_color = _blend(lightning_color, (255, 255, 255), 0.2)
+        pygame.draw.circle(self.surface, ring_color, center_pos, screen_radius, 1)
+
+        seed = (ship.render_state.random_seed ^ int(tick * 60.0)) & 0xFFFFFFFF
+        rng = random.Random(seed)
+        bolt_count = 6 + int(round(6 * intensity))
+        for _ in range(bolt_count):
+            angle = rng.uniform(0.0, 2.0 * math.pi)
+            jitter = rng.uniform(-0.45, 0.45)
+            inner_fraction = rng.uniform(0.3, 0.65)
+            outer_fraction = rng.uniform(0.9, 1.25)
+            start_angle = angle + jitter * 0.5
+            end_angle = angle - jitter
+            start_radius = screen_radius * inner_fraction
+            end_radius = screen_radius * outer_fraction
+            start_pos = (
+                center_screen.x + math.cos(start_angle) * start_radius,
+                center_screen.y + math.sin(start_angle) * start_radius,
+            )
+            end_pos = (
+                center_screen.x + math.cos(end_angle) * end_radius,
+                center_screen.y + math.sin(end_angle) * end_radius,
+            )
+            pygame.draw.aaline(self.surface, lightning_color, start_pos, end_pos, blend=1)
+            if rng.random() < 0.4:
+                spark_radius = max(1, int(round(2 * rng.uniform(0.6, 1.0))))
+                spark_pos = (
+                    center_screen.x + math.cos(end_angle) * end_radius,
+                    center_screen.y + math.sin(end_angle) * end_radius,
+                )
+                pygame.draw.circle(
+                    self.surface,
+                    _blend(lightning_color, (255, 255, 255), 0.5),
+                    (int(round(spark_pos[0])), int(round(spark_pos[1]))),
+                    spark_radius,
+                    0,
+                )
+
     def clear(self) -> None:
         self._start_frame()
         self.surface.fill(BACKGROUND)
@@ -1077,6 +1209,16 @@ class VectorRenderer:
 
         self._draw_hardpoints(frame, origin, right, up, forward, ship, color, scale=scale)
         self._draw_engines(frame, origin, right, up, forward, ship, color, scale=scale)
+        if ship.frame.id in THORIM_FRAME_IDS:
+            self._draw_thorim_charge(
+                frame,
+                origin,
+                right,
+                up,
+                forward,
+                ship,
+                scale=scale,
+            )
 
     @staticmethod
     def _prepare_ship_strips(
@@ -1110,6 +1252,29 @@ class VectorRenderer:
             color = MISSILE_COLOR if is_missile else PROJECTILE_COLOR
             screen_pos, visible = camera.project(projectile.position, self.surface.get_size())
             if not visible:
+                continue
+            if getattr(projectile.weapon, "id", "") == "pol_x01":
+                center = (int(round(screen_pos.x)), int(round(screen_pos.y)))
+                glow_radius = 14
+                core_radius = 9
+                ember_radius = 4
+                pygame.draw.circle(self.surface, THORIM_PROJECTILE_GLOW, center, glow_radius, 0)
+                pygame.draw.circle(self.surface, THORIM_PROJECTILE_OUTER, center, glow_radius, 2)
+                pygame.draw.circle(self.surface, THORIM_PROJECTILE_CORE, center, core_radius, 0)
+                pygame.draw.circle(
+                    self.surface,
+                    _blend(THORIM_PROJECTILE_CORE, (255, 255, 255), 0.45),
+                    center,
+                    ember_radius,
+                    0,
+                )
+                pygame.draw.circle(
+                    self.surface,
+                    _blend(THORIM_PROJECTILE_OUTER, (255, 255, 255), 0.2),
+                    center,
+                    glow_radius + 2,
+                    1,
+                )
                 continue
             if is_missile:
                 trail_points = list(projectile.trail_positions)
