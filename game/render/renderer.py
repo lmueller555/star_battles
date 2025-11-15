@@ -2164,7 +2164,7 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
     gap_center = math.pi / 2.0
     gap_half_angle = math.radians(36.0)
 
-    size_scale = 25.8
+    size_scale = 95.8
 
     outer_radius_x = 3.0 * size_scale
     outer_radius_z = 3.6 * size_scale
