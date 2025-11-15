@@ -1369,8 +1369,9 @@ def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
     ]
     _loop_segments(segments, rear_spine, close=False)
 
+    # Start the ventral spine at the forward spine instead of the nose,
+    # so there is no central structure closing off the front opening.
     ventral_spine = [
-        ventral_prow,
         ventral_forward_spine,
         ventral_mid_spine,
         ventral_brace_spine,
@@ -1382,8 +1383,8 @@ def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
     for start, end in zip(ventral_spine, ventral_spine[1:]):
         segments.append((start, end))
 
+    # Same for the dorsal spine: start at forward_spine instead of prow.
     dorsal_spine = [
-        prow,
         forward_spine,
         mid_spine,
         brace_spine,
@@ -1487,35 +1488,9 @@ def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
         segments.append((point, stern))
         segments.append((point, ventral_stern))
 
-    nose_outline_port = [
-        Vector3(-3.2, 3.6, 12.2),
-        Vector3(-4.0, 3.4, 11.6),
-        Vector3(-3.4, 3.2, 10.6),
-    ]
-    nose_outline = (
-        nose_outline_port
-        + [Vector3(0.0, 4.2, 12.4)]
-        + [_mirror_vector(point) for point in reversed(nose_outline_port)]
-    )
-    _loop_segments(segments, nose_outline)
-    for point in nose_outline:
-        segments.append((point, forward_spine))
-        segments.append((point, ventral_prow))
-
-    nose_outline_lower_port = [
-        Vector3(-3.2, 0.6, 12.0),
-        Vector3(-4.0, 0.4, 11.4),
-        Vector3(-3.4, 0.2, 10.6),
-    ]
-    nose_outline_lower = (
-        nose_outline_lower_port
-        + [Vector3(0.0, 1.0, 12.2)]
-        + [_mirror_vector(point) for point in reversed(nose_outline_lower_port)]
-    )
-    _loop_segments(segments, nose_outline_lower)
-    for point in nose_outline_lower:
-        segments.append((point, ventral_forward_spine))
-        segments.append((point, ventral_prow))
+    # NOTE: nose_outline and nose_outline_lower (which previously connected
+    # port and starboard across the very front and added extra supports) have
+    # been removed to keep the forward gap between the arms unobstructed.
 
     return segments
 
