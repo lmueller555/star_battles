@@ -21,7 +21,7 @@ Equipment Slots (all families listed for consistency; use 0 when unsupported)
 
 Strike/Escort: weapons, hull, engine, computer.
 
-Weapon subfamilies (if UI shows them): gun, missile launcher, defensive_weapon.
+Weapon subfamilies (if UI shows them): gun, launcher, defensive_weapon.
 
 Line/Capital: weapons, defensive_weapons, hull, engine, computer.
 
