@@ -990,8 +990,11 @@ GUIDANCE_SHIP_DATA = [{'counterpart': None,
                   'tracking_speed': 125}],
   'id': 'brimir_carrier',
   'level_requirement': 40,
-  'name': 'Brimir Carrier',
-  'notes': 'Carrier-class capital optimized for fleet support and strike coordination.',
+  'name': 'Brimir',
+  'notes': ('Discovery of the derelict shipyards near Delta Canopis has allowed the '
+            'construction of the Brimir-class carrier. The carrier is a support and '
+            'logistics vessel that allows strike ships to coordinate attacks and '
+            'quickly repair and refit away from an outpost.'),
   'role': 'Carrier',
   'role_bonuses': ['Carrier logistics network enables mobile repair and refit support '
                    'for allied squadrons.'],
@@ -1047,12 +1050,19 @@ GUIDANCE_SHIP_DATA = [{'counterpart': None,
              'coordination.',
              'Provides mobile repair and refit capabilities for allied Strike and '
              'Escort craft while operating away from outposts.',
-             'Balanced defensive armament allows self-defense without matching a '
-             'battleship’s raw damage output.',
-             'Excellent energy and EW suite (1,000 capacity, 40/s recovery) sustains '
-             'drone operations, PD systems, and EW defenses.',
-             'Limited agility (8–9°/s turning) and minimal avoidance (20) mean it '
-             'relies on escorts and fleet positioning for protection.'],
+             'Balanced defensive armament (4 guns, 2 launchers, 4 defensive, 4 '
+             'special) allows it to defend itself without matching a battleship’s '
+             'raw damage output.',
+             'Moderate FTL reach (12 LY) for a Capital ship—adequate for long-range '
+             'deployments.',
+             'Excellent energy and EW suite (1,000 capacity, 40/s recovery) supports '
+             'sustained drone operations, PD systems, and EW defenses.',
+             'Limited agility (8–9°/s turning) and minimal avoidance (20) — relies on '
+             'escorts and fleet positioning for protection.',
+             'Command-center design enables coordination bonuses when operating near '
+             'allied squadrons (if your fleet aura systems model these).',
+             'Armor (40) and Critical Defense (150) values make it resilient against '
+             'both kinetic and energy weapon fire.'],
   'upgrade_to': 'advanced_brimir'},
  {'counterpart': None,
   'economy': {'operating': {'boost': 20, 'ftl': 32},
@@ -1099,8 +1109,9 @@ GUIDANCE_SHIP_DATA = [{'counterpart': None,
   'id': 'thorim_siege',
   'level_requirement': 44,
   'name': 'Thorim Siege Ship',
-  'notes': 'Crescent-hulled siege capital that channels plasma through a recessed '
-           'spinal battery.',
+  'notes': ('The Thorim-class siege ship traces its lineage to heavy planetary '
+            'bombardment barges. Reinforced crescent spars focus massive plasma '
+            'lances while a recessed engine cradle keeps the firing gap clear.'),
   'role': 'Siege',
   'role_bonuses': ['Station-keeping algorithms tighten plasma dispersion after holding '
                    'position for 3 seconds.'],
@@ -1149,11 +1160,12 @@ GUIDANCE_SHIP_DATA = [{'counterpart': None,
             'visual_range': 1650,
             'yaw_acceleration': 7,
             'yaw_speed': 7},
-  'traits': ['Long-range siege capital built around a recessed spinal plasma cannon.',
-             'Crescent hull geometry keeps the firing lane clear for the center '
-             'hardpoint.',
-             'Triple engine pylons stabilise recoil but limit agility—escorts are '
-             'recommended for screening.'],
+  'traits': ['Long-range siege platform built around a recessed spinal plasma cannon '
+             'and five forward gun hardpoints.',
+             'Best-in-class crescent firing arc keeps the frontal gap clear for '
+             'super-heavy plasma volleys.',
+             'Reinforced hull ribs grant above-average armor while triple engine '
+             'pylons stabilise recoil but limit agility.'],
   'upgrade_to': 'advanced_thorim'},
  {'counterpart': None,
   'economy': {'operating': {'boost': 0, 'ftl': 0},
