@@ -186,7 +186,7 @@ class WeaponDatabase:
             return
         for path in directory.glob("*.json"):
             try:
-                data = json.loads(path.read_text())
+                data = json.loads(path.read_text(encoding="utf-8"))
             except json.JSONDecodeError:
                 continue
             if isinstance(data, dict):
