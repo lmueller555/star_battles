@@ -2153,6 +2153,191 @@ def _build_brimir_wireframe() -> list[tuple[Vector3, Vector3]]:
     return segments
 
 
+def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
+    """Construct a capital-class crescent hull for the Thorim siege ship."""
+
+    segments: list[tuple[Vector3, Vector3]] = []
+
+    length_scale = 0.72
+    width_scale = 0.78
+    height_scale = 0.68
+
+    gap_radians = math.radians(110.0)
+    start_angle = math.pi / 2.0 + gap_radians / 2.0
+    end_angle = 2.0 * math.pi + (math.pi / 2.0 - gap_radians / 2.0)
+    segment_count = 32
+    angles = [
+        start_angle + (end_angle - start_angle) * (index / segment_count)
+        for index in range(segment_count + 1)
+    ]
+
+    outer_radius_x = 420.0 * width_scale
+    outer_radius_z = 540.0 * length_scale
+    inner_radius_x = 280.0 * width_scale
+    inner_radius_z = 360.0 * length_scale
+
+    top_y = 84.0 * height_scale
+    bottom_y = -78.0 * height_scale
+    crown = 16.0 * height_scale
+
+    def crescent_loop(radius_x: float, radius_z: float, base_y: float) -> list[Vector3]:
+        return [
+            Vector3(
+                math.cos(angle) * radius_x,
+                base_y + math.cos(angle) * crown,
+                math.sin(angle) * radius_z,
+            )
+            for angle in angles
+        ]
+
+    outer_top = crescent_loop(outer_radius_x, outer_radius_z, top_y)
+    outer_bottom = crescent_loop(outer_radius_x, outer_radius_z, bottom_y)
+    inner_top = crescent_loop(inner_radius_x, inner_radius_z, top_y * 0.45)
+    inner_bottom = crescent_loop(inner_radius_x, inner_radius_z, bottom_y * 0.45)
+
+    _loop_segments(segments, outer_top, close=False)
+    _loop_segments(segments, outer_bottom, close=False)
+    _loop_segments(segments, inner_top, close=False)
+    _loop_segments(segments, inner_bottom, close=False)
+
+    for top, bottom in zip(outer_top, outer_bottom):
+        segments.append((top, bottom))
+    for top, bottom in zip(inner_top, inner_bottom):
+        segments.append((top, bottom))
+
+    for index in range(0, len(outer_top), 2):
+        segments.append((outer_top[index], inner_top[index]))
+        segments.append((outer_bottom[index], inner_bottom[index]))
+
+    edge_indices = (0, len(outer_top) - 1)
+    for edge_index in edge_indices:
+        segments.append((outer_top[edge_index], inner_top[edge_index]))
+        segments.append((outer_bottom[edge_index], inner_bottom[edge_index]))
+        segments.append((outer_top[edge_index], outer_bottom[edge_index]))
+        segments.append((inner_top[edge_index], inner_bottom[edge_index]))
+
+    dorsal_spine = [
+        Vector3(0.0, top_y + 32.0 * height_scale, inner_radius_z * -0.45),
+        Vector3(0.0, top_y + 54.0 * height_scale, inner_radius_z * -0.9),
+        Vector3(0.0, top_y + 38.0 * height_scale, inner_radius_z * -1.2),
+    ]
+    ventral_spine = [
+        Vector3(0.0, bottom_y - 28.0 * height_scale, inner_radius_z * -0.4),
+        Vector3(0.0, bottom_y - 42.0 * height_scale, inner_radius_z * -0.85),
+        Vector3(0.0, bottom_y - 30.0 * height_scale, inner_radius_z * -1.18),
+    ]
+    _loop_segments(segments, dorsal_spine, close=False)
+    _loop_segments(segments, ventral_spine, close=False)
+
+    back_index = len(inner_top) // 2
+    keel_anchor_top = inner_top[back_index]
+    keel_anchor_bottom = inner_bottom[back_index]
+    for spine_point in dorsal_spine:
+        segments.append((spine_point, keel_anchor_top))
+    for spine_point in ventral_spine:
+        segments.append((spine_point, keel_anchor_bottom))
+
+    engine_front_z = keel_anchor_bottom.z - 60.0 * length_scale
+    engine_back_z = engine_front_z - 150.0 * length_scale
+    engine_half_width = inner_radius_x * 0.92
+    engine_top_y = top_y + 68.0 * height_scale
+    engine_bottom_y = bottom_y - 68.0 * height_scale
+
+    engine_top_rect = [
+        Vector3(-engine_half_width, engine_top_y, engine_front_z),
+        Vector3(-engine_half_width, engine_top_y, engine_back_z),
+        Vector3(engine_half_width, engine_top_y, engine_back_z),
+        Vector3(engine_half_width, engine_top_y, engine_front_z),
+    ]
+    engine_bottom_rect = [
+        Vector3(-engine_half_width, engine_bottom_y, engine_front_z),
+        Vector3(-engine_half_width, engine_bottom_y, engine_back_z),
+        Vector3(engine_half_width, engine_bottom_y, engine_back_z),
+        Vector3(engine_half_width, engine_bottom_y, engine_front_z),
+    ]
+
+    _loop_segments(segments, engine_top_rect)
+    _loop_segments(segments, engine_bottom_rect)
+    for top_point, bottom_point in zip(engine_top_rect, engine_bottom_rect):
+        segments.append((top_point, bottom_point))
+
+    port_top_anchor = inner_top[back_index - 1]
+    star_top_anchor = inner_top[back_index + 1]
+    for destination in engine_top_rect[:2]:
+        segments.append((port_top_anchor, destination))
+    for destination in engine_top_rect[2:]:
+        segments.append((star_top_anchor, destination))
+
+    port_bottom_anchor = inner_bottom[back_index - 1]
+    star_bottom_anchor = inner_bottom[back_index + 1]
+    for destination in engine_bottom_rect[:2]:
+        segments.append((port_bottom_anchor, destination))
+    for destination in engine_bottom_rect[2:]:
+        segments.append((star_bottom_anchor, destination))
+
+    thruster_spacing = engine_half_width * 0.55
+    thruster_radius_x = engine_half_width * 0.35
+    thruster_radius_y = (engine_top_y - engine_bottom_y) * 0.24
+    thruster_front_z = engine_back_z
+    thruster_back_z = engine_back_z - 52.0 * length_scale
+
+    def offset_ring(center_x: float, center_y: float, z_pos: float) -> list[Vector3]:
+        ring = _elliptical_ring(
+            z_pos,
+            thruster_radius_x,
+            thruster_radius_y,
+            sides=8,
+        )
+        return [Vector3(point.x + center_x, point.y + center_y, point.z) for point in ring]
+
+    for x_sign in (-1, 1):
+        center_x = x_sign * thruster_spacing
+        center_y = (engine_top_y + engine_bottom_y) * 0.5
+        front_ring = offset_ring(center_x, center_y, thruster_front_z)
+        back_ring = offset_ring(center_x, center_y, thruster_back_z)
+        _loop_segments(segments, front_ring)
+        _loop_segments(segments, back_ring)
+        _connect_rings(segments, front_ring, back_ring)
+
+    central_z = inner_radius_z * 0.25 + 120.0 * length_scale
+    central_base = Vector3(0.0, -12.0 * height_scale, central_z)
+    central_tip = Vector3(0.0, top_y + 110.0 * height_scale, central_z + 40.0 * length_scale)
+    segments.append((central_base, central_tip))
+    segments.append((central_base, Vector3(0.0, bottom_y - 24.0 * height_scale, central_z)))
+
+    for edge_index in edge_indices:
+        brace_point_top = inner_top[edge_index]
+        brace_point_bottom = inner_bottom[edge_index]
+        segments.append((brace_point_top, central_base))
+        segments.append((brace_point_bottom, central_base))
+
+    port_indices = [6, 11]
+    star_indices = [len(inner_top) - 1 - index for index in port_indices]
+
+    def weapon_cluster(index: int, *, mirror: bool) -> None:
+        hull_top = inner_top[index]
+        hull_bottom = inner_bottom[index]
+        x_offset = 58.0 * width_scale * (-1 if mirror else 1)
+        forward_push = 34.0 * length_scale
+        mount_mid = Vector3(
+            hull_top.x + x_offset,
+            (hull_top.y + hull_bottom.y) * 0.5,
+            hull_top.z + forward_push,
+        )
+        mount_tip = Vector3(mount_mid.x, mount_mid.y + 72.0 * height_scale, mount_mid.z + 16.0 * length_scale)
+        segments.append((hull_top, mount_mid))
+        segments.append((hull_bottom, mount_mid))
+        segments.append((mount_mid, mount_tip))
+        segments.append((mount_tip, Vector3(mount_tip.x, mount_tip.y - 36.0 * height_scale, mount_tip.z + 18.0 * length_scale)))
+
+    for index in port_indices:
+        weapon_cluster(index, mirror=True)
+    for index in star_indices:
+        weapon_cluster(index, mirror=False)
+
+    return segments
+
+
 WIREFRAMES = {
     "Strike": [
         (Vector3(0, 0.3, 2.5), Vector3(0.9, 0, -2.0)),
@@ -2177,6 +2362,7 @@ WIREFRAMES = {
     "maul_assault": _build_maul_wireframe(),
     "vanir_command": _build_vanir_wireframe(),
     "brimir_carrier": _build_brimir_wireframe(),
+    "thorim_siege": _build_thorim_wireframe(),
 }
 
 SHIP_GEOMETRY_CACHE = _build_ship_geometry_cache()
