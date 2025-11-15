@@ -144,10 +144,6 @@ class WeaponData:
             min_range=float(data.get("minRange", 0.0)),
             disallow_strike_targets=bool(data.get("disallowStrikeTargets", False)),
         )
-        if weapon.wclass == "missile":
-            weapon.projectile_speed = 100.0
-        elif weapon.wclass == "projectile":
-            weapon.projectile_speed = 500.0
         return weapon
 
     @property
