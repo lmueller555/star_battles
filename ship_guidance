@@ -1400,6 +1400,105 @@ If Advanced Brimir exists, capture any “blue” deltas (e.g., +Hull, +Power, +
 
 If carrier drone or repair-field modules are implemented as pre-installed, add those under Pre-installed Systems.
 
+Capital — Thorim (Role: Siege)
+
+Identity
+
+Class / Role: Capital · Siege
+
+Level Requirement: 44
+
+Counterpart / Upgrade To: (TBD) / Advanced Thorim
+
+Lore / Description:
+
+The Thorim-class siege ship traces its lineage to heavy planetary bombardment barges.
+Reinforced crescent spars focus massive plasma lances while a recessed engine cradle keeps the firing gap clear.
+
+Economy
+
+Purchase Cost: 460,000 Tylium (confirm currency icon)
+
+Operating: Boost Cost 20 Tyl/s · FTL Cost 32 Tyl
+
+Upgrade Cost (→ Advanced): 150,000 Tylium (placeholder until panel confirms)
+
+Equipment Slots (Weight: Capital)
+
+Weapons (General): 5 (Capital)
+Guns: 5 (Capital)
+Launchers: 0 (Capital)
+Defensive Weapons: 0 (Capital)
+Special Weapons: 0 (Capital)
+Hull: 3 (Capital)
+Engine: 3 (Capital)
+Computer: 2 (Capital)
+
+Hull / Survivability
+
+Hull Points: 9,200
+Hull Recovery: 32 /s
+Durability: 120,000
+Durability Bonus: 0.6
+Armor Value: 55
+Critical Defense: 180
+
+Engine / Mobility
+
+Speed: 14 m/s
+Boost Speed: 24 m/s
+Boost Cost: 20 Tyl/s
+Acceleration: 2.6 m/s²
+Boost Acceleration: 1.2 m/s²
+Turning Speed: 6 deg/s
+Turning Acceleration: 7 deg/s²
+Pitch / Yaw Speed: 7 / 7 deg/s
+Pitch / Yaw Acceleration: 7 / 7 deg/s²
+Roll Speed / Acceleration: 6 / 6 deg/s²
+Inertial Compensation: 36 m/s
+Strafe Speed / Accel: 0 / 0
+Avoidance: 15
+Avoidance Fading: 0.72
+
+FTL Systems
+
+FTL Range: 14 LY
+FTL Charge Time: 34 s
+FTL Cooldown: 38 s
+FTL Cost: 32 Tyl
+Transponder Power Cost: 0
+
+Energy & Sensors / EW
+
+Power Points: 1,150
+Power Recovery: 38 /s
+Firewall Rating: 220
+Emitter Rating: 260
+Maximum DRADIS Range: 5,200 m
+Base DRADIS Range: 2,200 m
+Visual Range: 1,650 m
+
+Environmental
+
+Max Radiation Level: 260
+Radioactive Decay: 1.6
+Radioresistance: 0
+
+Pre-installed Systems
+
+None — all five weapon hardpoints ship empty for mission outfitting.
+
+Traits & Role Notes
+
+Long-range siege platform built around a recessed spinal plasma cannon and five forward gun hardpoints.
+Best-in-class crescent firing arc keeps the frontal gap clear for super-heavy plasma volleys.
+Reinforced hull ribs grant above-average armor while triple engine pylons stabilise recoil but limit agility.
+
+Open Items / TBD
+
+Capture exact purchase currency icon and confirm upgrade cost when Advanced variant UI is available.
+Record any blue-delta stats for Advanced Thorim per canonical upgrade schema once exposed.
+
 C) QA & Balance Guardrails (reference)
 
 Duels (same tier): 8–14 s TTK target bands.
