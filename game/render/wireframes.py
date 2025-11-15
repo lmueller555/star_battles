@@ -1894,15 +1894,18 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
     _loop_segments(segments, inner_top, close=False)
     _loop_segments(segments, inner_bottom, close=False)
 
+    # Vertical ribs between outer/inner loops
     for top, bottom in zip(outer_top, outer_bottom):
         segments.append((top, bottom))
     for top, bottom in zip(inner_top, inner_bottom):
         segments.append((top, bottom))
 
+    # Radial braces between outer and inner loops (every other vertex)
     for index in range(0, len(outer_top), 2):
         segments.append((outer_top[index], inner_top[index]))
         segments.append((outer_bottom[index], inner_bottom[index]))
 
+    # Extra structure at horn edges
     edge_indices = (0, len(outer_top) - 1)
     for edge_index in edge_indices:
         segments.append((outer_top[edge_index], inner_top[edge_index]))
@@ -1910,6 +1913,7 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
         segments.append((outer_top[edge_index], outer_bottom[edge_index]))
         segments.append((inner_top[edge_index], inner_bottom[edge_index]))
 
+    # Dorsal/ventral spines along the back
     dorsal_spine = [
         Vector3(0.0, top_y + 32.0 * height_scale, inner_radius_z * -0.45),
         Vector3(0.0, top_y + 54.0 * height_scale, inner_radius_z * -0.9),
@@ -1923,6 +1927,7 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
     _loop_segments(segments, dorsal_spine, close=False)
     _loop_segments(segments, ventral_spine, close=False)
 
+    # Tie spines into the inner hull at the back
     back_index = len(inner_top) // 2
     keel_anchor_top = inner_top[back_index]
     keel_anchor_bottom = inner_bottom[back_index]
@@ -1931,6 +1936,7 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
     for spine_point in ventral_spine:
         segments.append((spine_point, keel_anchor_bottom))
 
+    # Engine block at the rear
     engine_front_z = keel_anchor_bottom.z - 60.0 * length_scale
     engine_back_z = engine_front_z - 150.0 * length_scale
     engine_half_width = inner_radius_x * 0.92
@@ -1955,6 +1961,7 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
     for top_point, bottom_point in zip(engine_top_rect, engine_bottom_rect):
         segments.append((top_point, bottom_point))
 
+    # Connect engine block to inner hull
     port_top_anchor = inner_top[back_index - 1]
     star_top_anchor = inner_top[back_index + 1]
     for destination in engine_top_rect[:2]:
@@ -1969,6 +1976,7 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
     for destination in engine_bottom_rect[2:]:
         segments.append((star_bottom_anchor, destination))
 
+    # Twin thruster bells behind the engine block
     thruster_spacing = engine_half_width * 0.55
     thruster_radius_x = engine_half_width * 0.35
     thruster_radius_y = (engine_top_y - engine_bottom_y) * 0.24
@@ -1993,18 +2001,7 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
         _loop_segments(segments, back_ring)
         _connect_rings(segments, front_ring, back_ring)
 
-    central_z = inner_radius_z * 0.25 + 120.0 * length_scale
-    central_base = Vector3(0.0, -12.0 * height_scale, central_z)
-    central_tip = Vector3(0.0, top_y + 110.0 * height_scale, central_z + 40.0 * length_scale)
-    segments.append((central_base, central_tip))
-    segments.append((central_base, Vector3(0.0, bottom_y - 24.0 * height_scale, central_z)))
-
-    for edge_index in edge_indices:
-        brace_point_top = inner_top[edge_index]
-        brace_point_bottom = inner_bottom[edge_index]
-        segments.append((brace_point_top, central_base))
-        segments.append((brace_point_bottom, central_base))
-
+    # Weapon clusters along the inner rim
     port_indices = [6, 11]
     star_indices = [len(inner_top) - 1 - index for index in port_indices]
 
@@ -2018,11 +2015,24 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
             (hull_top.y + hull_bottom.y) * 0.5,
             hull_top.z + forward_push,
         )
-        mount_tip = Vector3(mount_mid.x, mount_mid.y + 72.0 * height_scale, mount_mid.z + 16.0 * length_scale)
+        mount_tip = Vector3(
+            mount_mid.x,
+            mount_mid.y + 72.0 * height_scale,
+            mount_mid.z + 16.0 * length_scale,
+        )
         segments.append((hull_top, mount_mid))
         segments.append((hull_bottom, mount_mid))
         segments.append((mount_mid, mount_tip))
-        segments.append((mount_tip, Vector3(mount_tip.x, mount_tip.y - 36.0 * height_scale, mount_tip.z + 18.0 * length_scale)))
+        segments.append(
+            (
+                mount_tip,
+                Vector3(
+                    mount_tip.x,
+                    mount_tip.y - 36.0 * height_scale,
+                    mount_tip.z + 18.0 * length_scale,
+                ),
+            )
+        )
 
     for index in port_indices:
         weapon_cluster(index, mirror=True)
