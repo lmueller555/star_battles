@@ -1599,42 +1599,6 @@ def _build_brimir_wireframe() -> list[tuple[Vector3, Vector3]]:
     for start, end in zip(ventral_spine, ventral_spine[1:]):
         segments.append((start, end))
 
-    forward_ring = nose_section[3]
-    for index in range(0, ring_sides, 2):
-        point = forward_ring[index]
-        segments.append((point, nose_tip))
-        segments.append((point, ventral_spear))
-
-    nose_ridge_port = [
-        Vector3(-52.0 * width_scale, 48.0 * height_scale, nose_z + 28.0 * length_scale),
-        Vector3(-34.0 * width_scale, 56.0 * height_scale, nose_z + 48.0 * length_scale),
-        Vector3(-18.0 * width_scale, 60.0 * height_scale, nose_z + 62.0 * length_scale),
-    ]
-    nose_ridge = (
-        nose_ridge_port
-        + [Vector3(0.0, 64.0 * height_scale, nose_z + 66.0 * length_scale)]
-        + [_mirror_vector(point) for point in reversed(nose_ridge_port)]
-    )
-    _loop_segments(segments, nose_ridge)
-    for point in nose_ridge:
-        segments.append((point, nose_tip))
-
-    ventral_ridge_port = [
-        Vector3(-40.0 * width_scale, -38.0 * height_scale, nose_z + 26.0 * length_scale),
-        Vector3(-26.0 * width_scale, -46.0 * height_scale, nose_z + 44.0 * length_scale),
-        Vector3(-14.0 * width_scale, -48.0 * height_scale, nose_z + 56.0 * length_scale),
-    ]
-    ventral_ridge = (
-        ventral_ridge_port
-        + [Vector3(0.0, -52.0 * height_scale, nose_z + 60.0 * length_scale)]
-        + [_mirror_vector(point) for point in reversed(ventral_ridge_port)]
-    )
-    _loop_segments(segments, ventral_ridge)
-    for point in ventral_ridge:
-        segments.append((point, ventral_spear))
-
-    segments.append((nose_tip, ventral_spear))
-
     tower_base_z = mid_z + 120.0 * length_scale
     tower_mid = Vector3(0.0, 178.0 * height_scale, tower_base_z - 80.0 * length_scale)
     tower_tip = Vector3(0.0, 214.0 * height_scale, tower_base_z - 160.0 * length_scale)
