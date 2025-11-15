@@ -1093,6 +1093,8 @@ class SandboxScene(Scene):
         if isinstance(target, Ship):
             if not target.is_alive():
                 return False
+            if getattr(weapon, "disallow_strike_targets", False) and target.frame.size.lower() == "strike":
+                return False
             target_position = target.kinematics.position
         else:
             if target.is_destroyed():
@@ -1100,6 +1102,9 @@ class SandboxScene(Scene):
             target_position = target.position
         to_target = target_position - self.player.kinematics.position
         distance = to_target.length()
+        min_range = getattr(weapon, "min_range", 0.0)
+        if distance < min_range:
+            return False
         if weapon.max_range > 0.0 and distance > weapon.max_range:
             return False
         if to_target.length_squared() <= 0.0:

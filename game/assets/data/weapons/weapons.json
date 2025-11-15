@@ -419,6 +419,27 @@
     "gimbal": 35.0
   },
   {
+    "id": "pol_x01",
+    "name": "POL-X01 'Plasma Orb Launcher'",
+    "slotType": "cannon",
+    "class": "projectile",
+    "damage": 26400.0,
+    "accuracy": 0.22,
+    "crit": 0.1,
+    "critMult": 2.5,
+    "rof": 0.016666666666666666,
+    "power": 1150.0,
+    "optimal": 3250.0,
+    "maxRange": 4000.0,
+    "minRange": 2500.0,
+    "projectileSpeed": 400.0,
+    "ammo": 0,
+    "reload": 60.0,
+    "gimbal": 5.0,
+    "requiresFullPower": true,
+    "disallowStrikeTargets": true
+  },
+  {
     "id": "pd_x30p",
     "name": "PD-X30P 'Wildfire'",
     "slotType": "cannon",

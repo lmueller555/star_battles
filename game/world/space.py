@@ -513,10 +513,14 @@ class SpaceWorld:
         muzzle = self._weapon_muzzle_position(ship, mount, forward, right, up)
         target_ship: Ship | None = None
         target_asteroid: Asteroid | None = None
+        disallow_strike_targets = getattr(weapon, "disallow_strike_targets", False)
+        min_range = getattr(weapon, "min_range", 0.0)
         if isinstance(target, Ship):
             if not target.is_alive():
                 return None
             target_ship = target
+            if disallow_strike_targets and _is_strike_ship(target_ship):
+                return None
         elif isinstance(target, Asteroid):
             if weapon.wclass == "missile":
                 return None
@@ -542,6 +546,8 @@ class SpaceWorld:
             if distance > 0.0:
                 aim_direction = to_target.normalize()
                 angle_error = mount_forward.angle_to(aim_direction)
+            if distance < min_range:
+                return None
             if angle_error > effective_gimbal:
                 return None
         if weapon.wclass == "hitscan" and target_position is not None:

@@ -1525,6 +1525,40 @@ Restricted to Capital-class hardpoints — enforce requirement in Store and Fitt
 
 Consider adding screen-shake and concussive sound effects for cinematic impact.
 
+POL-X01 “Plasma Orb Launcher” — Thorim Spinal Siege Weapon (L1)
+
+Damage: 1000 – 2200 (upgrades)
+Armor Piercing: 90
+Range: 2500 – 4000 m (upgrades)
+Optimal Range: 3250 m (upgrades)
+Accuracy: 110
+Critical Offense: 120
+Reload: 60 s (L1) / 30 s (Lmax)
+Power Cost: 100% ship max energy (requires full reserves)
+Firing Arc: 5°
+Cost: Thorim-exclusive (not sold)
+Durability: 18 000 / 18 000
+
+Effect:
+Massive Thorim-exclusive plasma weapon that launches a condensed orb from the ship’s recessed spinal emitter.
+Designed for devastating alpha strikes against Line and Capital hulls at long range once the ship has fully charged.
+Cannot engage Strike-class targets and will refuse to fire inside 2500 m.
+
+Upgrade Model:
+Increase Damage substantially per level; reduce Reload toward 30 s at max rank. Range profile remains fixed.
+
+Implementation Notes:
+
+Mark the weapon as Thorim-only in store/fitting data (exclusive tag) and restrict hardpoint usage to the spinal slot.
+
+Set requiresFullPower = true so the ship must reach maximum energy before firing; deduct 100% of max energy on shot.
+
+Add a minimum range check of 2500 m in targeting logic; shots should auto-cancel if the target is too close.
+
+Filter out Strike-class ships during target acquisition — allow engagements only against Escort, Line, Capital, and structures.
+
+Projectile should be a slow-moving, highly luminous orb with heavy impact effects to sell the siege weapon fantasy.
+
 Weapons (Defensive / Support Hardpoints – Capital Only)
 
 PD-X30P “Wildfire” — 25mm Point Defense Battery (L1)
