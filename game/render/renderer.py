@@ -2158,9 +2158,9 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
 
     segments: list[tuple[Vector3, Vector3]] = []
 
-    length_scale = 0.42
-    width_scale = 0.48
-    height_scale = 0.38
+    length_scale = 0.72
+    width_scale = 0.78
+    height_scale = 0.368
 
     gap_radians = math.radians(110.0)
     start_angle = math.pi / 2.0 + gap_radians / 2.0
