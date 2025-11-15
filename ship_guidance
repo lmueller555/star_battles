@@ -17,13 +17,10 @@ Economy
 
 purchase_cost (currency), upgrade_cost (to Advanced), operating: boost_cost (Tylium/sec), ftl_cost (Tylium/LY or as displayed).
 
-Equipment Slots (all families listed for consistency; use 0 when unsupported)
-
-Strike/Escort: weapons, hull, engine, computer.
-
-Weapon subfamilies (if UI shows them): gun, launcher, defensive_weapon.
-
-Line/Capital: weapons, defensive_weapons, hull, engine, computer.
+Equipment slot types for Strike/Escort/Line/Capital (use 0 when unsupported): weapons, hull, engine, computer.
+Weapon subfamilies (if UI shows them): gun, launcher, defensive weapon, special weapon.
+Special weapon slots can only be equipped with weapons marked as special weapons. If none exist, this slot is empty.
+There are 2 types of defensive weapons currently: Point Defense and Flak Battery. These are only available to Line and Capital class ships.
 
 When the panel shows counts like “4(+1)”, store:
 
@@ -105,7 +102,7 @@ Per-ship section template
 [Class — Ship Name (Role)]
 Identity: Level Req · Counterpart · Upgrade To
 Economy: Purchase Cost · Upgrade Cost (→ Advanced) · Operating (Boost Cost, FTL Cost)
-Slots: Weapons [base (+Δ) ⇒ total] · Hull · Engine [base (+Δ) ⇒ total] · Computer · (Gun/Launcher/Defensive/Special if shown)
+Slots: Weapons [base (+Δ) ⇒ total] · Hull · Engine [base (+Δ) ⇒ total] · Computer · (Gun/Launcher/Defensive)
 Hull: HP [base (+Δ) ⇒ total] · Recovery/s [base (+Δ) ⇒ total] · Durability [base (+Δ) ⇒ total] · Armor · Critical Defense
 Engine/Mobility: Speed [base (+Δ) ⇒ total] · Boost Speed [base (+Δ) ⇒ total] · Boost Cost · Accel [base (+Δ) ⇒ total] · Boost Accel · Turning Speed [base (+Δ) ⇒ total] · Turning Accel · Inertial Comp · Avoidance · Avoidance Fading · (Pitch/Yaw/Roll if available) · Strafe Speed/Accel
 FTL: Range · Charge Time · Cooldown · Cost · (Transponder Power Cost if present)
