@@ -2,7 +2,7 @@
   {
     "id": "point_defense_mk1",
     "name": "Aegis PD Grid",
-    "slotType": "utility",
+    "slotType": "computer",
     "tags": ["PD"],
     "stats": {
       "pd_range": 450,
@@ -33,7 +33,7 @@
   {
     "id": "flare_launcher_mk1",
     "name": "Helios Flare Launcher",
-    "slotType": "utility",
+    "slotType": "computer",
     "tags": ["COUNTERMEASURE"],
     "stats": {
       "cm_radius": 520,

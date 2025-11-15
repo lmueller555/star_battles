@@ -40,13 +40,13 @@ def test_activate_countermeasure_intercepts_and_breaks_lock(tmp_path):
         "power_regen": 10,
         "dradis_range": 3000,
     })
-    slots = ShipSlotLayout.from_dict({"utility": 1})
+    slots = ShipSlotLayout.from_dict({"computer": 1})
     hardpoint = Hardpoint("hp", "cannon", Vector3(), 20.0, 180.0)
     frame = ShipFrame("test", "Test", "Interceptor", "Strike", stats, slots, [hardpoint])
     ship = Ship(frame)
     module = ItemData(
         id="flare_launcher_mk1",
-        slot_type="utility",
+        slot_type="computer",
         name="Flare Launcher",
         tags=["COUNTERMEASURE"],
         stats={
