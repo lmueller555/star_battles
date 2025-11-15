@@ -91,6 +91,8 @@ class WeaponData:
     reload: float
     gimbal: float
     requires_full_power: bool = False
+    min_range: float = 0.0
+    disallow_strike_targets: bool = False
 
     @classmethod
     def from_dict(cls, data: Dict) -> "WeaponData":
@@ -139,6 +141,8 @@ class WeaponData:
             reload=float(data.get("reload", 0.0)),
             gimbal=gimbal,
             requires_full_power=bool(data.get("requiresFullPower", False)),
+            min_range=float(data.get("minRange", 0.0)),
+            disallow_strike_targets=bool(data.get("disallowStrikeTargets", False)),
         )
         if weapon.wclass == "missile":
             weapon.projectile_speed = 100.0
