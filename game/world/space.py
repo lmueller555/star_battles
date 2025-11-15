@@ -138,6 +138,19 @@ def _strike_damage_adjustment(damage: float) -> float:
     return max(1.0, damage)
 
 
+def _segment_distance(point: Vector3, start: Vector3, end: Vector3) -> float:
+    """Return the minimum distance between a point and a line segment."""
+
+    segment = end - start
+    length_sq = segment.length_squared()
+    if length_sq <= 1e-9:
+        return (point - start).length()
+    to_point = point - start
+    t = max(0.0, min(1.0, to_point.dot(segment) / length_sq))
+    closest = start + segment * t
+    return (point - closest).length()
+
+
 class SpaceWorld:
     def __init__(
         self,
@@ -338,10 +351,17 @@ class SpaceWorld:
                 target_ship = next((s for s in self.ships if id(s) == projectile.target_id), None)
                 if target_ship is None:
                     target_asteroid = self._find_asteroid_by_id(projectile.target_id)
+            previous_position = projectile.position - projectile.velocity * dt
             if target_ship and target_ship.is_alive():
-                to_target = target_ship.kinematics.position - projectile.position
+                target_position = target_ship.kinematics.position
+                to_target = target_position - projectile.position
                 distance = to_target.length()
-                if distance < 5.0:
+                segment_distance = _segment_distance(
+                    target_position,
+                    previous_position,
+                    projectile.position,
+                )
+                if segment_distance <= 5.0:
                     if not projectile.visual_only:
                         damage = projectile.weapon.base_damage
                         if _is_strike_ship(projectile.source_ship):
@@ -353,10 +373,16 @@ class SpaceWorld:
                     desired = to_target.normalize() * projectile.weapon.projectile_speed
                     projectile.velocity += (desired - projectile.velocity) * min(1.0, 1.1 * dt)
             elif target_asteroid and not target_asteroid.is_destroyed():
-                to_target = target_asteroid.position - projectile.position
+                target_position = target_asteroid.position
+                to_target = target_position - projectile.position
                 distance = to_target.length()
                 hit_radius = max(5.0, target_asteroid.radius)
-                if distance <= hit_radius:
+                segment_distance = _segment_distance(
+                    target_position,
+                    previous_position,
+                    projectile.position,
+                )
+                if segment_distance <= hit_radius:
                     if not projectile.visual_only:
                         damage = projectile.weapon.base_damage
                         if _is_strike_ship(projectile.source_ship):
