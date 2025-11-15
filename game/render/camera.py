@@ -7,20 +7,8 @@ from typing import Optional, Tuple
 
 from pygame.math import Vector3
 
+from game.render.geometry import get_ship_geometry_length
 from game.ships.ship import Ship
-
-# Approximate longitudinal lengths for each ship size in the wireframe renderer.
-# These values were derived from the existing wireframe definitions so the
-# camera can scale its follow distance without needing to import the renderer
-# module (avoiding circular imports).
-DEFAULT_SHIP_LENGTHS: dict[str, float] = {
-    "Strike": 4.5,
-    "Escort": 124.0,
-    "Line": 458.0,
-    "Capital": 952,
-    "Outpost": 1270.0,
-}
-
 
 def _approach(value: float, target: float, rate: float) -> float:
     if value < target:
@@ -43,19 +31,29 @@ def _ship_length(ship: Ship) -> float:
     if isinstance(length_override, (int, float)) and length_override > 0.0:
         return float(length_override)
 
-    size_length = DEFAULT_SHIP_LENGTHS.get(ship.frame.size)
-    if size_length is not None:
-        return size_length
+    try:
+        geometry_length = get_ship_geometry_length(ship.frame.id, ship.frame.size)
+    except KeyError:
+        geometry_length = 0.0
+    if geometry_length > 0.0:
+        return geometry_length
 
     # Fallback: approximate from available hardpoint positions if we do not
-    # recognize the hull size. This maintains compatibility with custom frames.
+    # have a matching wireframe definition. This maintains compatibility
+    # with custom frames.
     if ship.frame.hardpoints:
         z_values = [hp.position.z for hp in ship.frame.hardpoints]
         extent = max(z_values) - min(z_values)
         if extent > 0.0:
             return extent
 
-    return DEFAULT_SHIP_LENGTHS.get("Strike", 12.0)
+    try:
+        fallback = get_ship_geometry_length("Strike", None)
+    except KeyError:
+        fallback = 12.0
+    if fallback > 0.0:
+        return fallback
+    return 12.0
 
 
 def _ship_follow_distance(ship: Ship) -> float:
