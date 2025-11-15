@@ -18,7 +18,7 @@
     "maxRange": 750.0,
     "firingArc": 75.0,
     "gimbal": 75.0,
-    "projectileSpeed": 0.0,
+    "projectileSpeed": 500.0,
     "ammo": 0
   },
   {
@@ -40,7 +40,7 @@
     "maxRange": 750.0,
     "firingArc": 75.0,
     "gimbal": 75.0,
-    "projectileSpeed": 0.0,
+    "projectileSpeed": 500.0,
     "ammo": 0
   },
   {
@@ -62,7 +62,7 @@
     "maxRange": 600.0,
     "firingArc": 75.0,
     "gimbal": 75.0,
-    "projectileSpeed": 0.0,
+    "projectileSpeed": 500.0,
     "ammo": 0
   },
   {
@@ -84,7 +84,7 @@
     "maxRange": 600.0,
     "firingArc": 75.0,
     "gimbal": 75.0,
-    "projectileSpeed": 0.0,
+    "projectileSpeed": 500.0,
     "ammo": 0
   },
   {
@@ -106,7 +106,7 @@
     "maxRange": 600.0,
     "firingArc": 75.0,
     "gimbal": 75.0,
-    "projectileSpeed": 0.0,
+    "projectileSpeed": 500.0,
     "ammo": 0
   },
   {
@@ -126,7 +126,7 @@
     "power": 120.0,
     "optimal": 1000.0,
     "maxRange": 1000.0,
-    "projectileSpeed": 120.0,
+    "projectileSpeed": 90.0,
     "ammo": 0,
     "firingArc": 75.0,
     "gimbal": 75.0
@@ -150,7 +150,7 @@
     "maxRange": 500.0,
     "firingArc": 40.0,
     "gimbal": 40.0,
-    "projectileSpeed": 0.0,
+    "projectileSpeed": 500.0,
     "ammo": 0
   },
   {
@@ -170,7 +170,7 @@
     "power": 30.0,
     "optimal": 1000.0,
     "maxRange": 1000.0,
-    "projectileSpeed": 150.0,
+    "projectileSpeed": 90.0,
     "ammo": 0,
     "firingArc": 75.0,
     "gimbal": 75.0
@@ -194,7 +194,7 @@
     "maxRange": 1150.0,
     "firingArc": 180.0,
     "gimbal": 180.0,
-    "projectileSpeed": 0.0,
+    "projectileSpeed": 500.0,
     "ammo": 0
   },
   {
@@ -216,7 +216,7 @@
     "maxRange": 900.0,
     "firingArc": 180.0,
     "gimbal": 180.0,
-    "projectileSpeed": 0.0,
+    "projectileSpeed": 500.0,
     "ammo": 0
   },
   {
@@ -238,7 +238,7 @@
     "maxRange": 1350.0,
     "firingArc": 180.0,
     "gimbal": 180.0,
-    "projectileSpeed": 0.0,
+    "projectileSpeed": 500.0,
     "ammo": 0
   },
   {
@@ -258,7 +258,7 @@
     "power": 300.0,
     "optimal": 850.0,
     "maxRange": 1350.0,
-    "projectileSpeed": 100.0,
+    "projectileSpeed": 90.0,
     "ammo": 0,
     "firingArc": 180.0,
     "gimbal": 180.0
@@ -280,7 +280,7 @@
     "power": 300.0,
     "optimal": 900.0,
     "maxRange": 1600.0,
-    "projectileSpeed": 100.0,
+    "projectileSpeed": 90.0,
     "ammo": 0,
     "firingArc": 180.0,
     "gimbal": 180.0
@@ -302,7 +302,7 @@
     "power": 300.0,
     "optimal": 900.0,
     "maxRange": 1600.0,
-    "projectileSpeed": 100.0,
+    "projectileSpeed": 90.0,
     "ammo": 0,
     "firingArc": 180.0,
     "gimbal": 180.0
@@ -326,7 +326,7 @@
     "maxRange": 1700.0,
     "firingArc": 180.0,
     "gimbal": 180.0,
-    "projectileSpeed": 0.0,
+    "projectileSpeed": 500.0,
     "ammo": 0
   },
   {
@@ -348,7 +348,7 @@
     "maxRange": 1350.0,
     "firingArc": 180.0,
     "gimbal": 180.0,
-    "projectileSpeed": 0.0,
+    "projectileSpeed": 500.0,
     "ammo": 0
   },
   {
@@ -370,7 +370,7 @@
     "maxRange": 2000.0,
     "firingArc": 180.0,
     "gimbal": 180.0,
-    "projectileSpeed": 0.0,
+    "projectileSpeed": 500.0,
     "ammo": 0
   },
   {
@@ -390,7 +390,7 @@
     "power": 600.0,
     "optimal": 1000.0,
     "maxRange": 1800.0,
-    "projectileSpeed": 80.0,
+    "projectileSpeed": 90.0,
     "ammo": 0,
     "firingArc": 180.0,
     "gimbal": 180.0,
@@ -415,7 +415,7 @@
     "maxRange": 800.0,
     "firingArc": 180.0,
     "gimbal": 180.0,
-    "projectileSpeed": 0.0,
+    "projectileSpeed": 500.0,
     "ammo": 0
   },
   {
@@ -437,7 +437,7 @@
     "maxRange": 540.0,
     "firingArc": 180.0,
     "gimbal": 180.0,
-    "projectileSpeed": 0.0,
+    "projectileSpeed": 500.0,
     "ammo": 0
   },
   {
@@ -457,7 +457,7 @@
     "power": 600.0,
     "optimal": 1200.0,
     "maxRange": 2000.0,
-    "projectileSpeed": 80.0,
+    "projectileSpeed": 90.0,
     "ammo": 0,
     "firingArc": 180.0,
     "gimbal": 180.0,
@@ -483,7 +483,7 @@
     "minRange": 2300.0,
     "firingArc": 35.0,
     "gimbal": 35.0,
-    "projectileSpeed": 0.0,
+    "projectileSpeed": 500.0,
     "ammo": 0
   },
   {
@@ -504,7 +504,7 @@
     "optimal": 3250.0,
     "maxRange": 4000.0,
     "minRange": 2500.0,
-    "projectileSpeed": 400.0,
+    "projectileSpeed": 500.0,
     "ammo": 0,
     "firingArc": 5.0,
     "gimbal": 5.0,
@@ -530,7 +530,7 @@
     "maxRange": 1200.0,
     "firingArc": 180.0,
     "gimbal": 180.0,
-    "projectileSpeed": 0.0,
+    "projectileSpeed": 500.0,
     "ammo": 0
   },
   {
@@ -552,7 +552,7 @@
     "maxRange": 1400.0,
     "firingArc": 45.0,
     "gimbal": 45.0,
-    "projectileSpeed": 0.0,
+    "projectileSpeed": 500.0,
     "ammo": 0
   },
   {
@@ -574,7 +574,7 @@
     "maxRange": 1500.0,
     "firingArc": 180.0,
     "gimbal": 180.0,
-    "projectileSpeed": 0.0,
+    "projectileSpeed": 500.0,
     "ammo": 0
   },
   {
@@ -594,7 +594,7 @@
     "power": 480.0,
     "optimal": 1800.0,
     "maxRange": 1800.0,
-    "projectileSpeed": 95.0,
+    "projectileSpeed": 90.0,
     "ammo": 0,
     "firingArc": 360.0,
     "gimbal": 360.0
@@ -616,7 +616,7 @@
     "power": 720.0,
     "optimal": 4000.0,
     "maxRange": 4000.0,
-    "projectileSpeed": 110.0,
+    "projectileSpeed": 90.0,
     "ammo": 0,
     "firingArc": 120.0,
     "gimbal": 120.0
