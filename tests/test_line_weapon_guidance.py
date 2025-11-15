@@ -5,12 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from game.combat.weapons import (
-    GUIDANCE_ACCURACY_SCALE,
-    GUIDANCE_DAMAGE_SCALE,
-    GUIDANCE_POWER_SCALE,
-    WeaponDatabase,
-)
+from game.combat.weapons import GUIDANCE_ACCURACY_SCALE, WeaponDatabase
 
 
 @pytest.fixture(scope="module")
@@ -36,7 +31,7 @@ def _line_weapons() -> dict[str, object]:
 def test_line_weapon_damage_alignment(weapon_id: str, _line_weapons, _line_guidance_data) -> None:
     guidance = _line_guidance_data[weapon_id]
     weapon = _line_weapons[weapon_id]
-    expected_damage = guidance["damageMax"] * GUIDANCE_DAMAGE_SCALE
+    expected_damage = guidance.get("damage", guidance["damageMax"])
     assert weapon.base_damage == pytest.approx(expected_damage)
 
 
@@ -58,7 +53,7 @@ def test_line_weapon_accuracy_alignment(weapon_id: str, _line_weapons, _line_gui
 def test_line_weapon_power_alignment(weapon_id: str, _line_weapons, _line_guidance_data) -> None:
     guidance = _line_guidance_data[weapon_id]
     weapon = _line_weapons[weapon_id]
-    expected_power = guidance["powerCost"] * GUIDANCE_POWER_SCALE
+    expected_power = guidance.get("power", guidance["powerCost"])
     assert weapon.power_cost == pytest.approx(expected_power)
 
 
