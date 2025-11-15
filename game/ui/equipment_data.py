@@ -1766,6 +1766,26 @@ EQUIPMENT_ITEMS: List[EquipmentDefinition] = [
         description="Heavy-tuned composite covering every defensive axis with manageable penalties.",
         tags=("balanced", "survivability"),
     ),
+    # Capital-class engine modules ----------------------------------------
+    _module(
+        id="thorim_siege_thrusters",
+        name="Thorim Siege Thrusters",
+        slot_family="engine",
+        ship_class="Capital",
+        price=320_000,
+        durability=22_000,
+        stats={
+            "boost_speed": 7.5,
+            "boost_cost": 25.0,
+            "boost_consumes_power": 1.0,
+        },
+        upgrades=("boost_speed", "boost_cost"),
+        description=(
+            "Thorim-exclusive propulsion array that channels reactor output into additive boost "
+            "velocity. Consumes ship energy instead of tylium while active."
+        ),
+        tags=("exclusive:thorim_siege", "boost", "power_thruster"),
+    ),
     # Capital-class weapons -----------------------------------------------
     _weapon(
         id="hag_mk16a",

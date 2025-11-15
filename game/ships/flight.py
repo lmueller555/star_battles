@@ -31,10 +31,15 @@ def _approach(current: float, target: float, rate: float) -> float:
 def effective_thruster_speed(stats: ShipStats) -> float:
     """Return the top speed achievable while boost thrusters are active."""
 
+    base_speed = getattr(stats, "speed", 0.0)
+    flank_ratio = getattr(stats, "flank_speed_ratio", 0.6)
+    if getattr(stats, "boost_speed_is_delta", False):
+        boost_bonus = max(0.0, getattr(stats, "boost_speed", 0.0))
+        return base_speed * flank_ratio + boost_bonus
     boost_speed = getattr(stats, "boost_speed", 0.0)
     if boost_speed <= 0.0:
-        boost_speed = stats.speed * THRUSTER_SPEED_MULTIPLIER
-    boost_speed = max(boost_speed, stats.speed)
+        boost_speed = base_speed * THRUSTER_SPEED_MULTIPLIER
+    boost_speed = max(boost_speed, base_speed)
     return boost_speed
 
 

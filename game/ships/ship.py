@@ -205,7 +205,9 @@ class Ship:
         self.auto_throttle_ratio: float = 0.0
         self.auto_level_enabled: bool = True
         self.collision_recoil: float = 0.0
-        self.flank_speed_ratio: float = 0.6
+        self.flank_speed_ratio: float = float(
+            getattr(self.stats, "flank_speed_ratio", 0.6)
+        )
         self.thrusters_active: bool = False
         if modules:
             for module in modules:
@@ -244,7 +246,13 @@ class Ship:
         normalised = new_rating / 1000.0 if new_rating > 1.0 else new_rating
         stats.avoidance = normalised + direct_avoidance_bonus
 
+        consumes_power_bonus = self._module_stat_cache.get("boost_consumes_power", 0.0)
+        if consumes_power_bonus > 0.0:
+            stats.boost_consumes_power = True
         self.stats = stats
+        self.flank_speed_ratio = float(
+            getattr(self.stats, "flank_speed_ratio", self.flank_speed_ratio)
+        )
 
         def preserve_ratio(current: float, previous_max: float, new_max: float) -> float:
             if new_max <= 0.0:
@@ -284,7 +292,9 @@ class Ship:
         self.auto_throttle_enabled = False
         self.auto_throttle_ratio = 0.0
         self.collision_recoil = 0.0
-        self.flank_speed_ratio = 0.6
+        self.flank_speed_ratio = float(
+            getattr(self.stats, "flank_speed_ratio", 0.6)
+        )
         self.thrusters_active = False
 
     def tick_cooldowns(self, dt: float) -> None:
@@ -323,11 +333,28 @@ class Ship:
 
     # Module helpers -----------------------------------------------------
 
+    def _module_compatible(self, module: ItemData) -> bool:
+        tags = {tag.lower() for tag in module.tags}
+        exclusives = {tag.split(":", 1)[1] for tag in tags if tag.startswith("exclusive:")}
+        ship_id = self.frame.id.lower()
+        if exclusives and ship_id not in exclusives:
+            return False
+        if module.slot_type.lower() == "engine":
+            thorim_tag = "exclusive:thorim_siege"
+            has_thorim_tag = thorim_tag in tags
+            if ship_id == "thorim_siege":
+                return has_thorim_tag
+            if has_thorim_tag:
+                return False
+        return True
+
     def equip_module(
         self, module: ItemData, level: int = 1, index: Optional[int] = None
     ) -> bool:
         """Equip a module if slot capacity allows."""
 
+        if not self._module_compatible(module):
+            return False
         capacity = getattr(self.frame.slots, module.slot_type, None)
         if capacity is None:
             raise ValueError(f"Unknown slot type {module.slot_type}")

@@ -47,6 +47,27 @@ class StoreItem:
             magnitude += abs(value)
         return magnitude
 
+    def compatible_with(self, ship: Optional[Ship]) -> bool:
+        if ship is None:
+            return True
+        ship_size = ship.frame.size.lower()
+        allowed = self.ship_class.lower()
+        if allowed not in {ship_size, "any", "all", "universal"}:
+            return False
+        ship_id = ship.frame.id.lower()
+        tags = {tag.lower() for tag in self.tags}
+        exclusives = {tag.split(":", 1)[1] for tag in tags if tag.startswith("exclusive:")}
+        if exclusives and ship_id not in exclusives:
+            return False
+        if self.slot_family.lower() == "engine":
+            thorim_tag = "exclusive:thorim_siege"
+            has_thorim_tag = thorim_tag in tags
+            if ship_id == "thorim_siege":
+                return has_thorim_tag
+            if has_thorim_tag:
+                return False
+        return True
+
 
 @dataclass
 class StoreFilters:
@@ -76,13 +97,15 @@ class InventoryState:
     def has(self, item_id: str) -> bool:
         return self.owned.get(item_id, 0) > 0
 
-    def equip(self, item: StoreItem, capacity: int) -> bool:
+    def equip(self, item: StoreItem, capacity: int, ship: Optional[Ship] = None) -> bool:
         slot = item.slot_family
         slots = self.equipped.setdefault(slot, [])
         if len(slots) >= capacity:
             return False
         equipped_count = slots.count(item.id)
         if equipped_count >= self.owned.get(item.id, 0):
+            return False
+        if ship and not item.compatible_with(ship):
             return False
         slots.append(item.id)
         return True
@@ -166,17 +189,11 @@ class StoreService:
         currency = self._context.available_currency()
         selected = self._context.selected_item
         families = set(filters.slot_families)
-        ship_class = None
-        if ship and ship.frame:
-            ship_class = ship.frame.size.lower()
 
         def _eligible(item: StoreItem) -> bool:
             if item.slot_family not in families:
                 return False
-            if not ship_class:
-                return True
-            allowed = item.ship_class.lower()
-            return allowed == ship_class or allowed in {"any", "all", "universal"}
+            return item.compatible_with(ship)
 
         items = [item for item in CATALOG.values() if _eligible(item)]
         sort_key = filters.sort_by.lower()
@@ -233,7 +250,7 @@ class StoreService:
         elif item.slot_family == "weapon":
             capacity = _weapon_capacity(ship)
         if capacity > 0:
-            self._context.inventory.equip(item, capacity)
+            self._context.inventory.equip(item, capacity, ship)
         self._context.selected_item = item_id
         return {"success": True, "currency": float(ship.resources.cubits)}
 
@@ -287,7 +304,9 @@ class FittingService:
             capacity = _weapon_capacity(ship)
         if capacity <= 0:
             return False
-        return inventory.equip(item, capacity)
+        if not item.compatible_with(ship):
+            return False
+        return inventory.equip(item, capacity, ship)
 
     def _apply_modules(self, base: object, modules: Sequence[StoreItem]) -> Dict[str, float]:
         stats = {

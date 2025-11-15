@@ -1332,6 +1332,20 @@ EQUIPMENT_UPGRADE_SPECS: Dict[str, EquipmentUpgradeSpec] = {
         },
         steps=_engine_steps(18.0, 3.0),
     ),
+    "thorim_siege_thrusters": EquipmentUpgradeSpec(
+        item_id="thorim_siege_thrusters",
+        name="Thorim Siege Thrusters",
+        slot="engine",
+        effect="Thorim-exclusive engine array scaling additive boost speed while lowering power cost per level.",
+        level_cap=15,
+        upgrade_axes=('boost_speed', 'boost_cost'),
+        curves={
+            "boost_speed": _linear(7.5, 0.35714285714285715),
+            "boost_cost": _linear(25.0, -1.0714285714285714),
+            "durability": _linear(22000.0, 0.0),
+        },
+        steps=_engine_steps(28.0, 4.0),
+    ),
     "fbs_12_engine_overload": EquipmentUpgradeSpec(
         item_id="fbs_12_engine_overload",
         name="FBS-12 Engine Overload System",

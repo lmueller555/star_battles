@@ -95,6 +95,8 @@ class ShipStats:
     max_radiation_level: float
     radioactive_decay: float
     radioresistance: float
+    flank_speed_ratio: float = 0.6
+    boost_speed_is_delta: bool = False
     upgrades: Dict[str, UpgradeValue] = field(default_factory=dict, repr=False)
 
     _ALIASES: ClassVar[Dict[str, str]] = {
@@ -276,6 +278,12 @@ class ShipStats:
         if boost_cost_up:
             upgrades["boost_cost"] = boost_cost_up
         boost_consumes_power = bool(data.get("boost_consumes_power", False))
+        boost_speed_is_delta = bool(data.get("boost_speed_is_delta", False))
+        flank_speed_ratio_raw = data.get("flank_speed_ratio")
+        try:
+            flank_speed_ratio = float(flank_speed_ratio_raw)
+        except (TypeError, ValueError):
+            flank_speed_ratio = 0.6
         power_points, power_points_up = _extract_stat(
             data, "power_points", "power_cap", default=150.0
         )
@@ -399,6 +407,8 @@ class ShipStats:
             max_radiation_level=max_radiation,
             radioactive_decay=radioactive_decay,
             radioresistance=radioresistance,
+            flank_speed_ratio=flank_speed_ratio,
+            boost_speed_is_delta=boost_speed_is_delta,
         )
         stats.upgrades = upgrades
         return stats
