@@ -24,8 +24,6 @@ GRID_MAJOR_COLOR = (34, 52, 72)
 SHIP_COLOR = (120, 220, 255)
 ENEMY_COLOR = (255, 80, 100)
 PROJECTILE_COLOR = (255, 200, 80)
-PLASMA_ORB_COLOR = (180, 120, 255)
-PLASMA_ORB_OUTER = (90, 50, 170)
 MISSILE_COLOR = (255, 255, 255)
 MISSILE_SMOKE_COLOR = (200, 200, 200)
 PROJECTILE_RENDER_DISTANCE = 3000.0
@@ -2155,130 +2153,6 @@ def _build_brimir_wireframe() -> list[tuple[Vector3, Vector3]]:
     return segments
 
 
-def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
-    """Simplified Thorim silhouette with only core structural elements."""
-
-    segments: list[tuple[Vector3, Vector3]] = []
-
-    ring_sides = 40
-    gap_center = math.pi / 2.0
-    gap_half_angle = math.radians(36.0)
-
-    size_scale = 95.8
-
-    outer_radius_x = 2.73 * size_scale
-    outer_radius_z = 3.64 * size_scale
-    inner_radius_x = 1.82 * size_scale
-    inner_radius_z = 2.52 * size_scale
-    ring_height = 0.5 * size_scale
-
-    ring_sections: list[tuple[list[tuple[Vector3, Vector3]], list[tuple[Vector3, Vector3]]]] = []
-    current_outer: list[tuple[Vector3, Vector3]] = []
-    current_inner: list[tuple[Vector3, Vector3]] = []
-
-    def _ring_point(angle: float, radius_x: float, radius_z: float, height: float) -> Vector3:
-        return Vector3(
-            math.cos(angle) * radius_x,
-            height,
-            math.sin(angle) * radius_z,
-        )
-
-    for index in range(ring_sides + 1):
-        angle = (math.tau / ring_sides) * index
-        adjusted = (angle - gap_center + math.pi) % math.tau - math.pi
-        if abs(adjusted) <= gap_half_angle:
-            if current_outer or current_inner:
-                ring_sections.append((current_outer, current_inner))
-                current_outer = []
-                current_inner = []
-            continue
-
-        outer_top = _ring_point(angle, outer_radius_x, outer_radius_z, ring_height)
-        outer_bottom = _ring_point(angle, outer_radius_x, outer_radius_z, -ring_height)
-        inner_top = _ring_point(angle, inner_radius_x, inner_radius_z, ring_height * 0.6)
-        inner_bottom = _ring_point(angle, inner_radius_x, inner_radius_z, -ring_height * 0.6)
-
-        current_outer.append((outer_top, outer_bottom))
-        current_inner.append((inner_top, inner_bottom))
-
-    if current_outer or current_inner:
-        ring_sections.append((current_outer, current_inner))
-
-    def _connect_sections(sections: Sequence[tuple[Vector3, Vector3]]) -> None:
-        for idx in range(len(sections) - 1):
-            segments.append((sections[idx][0], sections[idx + 1][0]))
-            segments.append((sections[idx][1], sections[idx + 1][1]))
-
-    for outer_sections, inner_sections in ring_sections:
-        _connect_sections(outer_sections)
-        _connect_sections(inner_sections)
-
-        if outer_sections:
-            segments.append((outer_sections[0][0], outer_sections[0][1]))
-            segments.append((outer_sections[-1][0], outer_sections[-1][1]))
-        if inner_sections:
-            segments.append((inner_sections[0][0], inner_sections[0][1]))
-            segments.append((inner_sections[-1][0], inner_sections[-1][1]))
-
-        if outer_sections and inner_sections:
-            segments.extend(
-                [
-                    (outer_sections[0][0], inner_sections[0][0]),
-                    (outer_sections[0][1], inner_sections[0][1]),
-                    (outer_sections[-1][0], inner_sections[-1][0]),
-                    (outer_sections[-1][1], inner_sections[-1][1]),
-                ]
-            )
-
-    # Central weapon hardpoint
-    weapon_base = Vector3(0.0, 0.0, -inner_radius_z * 0.15)
-    weapon_tip = Vector3(0.0, 0.0, inner_radius_z * 0.55)
-    segments.append((weapon_base, weapon_tip))
-
-    # Engine housing at the rear of the crescent
-    engine_z = -outer_radius_z * 1.1
-    engine_half_width = inner_radius_x * 0.6
-    engine_half_height = ring_height * 1.1
-
-    engine_top_left = Vector3(-engine_half_width, engine_half_height, engine_z)
-    engine_top_right = Vector3(engine_half_width, engine_half_height, engine_z)
-    engine_bottom_left = Vector3(-engine_half_width, -engine_half_height, engine_z)
-    engine_bottom_right = Vector3(engine_half_width, -engine_half_height, engine_z)
-
-    segments.extend(
-        [
-            (engine_top_left, engine_top_right),
-            (engine_bottom_left, engine_bottom_right),
-            (engine_top_left, engine_bottom_left),
-            (engine_top_right, engine_bottom_right),
-        ]
-    )
-
-    if outer_sections:
-        aft_candidates = sorted(outer_sections, key=lambda section: section[0].z)[:4]
-        left_anchor = min(
-            (section for section in aft_candidates if section[0].x <= 0),
-            key=lambda section: section[0].x,
-            default=aft_candidates[0] if aft_candidates else outer_sections[0],
-        )
-        right_anchor = max(
-            (section for section in aft_candidates if section[0].x >= 0),
-            key=lambda section: section[0].x,
-            default=aft_candidates[-1] if aft_candidates else outer_sections[-1],
-        )
-
-        segments.extend(
-            [
-                (engine_top_left, left_anchor[0]),
-                (engine_bottom_left, left_anchor[1]),
-                (engine_top_right, right_anchor[0]),
-                (engine_bottom_right, right_anchor[1]),
-            ]
-        )
-
-    return segments
-
-
 WIREFRAMES = {
     "Strike": [
         (Vector3(0, 0.3, 2.5), Vector3(0.9, 0, -2.0)),
@@ -2303,7 +2177,6 @@ WIREFRAMES = {
     "maul_assault": _build_maul_wireframe(),
     "vanir_command": _build_vanir_wireframe(),
     "brimir_carrier": _build_brimir_wireframe(),
-    "thorim_siege": _build_thorim_wireframe(),
 }
 
 SHIP_GEOMETRY_CACHE = _build_ship_geometry_cache()
@@ -3219,10 +3092,7 @@ class VectorRenderer:
             ).length_squared() > PROJECTILE_RENDER_DISTANCE_SQR:
                 continue
             is_missile = projectile.weapon.wclass == "missile"
-            is_plasma_orb = projectile.weapon.id == "plasma_orb_launcher"
             color = MISSILE_COLOR if is_missile else PROJECTILE_COLOR
-            if is_plasma_orb:
-                color = PLASMA_ORB_COLOR
             screen_pos, visible = camera.project(projectile.position, self.surface.get_size())
             if not visible:
                 continue
@@ -3246,16 +3116,6 @@ class VectorRenderer:
                         )
             radius = 3
             thickness = 0 if is_missile else 1
-            if is_plasma_orb:
-                radius = 9
-                thickness = 0
-                pygame.draw.circle(
-                    self.surface,
-                    PLASMA_ORB_OUTER,
-                    (int(screen_pos.x), int(screen_pos.y)),
-                    radius + 2,
-                    2,
-                )
             pygame.draw.circle(
                 self.surface,
                 color,

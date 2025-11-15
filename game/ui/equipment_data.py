@@ -1768,35 +1768,6 @@ EQUIPMENT_ITEMS: List[EquipmentDefinition] = [
     ),
     # Capital-class weapons -----------------------------------------------
     _weapon(
-        id="plasma_orb_launcher",
-        name="P-01 'Plasma Orb Launcher'",
-        ship_class="Capital",
-        price=650_000,
-        durability=30_000,
-        stats={
-            "damage_min": 1_000.0,
-            "damage_max": 1_000.0,
-            "armor_piercing": 55.0,
-            "range_min": 1_200.0,
-            "range_max": 4_000.0,
-            "optimal_range": 3_600.0,
-            "accuracy": 150.0,
-            "critical_offense": 120.0,
-            "reload": 60.0,
-            "power": 0.0,
-            "firing_arc": 30.0,
-            "turn_speed": 12.0,
-            "projectile_speed": 500.0,
-        },
-        upgrades=("damage", "reload"),
-        description=(
-            "Thorim-exclusive siege launcher that condenses ship-wide energy into a "
-            "plasma orb. Requires full energy reserves, consumes the entire pool on "
-            "fire, and cannot lock Strike-class hulls."
-        ),
-        tags=("siege", "exclusive:thorim_siege", "full_energy_cost"),
-    ),
-    _weapon(
         id="hag_mk16a",
         name="HAG-MK16A 'Gram'",
         ship_class="Capital",
