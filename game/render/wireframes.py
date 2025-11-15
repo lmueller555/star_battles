@@ -1888,6 +1888,57 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
         segments.append((outer_top[edge_index], outer_bottom[edge_index]))
         segments.append((inner_top[edge_index], inner_bottom[edge_index]))
 
+    # Pointed caps at siege arm tips
+    cap_extension = outer_radius_x * 0.22
+    cap_forward_push = 18.0 * length_scale
+    cap_height_offset = 28.0 * height_scale
+    cap_recess = 32.0 * length_scale
+
+    for edge_index in edge_indices:
+        outer_top_point = outer_top[edge_index]
+        outer_bottom_point = outer_bottom[edge_index]
+        inner_top_point = inner_top[edge_index]
+        inner_bottom_point = inner_bottom[edge_index]
+
+        outward_vector = outer_top_point - inner_top_point
+        magnitude = outward_vector.length()
+        if magnitude > 0.0:
+            outward_unit = outward_vector / magnitude
+        else:
+            x_sign = -1.0 if outer_top_point.x < 0.0 else 1.0
+            outward_unit = Vector3(x_sign, 0.0, 0.0)
+
+        base_mid = (outer_top_point + outer_bottom_point) * 0.5
+        cap_tip = base_mid + outward_unit * cap_extension
+        cap_tip += Vector3(0.0, 0.0, cap_forward_push)
+
+        cap_upper = Vector3(
+            cap_tip.x,
+            cap_tip.y + cap_height_offset,
+            cap_tip.z - cap_recess * 0.6,
+        )
+        cap_lower = Vector3(
+            cap_tip.x,
+            cap_tip.y - cap_height_offset,
+            cap_tip.z - cap_recess * 0.6,
+        )
+
+        segments.extend(
+            [
+                (outer_top_point, cap_upper),
+                (outer_bottom_point, cap_lower),
+                (outer_top_point, cap_tip),
+                (outer_bottom_point, cap_tip),
+                (inner_top_point, cap_upper),
+                (inner_bottom_point, cap_lower),
+                (inner_top_point, cap_tip),
+                (inner_bottom_point, cap_tip),
+                (cap_upper, cap_lower),
+                (cap_upper, cap_tip),
+                (cap_lower, cap_tip),
+            ]
+        )
+
     # Dorsal/ventral spines along the back
     dorsal_spine = [
         Vector3(0.0, top_y + 32.0 * height_scale, inner_radius_z * -0.45),
