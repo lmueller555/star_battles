@@ -2167,9 +2167,9 @@ def _build_thorim_wireframe() -> list[tuple[Vector3, Vector3]]:
     size_scale = 95.8
 
     outer_radius_x = 3.9 * size_scale
-    outer_radius_z = 5.2 * size_scale
+    outer_radius_z = 4.6 * size_scale
     inner_radius_x = 2.6 * size_scale
-    inner_radius_z = 3.6 * size_scale
+    inner_radius_z = 3.0 * size_scale
     ring_height = 0.72 * size_scale
 
     ring_sections: list[tuple[list[tuple[Vector3, Vector3]], list[tuple[Vector3, Vector3]]]] = []
