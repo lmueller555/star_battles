@@ -847,8 +847,11 @@ GUIDANCE_SHIP_DATA = [{'counterpart': None,
   'id': 'vanir_command',
   'level_requirement': 1,
   'name': 'Vanir',
-  'notes': 'Line-class command hull that acts as a mobile anchor for missile and '
-           'energy-support operations.',
+  'notes': 'Heavy Command line ship with a large energy pool and strong computer '
+           'capacity for EW/support builds. Plays as a mobile anchor: slow '
+           'handling but durable with solid long-range sensors; excels when '
+           'screened by Escorts/Strikes and when fielded as a missile/energy-'
+           'support platform.',
   'role': 'Command',
   'role_bonuses': ['Role Bonus: −150 Transponder Power Cost (Command bonus).'],
   'size': 'Line',
