@@ -19,11 +19,11 @@ purchase_cost (currency), upgrade_cost (to Advanced), operating: boost_cost (Tyl
 
 Equipment Slots (all families listed for consistency; use 0 when unsupported)
 
-Strike/Escort/Line: weapons, hull, engine, computer.
+Strike/Escort: weapons, hull, engine, computer.
 
-Weapon subfamilies (if UI shows them): gun, launcher, defensive_weapon, special_weapon.
+Weapon subfamilies (if UI shows them): gun, missile launcher, defensive_weapon.
 
-Capital: guns, launchers, defensive_weapons + hull, engine, computer.
+Line/Capital: weapons, defensive_weapons, hull, engine, computer.
 
 When the panel shows counts like “4(+1)”, store:
 
