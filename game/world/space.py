@@ -363,7 +363,7 @@ class SpaceWorld:
                 )
                 if segment_distance <= 5.0:
                     if not projectile.visual_only:
-                        damage = projectile.weapon.base_damage
+                        damage = projectile.base_damage
                         if _is_strike_ship(projectile.source_ship):
                             damage = _strike_damage_adjustment(damage)
                         self._apply_damage(target_ship, damage)
@@ -384,7 +384,7 @@ class SpaceWorld:
                 )
                 if segment_distance <= hit_radius:
                     if not projectile.visual_only:
-                        damage = projectile.weapon.base_damage
+                        damage = projectile.base_damage
                         if _is_strike_ship(projectile.source_ship):
                             damage = _strike_damage_adjustment(damage)
                         self._apply_asteroid_damage(
@@ -628,6 +628,7 @@ class SpaceWorld:
                 team=ship.team,
                 source_ship=ship,
                 visual_only=True,
+                damage=0.0,
             )
             self.projectiles.append(tracer)
             self._trigger_weapon_effect(ship, mount, weapon, effective_gimbal)
@@ -663,6 +664,7 @@ class SpaceWorld:
                 ttl=ttl,
                 team=ship.team,
                 source_ship=ship,
+                damage=weapon.roll_damage(self.rng),
             )
             self.projectiles.append(projectile)
             if target_ship and (ship.team == "player" or target_ship.team == "player"):

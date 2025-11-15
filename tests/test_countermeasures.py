@@ -65,7 +65,8 @@ def test_activate_countermeasure_intercepts_and_breaks_lock(tmp_path):
         "id": "test_missile",
         "slotType": "launcher",
         "class": "missile",
-        "damage": 100,
+        "damageMin": 100,
+        "damageMax": 100,
         "accuracy": 1.0,
         "crit": 0.0,
         "critMult": 1.0,
@@ -85,6 +86,7 @@ def test_activate_countermeasure_intercepts_and_breaks_lock(tmp_path):
         target_id=id(ship),
         ttl=5.0,
         team="enemy",
+        damage=missile.damage_max,
     )
     world.projectiles.append(projectile)
 
