@@ -16,7 +16,7 @@ from game.ui.sector_map import map_display_rect
 from game.world.mining import MiningHUDState
 from game.ships.ship import Ship
 from game.ships.flight import effective_thruster_speed
-from game.render.renderer import WIREFRAMES
+from game.render.wireframes import WIREFRAMES
 
 
 FLANK_SLIDER_WIDTH = 18

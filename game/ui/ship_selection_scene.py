@@ -10,7 +10,7 @@ from pygame.math import Vector2, Vector3
 
 from game.assets.content import ContentManager
 from game.engine.scene import Scene
-from game.render.renderer import WIREFRAMES
+from game.render.wireframes import WIREFRAMES
 from game.ships.data import ShipFrame
 
 BACKGROUND_COLOR = (6, 10, 16)

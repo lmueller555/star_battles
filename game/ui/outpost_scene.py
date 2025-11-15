@@ -15,7 +15,8 @@ from game.engine.input import InputMapper
 from game.engine.logger import GameLogger
 from game.engine.scene import Scene
 from game.render.camera import ChaseCamera
-from game.render.renderer import VectorRenderer, WIREFRAMES
+from game.render.renderer import VectorRenderer
+from game.render.wireframes import WIREFRAMES
 from game.ships.ship import Ship, ShipControlState
 from game.world.space import SpaceWorld, SpaceWorldState
 from game.world.station import DockingStation
