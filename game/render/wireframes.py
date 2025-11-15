@@ -1205,6 +1205,7 @@ def _build_maul_wireframe() -> list[tuple[Vector3, Vector3]]:
 def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
     segments: list[tuple[Vector3, Vector3]] = []
 
+    # Central spine control points (unchanged)
     prow = Vector3(0.0, 4.6, 12.4)
     forward_spine = Vector3(0.0, 4.8, 9.8)
     mid_spine = Vector3(0.0, 5.0, 6.4)
@@ -1223,61 +1224,69 @@ def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
     ventral_engine_tail = Vector3(0.0, 0.0, -8.8)
     ventral_stern = Vector3(0.0, -0.2, -12.0)
 
+    # ──────────────────────────
+    # Hull curves – smoother, more rounded
+    # ──────────────────────────
+
+    # Port outer hull: soften steps, slight bow around midsection
     port_outer_hull = [
-        Vector3(-5.2, 3.4, 12.4),
-        Vector3(-5.6, 3.2, 11.0),
-        Vector3(-6.1, 3.0, 9.2),
-        Vector3(-6.5, 2.8, 7.2),
-        Vector3(-6.9, 2.4, 5.0),
-        Vector3(-7.0, 2.2, 3.0),
-        Vector3(-6.8, 2.0, 1.0),
-        Vector3(-6.5, 1.8, -1.2),
-        Vector3(-6.2, 1.7, -3.6),
-        Vector3(-5.9, 1.8, -6.0),
-        Vector3(-5.6, 2.0, -8.6),
-        Vector3(-5.3, 2.2, -11.2),
+        Vector3(-5.0, 3.5, 12.4),
+        Vector3(-5.3, 3.3, 11.0),
+        Vector3(-5.7, 3.1, 9.2),
+        Vector3(-6.2, 2.9, 7.2),
+        Vector3(-6.6, 2.6, 5.0),
+        Vector3(-6.8, 2.4, 3.0),
+        Vector3(-6.9, 2.2, 1.0),
+        Vector3(-6.8, 2.0, -1.2),
+        Vector3(-6.5, 1.9, -3.6),
+        Vector3(-6.1, 2.0, -6.0),
+        Vector3(-5.7, 2.2, -8.6),
+        Vector3(-5.2, 2.3, -11.2),
     ]
+    # Lower outer hull: mirrored in Y with slightly rounded profile
     port_outer_hull_lower = [
-        Vector3(-5.2, 0.2, 12.4),
-        Vector3(-5.6, 0.0, 11.0),
-        Vector3(-6.1, -0.4, 9.2),
-        Vector3(-6.5, -0.8, 7.2),
-        Vector3(-6.9, -1.2, 5.0),
-        Vector3(-7.0, -1.4, 3.0),
-        Vector3(-6.8, -1.6, 1.0),
-        Vector3(-6.5, -1.8, -1.2),
-        Vector3(-6.2, -1.9, -3.6),
-        Vector3(-5.9, -1.8, -6.0),
-        Vector3(-5.6, -1.6, -8.6),
-        Vector3(-5.3, -1.4, -11.2),
+        Vector3(-5.0, 0.4, 12.4),
+        Vector3(-5.3, 0.1, 11.0),
+        Vector3(-5.7, -0.2, 9.2),
+        Vector3(-6.2, -0.6, 7.2),
+        Vector3(-6.6, -1.0, 5.0),
+        Vector3(-6.8, -1.2, 3.0),
+        Vector3(-6.9, -1.4, 1.0),
+        Vector3(-6.8, -1.6, -1.2),
+        Vector3(-6.5, -1.7, -3.6),
+        Vector3(-6.1, -1.6, -6.0),
+        Vector3(-5.7, -1.4, -8.6),
+        Vector3(-5.2, -1.2, -11.2),
     ]
+
+    # Port inner hull: narrower, smoother taper front and rear
     port_inner_hull = [
-        Vector3(-2.6, 3.6, 12.0),
-        Vector3(-2.9, 3.4, 10.6),
-        Vector3(-3.2, 3.2, 9.0),
-        Vector3(-3.4, 3.0, 7.4),
-        Vector3(-3.5, 2.8, 5.6),
-        Vector3(-3.4, 2.6, 3.8),
-        Vector3(-3.3, 2.4, 2.0),
-        Vector3(-3.1, 2.2, 0.0),
-        Vector3(-3.0, 2.0, -2.2),
-        Vector3(-2.9, 2.0, -4.6),
-        Vector3(-2.8, 2.2, -7.2),
-        Vector3(-2.8, 2.4, -9.8),
+        Vector3(-2.4, 3.7, 12.0),
+        Vector3(-2.7, 3.5, 10.6),
+        Vector3(-3.0, 3.3, 9.0),
+        Vector3(-3.2, 3.1, 7.4),
+        Vector3(-3.3, 2.9, 5.6),
+        Vector3(-3.3, 2.7, 3.8),
+        Vector3(-3.2, 2.5, 2.0),
+        Vector3(-3.0, 2.3, 0.0),
+        Vector3(-2.9, 2.1, -2.2),
+        Vector3(-2.8, 2.1, -4.6),
+        Vector3(-2.7, 2.3, -7.2),
+        Vector3(-2.7, 2.5, -9.8),
     ]
     port_inner_hull_lower = [
-        Vector3(-2.6, 0.2, 12.0),
-        Vector3(-2.9, 0.0, 10.6),
-        Vector3(-3.2, -0.2, 9.0),
-        Vector3(-3.4, -0.4, 7.4),
-        Vector3(-3.5, -0.6, 5.6),
-        Vector3(-3.4, -0.8, 3.8),
-        Vector3(-3.3, -1.0, 2.0),
-        Vector3(-3.1, -1.2, 0.0),
-        Vector3(-3.0, -1.4, -2.2),
-        Vector3(-2.9, -1.4, -4.6),
-        Vector3(-2.8, -1.2, -7.2),
-        Vector3(-2.8, -1.0, -9.8),
+        Vector3(-2.4, 0.4, 12.0),
+        Vector3(-2.7, 0.2, 10.6),
+        Vector3(-3.0, 0.0, 9.0),
+        Vector3(-3.2, -0.2, 7.4),
+        Vector3(-3.3, -0.4, 5.6),
+        Vector3(-3.3, -0.6, 3.8),
+        Vector3(-3.2, -0.8, 2.0),
+        Vector3(-3.0, -1.0, 0.0),
+        Vector3(-2.9, -1.2, -2.2),
+        Vector3(-2.8, -1.2, -4.6),
+        Vector3(-2.7, -1.0, -7.2),
+        Vector3(-2.7, -0.8, -9.8),
     ]
 
     _loop_segments(segments, port_outer_hull, close=False)
@@ -1335,6 +1344,7 @@ def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
         mirrored_lower_outer = mirrored_outer_hull_lower[index]
         mirrored_lower_inner = mirrored_inner_hull_lower[index]
 
+        # Vertical and radial ribs – unchanged
         segments.append((outer, inner))
         segments.append((mirrored_outer, mirrored_inner))
         segments.append((outer, lower_outer))
@@ -1361,6 +1371,7 @@ def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
             segments.append((lower_outer, ventral_stern))
             segments.append((mirrored_lower_outer, ventral_stern))
 
+    # Rear dorsal spine
     rear_spine = [
         reactor,
         engine_core,
@@ -1369,8 +1380,7 @@ def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
     ]
     _loop_segments(segments, rear_spine, close=False)
 
-    # Start the ventral spine at the forward spine instead of the nose,
-    # so there is no central structure closing off the front opening.
+    # Start ventral spine at forward spine, not nose (keep opening clear)
     ventral_spine = [
         ventral_forward_spine,
         ventral_mid_spine,
@@ -1383,7 +1393,7 @@ def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
     for start, end in zip(ventral_spine, ventral_spine[1:]):
         segments.append((start, end))
 
-    # Same for the dorsal spine: start at forward_spine instead of prow.
+    # Same for dorsal spine
     dorsal_spine = [
         forward_spine,
         mid_spine,
@@ -1396,9 +1406,10 @@ def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
     for upper, lower in zip(dorsal_spine, ventral_spine):
         segments.append((upper, lower))
 
+    # Rear cross braces – keep but with smoother Y/Z placement
     rear_cross_braces = [
-        (-3.4, 2.4, 2.0, 8, 9),
-        (-5.6, 2.3, 2.1, 9, 10),
+        (-3.2, 2.5, 2.0, 8, 9),
+        (-5.2, 2.4, 2.1, 9, 10),
     ]
     for z_position, upper_y, lower_y, upper_index, lower_index in rear_cross_braces:
         port_upper = Vector3(port_inner_hull[upper_index].x, upper_y, z_position)
@@ -1420,18 +1431,19 @@ def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
         segments.append((port_lower, port_inner_hull_lower[lower_index]))
         segments.append((starboard_lower, mirrored_inner_hull_lower[lower_index]))
 
+    # Vane pairs – softened positions
     vane_pairs = [
-        (Vector3(-6.6, 1.8, -0.8), Vector3(-8.2, 1.6, -1.4)),
-        (Vector3(-6.8, 1.7, -2.2), Vector3(-8.4, 1.5, -3.0)),
-        (Vector3(-6.9, 1.6, -3.6), Vector3(-8.5, 1.4, -4.6)),
-        (Vector3(-6.7, 1.6, -5.2), Vector3(-8.1, 1.4, -6.6)),
+        (Vector3(-6.4, 1.9, -0.8), Vector3(-8.0, 1.7, -1.4)),
+        (Vector3(-6.6, 1.8, -2.2), Vector3(-8.2, 1.6, -3.0)),
+        (Vector3(-6.7, 1.7, -3.6), Vector3(-8.3, 1.5, -4.6)),
+        (Vector3(-6.5, 1.7, -5.2), Vector3(-7.9, 1.5, -6.6)),
     ]
     for base, tip in vane_pairs:
         segments.append((base, tip))
         mirrored_base = _mirror_vector(base)
         mirrored_tip = _mirror_vector(tip)
         segments.append((mirrored_base, mirrored_tip))
-        lower_base = Vector3(base.x, -1.2, base.z)
+        lower_base = Vector3(base.x, -1.1, base.z)
         lower_mirrored = _mirror_vector(lower_base)
         segments.append((base, lower_base))
         segments.append((mirrored_base, lower_mirrored))
@@ -1446,15 +1458,16 @@ def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
         segments.append((lower_base, anchor))
         segments.append((lower_mirrored, anchor))
 
+    # Engine rings – already fairly rounded, just tiny tweaks
     engine_rings_z = [-6.0, -7.2, -8.6]
     for ring_z in engine_rings_z:
         ring = [
-            Vector3(-1.4, 3.4, ring_z),
-            Vector3(-0.8, 3.8, ring_z),
+            Vector3(-1.3, 3.4, ring_z),
+            Vector3(-0.7, 3.8, ring_z),
             Vector3(0.0, 4.0, ring_z),
-            Vector3(0.8, 3.8, ring_z),
-            Vector3(1.4, 3.4, ring_z),
-            Vector3(0.0, 3.0, ring_z),
+            Vector3(0.7, 3.8, ring_z),
+            Vector3(1.3, 3.4, ring_z),
+            Vector3(0.0, 3.1, ring_z),
         ]
         _loop_segments(segments, ring)
         for point in ring:
@@ -1463,11 +1476,12 @@ def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
             ventral_anchor = ventral_engine_core if ring_z > -7.0 else ventral_engine_tail
             segments.append((point, ventral_anchor))
 
+    # Aft block – less boxy, more diamond-like
     aft_block_port = [
-        Vector3(-4.6, 2.2, -5.8),
-        Vector3(-5.2, 2.0, -7.4),
-        Vector3(-4.8, 2.2, -9.4),
-        Vector3(-4.0, 2.4, -7.6),
+        Vector3(-4.4, 2.3, -5.8),
+        Vector3(-5.0, 2.1, -7.4),
+        Vector3(-4.6, 2.3, -9.4),
+        Vector3(-3.8, 2.5, -7.6),
     ]
     aft_block = aft_block_port + [_mirror_vector(point) for point in reversed(aft_block_port)]
     _loop_segments(segments, aft_block)
@@ -1475,22 +1489,22 @@ def _build_vanir_wireframe() -> list[tuple[Vector3, Vector3]]:
         segments.append((point, engine_core))
         segments.append((point, ventral_engine_core))
 
+    # Exhaust band – slightly smoother curve
     exhaust_band = [
-        Vector3(-2.2, 2.6, -11.0),
-        Vector3(-1.2, 2.4, -11.6),
-        Vector3(0.0, 2.2, -11.8),
-        Vector3(1.2, 2.4, -11.6),
-        Vector3(2.2, 2.6, -11.0),
-        Vector3(0.0, 3.0, -10.8),
+        Vector3(-2.0, 2.7, -11.0),
+        Vector3(-1.1, 2.5, -11.6),
+        Vector3(0.0, 2.3, -11.8),
+        Vector3(1.1, 2.5, -11.6),
+        Vector3(2.0, 2.7, -11.0),
+        Vector3(0.0, 3.1, -10.8),
     ]
     _loop_segments(segments, exhaust_band)
     for point in exhaust_band:
         segments.append((point, stern))
         segments.append((point, ventral_stern))
 
-    # NOTE: nose_outline and nose_outline_lower (which previously connected
-    # port and starboard across the very front and added extra supports) have
-    # been removed to keep the forward gap between the arms unobstructed.
+    # NOTE: nose_outline and nose_outline_lower remain removed so the front
+    # gap between the two arms stays completely unobstructed.
 
     return segments
 
