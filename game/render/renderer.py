@@ -587,6 +587,7 @@ class VectorRenderer:
         intensity = max(0.0, min(1.0, timer / max(0.001, duration)))
         if intensity <= 0.0:
             return
+        elapsed = duration - timer
         effect_range = getattr(mount, "effect_range", 0.0)
         if effect_range <= 0.0:
             effect_range = 360.0
@@ -601,39 +602,39 @@ class VectorRenderer:
         if base_dir.length_squared() <= 1e-6:
             base_dir = ship.hardpoint_direction(getattr(mount, "hardpoint", None))
         base_dir = base_dir.normalize()
-        rng = self._mount_rng(mount)
+        base_rng = random.Random(getattr(mount, "effect_seed", 0))
         particle_count = max(6, int(18 + 26 * intensity))
-        steps = 6
-
-        def _travel_fraction(t: float) -> float:
-            if t <= 0.0:
-                return 0.0
-            if t >= 1.0:
-                return 1.0
-            if t <= 0.75:
-                return t
-            tail = (t - 0.75) / 0.25
-            tail = max(0.0, min(1.0, tail))
-            eased = 1.0 - (1.0 - tail) ** 3
-            return 0.75 + 0.25 * eased
+        travel_speed = 1800.0
+        trail_steps = 5
+        trail_fraction = 0.22
 
         for _ in range(particle_count):
+            particle_seed = base_rng.randrange(0, 1 << 30)
+            rng = random.Random(particle_seed)
             direction = self._sample_direction_in_cone(base_dir, gimbal, rng)
             distance = effect_range * rng.uniform(0.4, 0.85)
-            for step in range(1, steps + 1):
-                time_fraction = step / steps
-                travel = _travel_fraction(time_fraction)
-                fraction = travel
-                position = origin_point + direction * (distance * travel)
+            travel_time = distance / max(1e-3, travel_speed)
+            spawn_time = rng.uniform(0.0, max(0.0, duration - travel_time * 0.1))
+            if elapsed < spawn_time or elapsed > spawn_time + travel_time:
+                continue
+            progress = (elapsed - spawn_time) / max(1e-6, travel_time)
+            progress = max(0.0, min(1.0, progress))
+            brightness = 0.6 + 0.4 * rng.random()
+            fade = intensity * (0.85 + 0.3 * rng.random())
+            head_radius = 2
+            for step in range(trail_steps + 1):
+                fraction = progress - (step / trail_steps) * trail_fraction
+                if fraction <= 0.0:
+                    continue
+                position = origin_point + direction * (distance * fraction)
                 screen, visible = frame.project_point(position)
                 if not visible:
                     continue
-                fade = intensity * (1.0 - (fraction - 0.5) * 0.35)
-                brightness = 0.6 + 0.4 * rng.random()
+                trail_fade = fade * (1.0 - 0.75 * (step / max(1, trail_steps)))
                 red = int(180 + 70 * brightness)
-                green = int(30 + 40 * fade)
-                blue = int(30 * fade)
-                radius = 1 if step < steps else 2
+                green = int(30 + 40 * trail_fade)
+                blue = int(30 * trail_fade)
+                radius = head_radius if step == 0 else 1
                 pygame.draw.circle(
                     self.surface,
                     (min(255, red), min(120, green), min(100, blue)),
