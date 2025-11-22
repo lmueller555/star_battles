@@ -187,6 +187,14 @@ class SandboxScene(Scene):
                         ai = create_ai_for_ship(ship)
                         self.world.add_ship(ship, ai=ai)
 
+                thorim_frame = self.content.ships.get("thorim_siege")
+                thorim_ship = Ship(thorim_frame, team="enemy")
+                thorim_ship.kinematics.position = Vector3(240.0, 0.0, 1800.0) * SECTOR_SCALE
+                thorim_ship.kinematics.velocity = Vector3(0.0, 0.0, -6.0)
+                self._equip_ship(thorim_ship)
+                thorim_ai = create_ai_for_ship(thorim_ship)
+                self.world.add_ship(thorim_ship, ai=thorim_ai)
+
                 edge_distance = max(0.0, AsteroidField.FIELD_RADIUS * 0.95 - 12000.0)
                 outpost_spawns: list[tuple[str, str, Vector3]] = [
                     ("player", "outpost_regular", Vector3(-edge_distance, 0.0, -edge_distance)),
