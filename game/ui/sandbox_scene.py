@@ -19,7 +19,12 @@ from game.sensors.dradis import DradisSystem
 from game.ships.ship import Ship, ShipControlState, WeaponMount
 from game.world.ai import create_ai_for_ship
 from game.world.asteroids import Asteroid, AsteroidField
-from game.world.space import COLLISION_RADII, SpaceWorld
+from game.world.space import (
+    COLLISION_RADII,
+    FLAK_WEAPONS,
+    POINT_DEFENSE_WEAPONS,
+    SpaceWorld,
+)
 from game.world.mining import MiningHUDState
 from game.world.station import DockingStation
 from game.ui.sector_map import SectorMapView
@@ -1055,7 +1060,7 @@ class SandboxScene(Scene):
         if self.player.power < power_cost:
             return
         target = self._select_weapon_target(mount, weapon, preferred_target, enemies)
-        if not target:
+        if not target and not self._slot_can_fire_without_target(weapon):
             return
         if (
             weapon.slot_type == "launcher"
@@ -1068,6 +1073,13 @@ class SandboxScene(Scene):
             self.player.lock_progress = 0.0
         if result and result.hit and self.camera:
             self.camera.apply_recoil(0.4)
+
+    def _slot_can_fire_without_target(self, weapon) -> bool:
+        if not self.player:
+            return False
+        if self.player.frame.size.lower() not in {"line", "capital"}:
+            return False
+        return weapon.id in POINT_DEFENSE_WEAPONS or weapon.id in FLAK_WEAPONS
 
     def _select_weapon_target(
         self,
