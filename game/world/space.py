@@ -681,7 +681,7 @@ class SpaceWorld:
     ) -> None:
         if weapon.id in POINT_DEFENSE_WEAPONS:
             mount.effect_type = "point_defense"
-            mount.effect_duration = 5.0
+            mount.effect_duration = 1.0
         elif weapon.id in FLAK_WEAPONS:
             mount.effect_type = "flak"
             mount.effect_duration = 0.55
