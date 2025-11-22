@@ -1,0 +1,70 @@
+# Publishing to itch.io (ultra-detailed walkthrough)
+
+This guide explains how to take the current Pygame prototype and ship a downloadable build on itch.io. Follow every step in order so uploads remain reproducible and asset-complete.
+
+## 1) Prepare the workspace
+1. Install Python 3.10+ on the build machine.
+2. From the repository root, create and activate a clean virtual environment:
+   - `python -m venv .venv`
+   - Windows PowerShell: `.venv\\Scripts\\Activate.ps1`
+   - macOS/Linux: `source .venv/bin/activate`
+3. Install runtime and test dependencies: `pip install -r requirements.txt`.
+4. Verify the game boots locally: `python main.py` (close after the title scene renders).
+5. Run the regression suite to ensure no packaging blockers: `pytest`.
+
+## 2) Lock game settings for builds
+1. Open `settings.json` and set deterministic defaults for packaged builds:
+   - Set `"resolution"` to a common windowed size (e.g., `[1920, 1080]`) so Pygame does not request fullscreen by default.
+   - Keep `"simHz"` at `60` and `"maxFps"` at `120` unless you have platform-specific needs.
+2. Commit this file alongside the build so first-run defaults match QA expectations.
+
+## 3) Make asset loading portable
+The entrypoint loads content from `game/assets` relative to the working directory via `ContentManager(Path("game/assets"))` in `main.py`. To keep assets discoverable after bundling:
+1. Avoid hard-coding absolute paths; keep the relative `game/assets` root untouched.
+2. If you add new assets, drop them under `game/assets` so `ContentManager.load()` picks them up without code changes.
+3. Add a runtime fallback that checks for a `assets` directory next to the executable when frozen (PyInstaller/py2exe). Inside `main.py`, before instantiating `ContentManager`, detect `hasattr(sys, "_MEIPASS")` and point the base path to `Path(sys._MEIPASS) / "game" / "assets"` when present.
+4. Keep JSON and texture/font/audio files in their existing relative layout to avoid patching loader code.
+
+## 4) Build a standalone executable
+Use PyInstaller to ship a single-folder bundle that includes Pygame and all assets.
+1. Install PyInstaller into the venv: `pip install pyinstaller`.
+2. From the repo root, run:
+   ```bash
+   pyinstaller main.py \
+     --name "StarBattles" \
+     --noconfirm \
+     --clean \
+     --add-data "game/assets:game/assets" \
+     --add-data "settings.json:." \
+     --hidden-import pygame
+   ```
+   - `--add-data` copies the asset directory and default settings into the dist folder.
+   - `--hidden-import pygame` prevents missing dynamic modules on some platforms.
+3. After the build completes, verify `dist/StarBattles/` contains `StarBattles` (exe or binary), `game/assets`, and `settings.json`.
+4. Smoke test the built binary from inside `dist/StarBattles`: `./StarBattles` (Linux/macOS) or `StarBattles.exe` (Windows). Confirm scenes load and assets render.
+
+## 5) Package per-platform uploads
+Itch.io expects zip/tar uploads per platform.
+1. For Windows, zip the entire `dist/StarBattles` directory as `star-battles-win.zip`.
+2. For macOS/Linux, create separate archives (`tar -czf star-battles-mac.tar.gz dist/StarBattles`) built on each OS to avoid incompatible binaries.
+3. Include a `README.txt` in each archive with launch instructions and common SDL dependency notes (e.g., installing system libs on Linux if missing audio/video backends).
+
+## 6) Automate builds (optional but recommended)
+1. Add a `tools/build.py` script that wraps the PyInstaller command and copies build artifacts into a `builds/` folder with semantic version tags.
+2. Wire the script into CI (GitHub Actions) with a matrix for `windows-latest`, `macos-latest`, and `ubuntu-latest`, caching the Pygame wheel if desired.
+3. Store itch.io credentials as CI secrets to enable one-click publishing (next step) after tests pass.
+
+## 7) Upload to itch.io via butler
+1. Install `butler` from https://itch.io/docs/butler/installing.html on the build machine/CI runners.
+2. Log in once locally: `butler login` (stores a local credential file; in CI, set `BUTLER_CREDENTIALS` secret).
+3. Push each platform build with channel names that indicate OS and architecture:
+   - `butler push star-battles-win.zip your-itch-username/star-battles:windows`
+   - `butler push star-battles-mac.tar.gz your-itch-username/star-battles:mac`
+   - `butler push star-battles-linux.tar.gz your-itch-username/star-battles:linux`
+4. Add `--userversion` tags that match git tags (e.g., `v0.1.0`) so itch.io versions align with repository history.
+
+## 8) Final QA before publishing
+1. Download the uploaded builds from itch.io and run them on clean machines to verify they start without the repo present.
+2. Confirm `settings.json` exists next to the binary and changes persist across runs.
+3. Check controller/keybindings via `InputBindings` defaults to ensure bindings are saved/loaded as expected.
+4. Keep a short gameplay smoke test checklist (title → sandbox → fire weapons → quit) to validate content integrity before toggling the itch.io page public.

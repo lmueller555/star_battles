@@ -1,0 +1,72 @@
+# Multiplayer and persistent-world enablement (step-by-step)
+
+This document details how to evolve the current single-player Pygame prototype into a client that connects to an authoritative, persistent multiplayer world. Steps cover code changes, data migrations, and the external server stack required to keep the universe alive for all players.
+
+## 1) Separate client rendering from simulation authority
+1. The fixed-step loop in `game/engine/loop.py` currently advances local simulation and rendering together. Refactor so the client loop renders locally but consumes simulation snapshots from the server:
+   - Keep `process_events` to gather local input, but gate `update` so it only applies client-side prediction and reconciliation.
+   - Add a network tick that ingests authoritative state and rewinds/replays prediction for the player ship.
+2. Extract all gameplay state mutations (physics integration, combat resolution, mining yields) into functions that can run headless on the server. Start by identifying the systems under `game/world` (e.g., `space.py`, `sector.py`, `mining.py`) and move shared math/utilities into importable modules that have no Pygame dependency.
+
+## 2) Define a network protocol and data model
+1. Create serializable DTOs for ships, projectiles, resources, and scene transitions. Reuse existing data definitions:
+   - Ship archetypes live under `game/assets/data/ships/` and weapon/item data under `game/assets/data/`—include their IDs in payloads instead of duplicating stats.
+   - Input bindings and player commands map to `InputBindings` and `InputMapper` from `game/engine/input.py`; serialize command intents (throttle, strafe, fire, target selection) rather than raw key events.
+2. Choose a transport that supports low-latency updates (e.g., WebSockets or UDP with a reliability layer). Start with WebSockets for simplicity and firewall friendliness.
+3. Version every payload (add `schemaVersion` fields) so clients and servers can reject incompatible builds gracefully.
+
+## 3) Stand up the authoritative simulation server
+1. Build a dedicated server process (Python recommended for code reuse) that imports the same simulation modules used by the client:
+   - Reuse `FixedTimestepLoop` with `process_events` replaced by network ingress and `render` omitted.
+   - Load content through `ContentManager` with a server-appropriate base path (mount `game/assets` or a pre-baked content package).
+2. Persistence requirements:
+   - Stand up a database (e.g., PostgreSQL) to store player accounts, ship inventories, currencies, and world state (mining node depletion, sector ownership).
+   - Add DAO/repository modules (e.g., `game/server/persistence.py`) that translate between DB rows and in-memory state.
+3. Session flow:
+   - On client connect, authenticate (see step 4), load or spawn the player’s ship, and insert it into the active sector.
+   - Run the simulation at 60 Hz on the server, emitting state snapshots to connected clients at a lower rate (e.g., 20 Hz) with interpolation hints.
+   - Keep combat authoritative: resolve hits, damage, and resource payouts server-side using existing combat formulas (`tests/test_combat_damage.py` validates the math to match).
+
+## 4) Authentication and player identity
+1. Add a login handshake before entering the title scene on clients:
+   - Extend `TitleScene` to present a username/password or token prompt and block further navigation until the server issues a session token.
+   - Store the token in memory only; if you persist it, encrypt or hash at rest.
+2. On the server, expose an auth endpoint (REST or WebSocket message) that verifies credentials against the DB and issues signed JWT-like tokens.
+3. Wrap every gameplay message with the session token and validate on the server to prevent spoofing.
+
+## 5) Client networking layer
+1. Create a `game/net/client.py` module that:
+   - Opens a WebSocket connection to the server URL.
+   - Sends input commands at a fixed cadence (e.g., 20 Hz) derived from `InputMapper` state.
+   - Listens for snapshot packets and enqueues them for consumption by the main loop.
+2. Modify `main.py` to initialize this network client after `ContentManager.load()` and before scene activation. Inject it into the `SceneManager` context so every scene can publish/receive events.
+3. Update scenes (`TitleScene`, `SandboxScene`, `OutpostInteriorScene`, `ShipSelectionScene`) to replace local spawning with server-provided state:
+   - On scene entry, request the relevant sector or interior state from the server.
+   - When exiting scenes, send a detach/unsubscribe message so the server can stop streaming updates.
+
+## 6) Prediction, interpolation, and reconciliation
+1. Use client-side prediction for the local player ship to keep controls responsive:
+   - Immediately apply inputs locally to the controlled ship using existing physics helpers, but tag each input with an incrementing command ID.
+   - When the server echoes back the authoritative state and last-acknowledged command ID, rewind the player ship to that state and reapply unacknowledged inputs.
+2. For other entities, perform interpolation between server snapshots using timestamps to avoid jitter. Keep a short buffer (100–200 ms) of snapshots and render interpolated transforms.
+3. Drop any gameplay code that assumes instant local authority (e.g., local projectile hits); instead, display predicted tracers while waiting for server-confirmed damage events.
+
+## 7) Persisting the world
+1. Model sectors and stations as persistent records in the database, reflecting the data structures in `game/world/sector.py` and `game/world/station.py`.
+2. On server startup, seed the world from JSON under `game/assets/data` and then layer player-driven changes (e.g., mined-out nodes, station inventory) from the DB.
+3. Save deltas on a timer (e.g., every 30 seconds) and on shutdown to avoid data loss. Use transactional writes for inventory/currency changes tied to combat and mining events.
+
+## 8) Hosting and deployment
+1. Deploy the server to a publicly reachable host with stable bandwidth/latency. Containerize it (Docker) with an entrypoint that runs the headless simulation loop and exposes WebSocket/REST ports.
+2. Add environment-variable configuration for database URLs, tick rates, and max player caps. Keep the same asset bundle versioned with the client to prevent desync.
+3. Set up monitoring (logs + metrics) to track tick duration, connected clients, and error rates; alerts should fire if the loop exceeds budget or disconnects spike.
+
+## 9) Client distribution changes for multiplayer
+1. Add a lightweight `config.json` (or extend `settings.json`) with the default server URL, fallback URLs, and build `schemaVersion` so itch.io players auto-connect without editing code.
+2. Update the packaging steps (see `publishing_guidance`) to include the new network modules and configuration file in the PyInstaller `--add-data` list.
+3. Communicate port requirements (e.g., `wss://yourdomain:443`) in release notes so players know the game needs outbound connectivity.
+
+## 10) End-to-end validation
+1. Write integration tests that spin up a dummy server instance and simulate two clients exchanging snapshots, asserting deterministic outcomes using the existing test harness style in `tests/`.
+2. Run load tests that spawn dozens of headless clients to ensure the server maintains 60 Hz simulation without tick overruns.
+3. Before wide release, perform a canary test on itch.io builds by connecting from multiple geographic locations to verify latency handling and reconnection logic.
