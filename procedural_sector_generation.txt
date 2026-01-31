@@ -1,0 +1,398 @@
+Procedural Sector Generation — Authoritative Requirements Guide
+===============================================================
+
+Purpose and Scope
+-----------------
+This document is the authoritative specification for generating game sectors procedurally.
+It defines: (1) the minimum gameplay elements that must be present in every sector, (2) the
+rules governing how those elements are placed, distributed, and balanced, (3) how visual
+identity is achieved using background set dressing such as wireframe planets, and (4) the
+implementation requirements for deterministic, seed-based generation. The goal is to create
+sectors that are distinct and memorable while remaining consistent in core gameplay
+structure and difficulty expectations.
+
+Key Principles
+--------------
+1) Consistent Gameplay Presence, Unique Layout
+   - Every sector MUST include the same mandatory gameplay element categories
+     (friendly outposts, enemy outposts, NPCs, asteroid fields, navigational hazards, etc.).
+   - The number, placement, and exact configuration of these elements must be procedurally
+     generated per sector using a deterministic seed.
+   - The spatial layout must be unique per sector while honoring minimum spacing and
+     gameplay readability constraints.
+
+2) Visual Distinction per Sector
+   - Each sector MUST include large, unreachable, background visual elements (wireframe
+     planets, moons, rings, nebulae, derelict megastructures, etc.) that establish a unique
+     visual identity.
+   - Background elements must be carefully staged in scale, color palette, and composition
+     to avoid obscuring gameplay elements.
+
+3) Deterministic and Auditable
+   - Given a sector ID and seed, the system MUST generate the exact same layout every time.
+   - Generation MUST be traceable with a “generation manifest” output for debugging and
+     validation (detailed below).
+
+4) Gameplay Readability and Fairness
+   - Mandatory elements must be positioned to provide clear objectives and avoid unfair
+     immediate threats to players upon entry.
+   - The system must enforce minimum safe zones around spawn points and other critical
+     locations.
+
+
+Definitions
+-----------
+- Sector: A bounded region of space (2D or 3D as appropriate) containing gameplay elements
+  (outposts, NPCs, resources) and background visual elements.
+- Gameplay Elements: Objects that players can interact with or that affect gameplay
+  (e.g., outposts, asteroids, NPCs, hazards, loot).
+- Background Visual Elements: Large, unreachable objects intended purely for visual
+  identity (e.g., wireframe planets, distant stations, ring systems).
+- Seed: A numeric or string value that deterministically controls generation.
+- Sector Manifest: A serialized output (JSON or similar) that includes all generation
+  parameters and placed objects.
+
+
+Mandatory Gameplay Elements (Core Consistency Requirements)
+-----------------------------------------------------------
+Every sector MUST contain at least the following categories, regardless of seed:
+
+1) Friendly Outposts (minimum count: 1)
+   - Function: Player docking, quest hubs, refuel/repair, safe navigation anchor.
+   - Requirements:
+     * Must be within a reasonable travel time from the player’s initial spawn.
+     * Must not be placed within immediate threat range of enemy outposts.
+     * Must have clear line-of-sight visibility from at least one approach direction.
+
+2) Enemy Outposts (minimum count: 1)
+   - Function: Hostile presence, mission targets, risk zones.
+   - Requirements:
+     * Must be sufficiently far from friendly outposts to allow safe travel corridors.
+     * Must have surrounding threat actors (patrol NPCs or static defenses).
+
+3) NPCs (minimum count: 1 friendly + 1 hostile)
+   - Function: Provide encounters, combat, trade, narrative hooks.
+   - Requirements:
+     * At least one friendly NPC in proximity to friendly outpost.
+     * At least one hostile NPC in proximity to enemy outpost.
+     * Additional NPCs distributed across the sector using procedural spawn logic.
+
+4) Asteroid Fields (minimum count: 1)
+   - Function: Navigation obstacles, resources, cover, emergent combat.
+   - Requirements:
+     * Field density and radius must be seed-controlled but within configured bounds.
+     * Must not block the main safe corridor between spawn and friendly outpost.
+
+5) Environmental Hazards (minimum count: 1)
+   - Function: Risk/reward zones, navigation challenges.
+   - Examples: Radiation fields, gravity anomalies, minefields, debris clouds.
+   - Requirements:
+     * Must be visually telegraphed.
+     * Must be avoidable via alternate routes.
+
+6) Resource or Loot Nodes (minimum count: 1)
+   - Function: Exploration reward, crafting materials, upgrades.
+   - Requirements:
+     * Must appear in or near asteroid fields or other points of interest.
+     * Must not appear inside immediate enemy outpost kill zones.
+
+
+Sector Geometry and Coordinate System
+-------------------------------------
+1) Coordinate Space
+   - Define a sector bounding box or radius (2D circle or 3D sphere).
+   - Example: Radius = 10,000 units from sector center.
+   - All placement is relative to sector center (0,0,0).
+
+2) Zones Within a Sector
+   - Spawn Zone: Player entry area; safe zone with minimal threats.
+   - Friendly Zone: Space surrounding friendly outpost and associated NPCs.
+   - Hostile Zone: Space surrounding enemy outpost and patrols.
+   - Transit Corridor: Main travel route between spawn and friendly outpost.
+   - Peripheral Zone: Outer edges of the sector, suitable for hazards or deep exploration.
+
+3) Minimum Distances (sample values; tune as needed)
+   - Spawn to friendly outpost: 800–2500 units
+   - Friendly to enemy outpost: 3000–8000 units
+   - Spawn to hazard: ≥ 1000 units
+   - Friendly outpost to asteroid field: ≥ 500 units
+   - Enemy outpost to resource node: ≥ 800 units (unless intentionally protected loot)
+
+
+Procedural Generation Pipeline
+------------------------------
+Generation must follow a deterministic pipeline to ensure reproducible results and
+predictable layering of elements. The recommended pipeline:
+
+1) Initialize Sector Parameters
+   - Input: sector ID, seed, difficulty tier, biome/visual theme.
+   - Output: base random number generator state.
+
+2) Define Sector Zones
+   - Compute spawn position and establish spawn safety radius.
+   - Place friendly outpost within a valid range from spawn.
+   - Compute an ideal travel corridor vector between spawn and friendly outpost.
+   - Place enemy outpost in a hostile zone (angle offset from corridor).
+
+3) Place Core Gameplay Elements
+   - Friendly outpost: anchored placement.
+   - Enemy outpost: anchored placement with surrounding patrols.
+   - NPC spawns: layered near outposts, then across sector.
+   - Asteroid fields: positioned to create navigation choices without blocking main corridor.
+   - Hazards: placed in peripheral or branching zones.
+   - Resource nodes: embedded in asteroids or near hazards with risk/reward.
+
+4) Place Secondary Elements
+   - Additional debris fields, micro-hazards, derelict ships, minor loot caches.
+   - Patrol route splines or volumes.
+
+5) Place Background Visual Elements
+   - Generate 1–3 major wireframe planets or megastructures.
+   - Generate 2–6 secondary elements (moons, ring fragments, distant beacons).
+   - Position them outside reachable space (beyond player travel boundary) while
+     ensuring they remain visible.
+
+6) Validate Sector
+   - Run constraint checks (distance, overlap, occlusion, collision-free pathways).
+   - If constraints fail, re-roll positions while preserving seed (e.g., increment
+     “placement attempt” sub-seed).
+
+7) Emit Sector Manifest
+   - Export all object placements, sizes, and parameters.
+   - Include metadata for debugging and reproduction.
+
+
+Determinism and Seeding Requirements
+------------------------------------
+1) Deterministic RNG
+   - Use a seeded RNG with stable output across platforms.
+   - Derive sub-seeds per element category (e.g., seed_outposts, seed_asteroids) using
+     a consistent hash function.
+
+2) Seed Structure
+   - Suggested format: hash(sector_id + global_seed + difficulty + theme).
+   - Sector generation must be independent of runtime ordering (no hidden state changes
+     tied to unrelated systems).
+
+3) Retry Logic and Stability
+   - If placement fails, re-roll using sub-seeds and attempt counters, not random
+     runtime state.
+   - Log attempt counts in manifest.
+
+
+Gameplay Balance and Readability Requirements
+---------------------------------------------
+1) Safe Spawn Zone
+   - No hostile NPCs or hazards within spawn safety radius.
+   - Minimal visual clutter to allow orientation.
+
+2) Threat Gradients
+   - Difficulty should generally increase as the player moves from spawn to outer areas.
+   - Enemy patrol density should be higher near enemy outpost, lower near friendly outpost.
+
+3) Navigation Clarity
+   - Provide a clear navigable path between spawn and friendly outpost.
+   - Avoid asteroid density that creates unavoidable collisions.
+
+4) Encounter Variety
+   - Ensure a mix of NPCs and hazards across the sector to avoid repetitive layouts.
+   - Vary patrol routes, idle positions, and roaming distances.
+
+
+Asteroid Field Generation Requirements
+--------------------------------------
+1) Field Types
+   - Clusters: Dense groupings, small radius.
+   - Belts: Long, curved lines with mid-density.
+   - Scatter: Sparse distribution over a large region.
+
+2) Placement Rules
+   - Must avoid spawning directly in transit corridor.
+   - Must respect minimum distances from outposts.
+
+3) Density and Scale
+   - Define density ranges per difficulty tier.
+   - Scale asteroid sizes for visual variation; include a few large anchors.
+
+4) Resource Embedding
+   - Some asteroids contain resources or salvage.
+   - Ensure resource nodes are discoverable with sensors or visual cues.
+
+
+NPC Placement Requirements
+--------------------------
+1) Friendly NPCs
+   - At least one near friendly outpost.
+   - Additional friendly NPCs may roam near safe zones.
+
+2) Hostile NPCs
+   - At least one near enemy outpost.
+   - Patrol routes must be generated to create dynamic encounters.
+
+3) Neutral NPCs (Optional but recommended)
+   - Traders or civilians in peripheral space.
+   - Their placement should avoid high-risk zones.
+
+4) Spawn Logic
+   - Use weighted distributions around points of interest.
+   - Ensure spawn groups do not overlap with hazards.
+
+
+Outpost Placement Requirements
+------------------------------
+1) Friendly Outposts
+   - Must be visible and reachable from spawn.
+   - Surrounded by safe space radius.
+
+2) Enemy Outposts
+   - Must be in a distinct hostile zone.
+   - Should be supported by surrounding patrols or defenses.
+
+3) Outpost Variants
+   - Provide multiple modular layout variants for each faction.
+   - Randomly select variant based on seed for distinctiveness.
+
+
+Environmental Hazards
+---------------------
+1) Hazard Types
+   - Radiation zones: slowly damage players.
+   - Gravity anomalies: alter movement or trajectory.
+   - Minefields: high-risk, high-reward.
+
+2) Visibility
+   - Hazards must be visually telegraphed with unique VFX.
+   - Use color cues or HUD warnings to signal hazard boundaries.
+
+3) Placement Strategy
+   - Use hazards to create optional risk routes.
+   - Avoid placing hazards directly on required paths.
+
+
+Background Visual Elements (Wireframe Planets & Set Dressing)
+-------------------------------------------------------------
+1) Purpose
+   - Provide immediate, unique visual identity for each sector.
+   - Convey different regions of space (e.g., nebula-heavy, ringed planet, derelict mega-ship).
+
+2) Element Types
+   - Wireframe Planets (primary)
+   - Wireframe Moons (secondary)
+   - Ring Systems
+   - Distant Megastructures
+   - Nebula Volumes (non-collidable)
+
+3) Placement Requirements
+   - Must be outside the reachable gameplay space (beyond max player radius).
+   - Must remain visible from most locations in the sector.
+   - Must not visually obscure gameplay elements (avoid overlapping HUD or critical areas).
+
+4) Visual Identity Rules
+   - Each sector must select a unique “visual theme” profile containing:
+     * Palette (2–3 dominant colors)
+     * Primary background element (e.g., large wireframe planet)
+     * Secondary elements (moons, debris)
+   - Use the seed to select theme.
+
+5) Scale and Parallax
+   - Scale elements to suggest vast distances.
+   - Enable parallax effects based on player movement to enhance depth.
+
+
+Sector Themes and Visual Profiles
+---------------------------------
+1) Theme Selection
+   - Themes must be chosen deterministically from seed.
+   - Example themes: “Ringed Planet Orbit,” “Nebula Drift,” “Derelict Fleet Graveyard.”
+
+2) Theme Components
+   - Color palette
+   - Background element types and counts
+   - Ambient lighting settings
+   - Starfield density
+
+3) Theme Constraints
+   - Must preserve gameplay visibility.
+   - Must not obscure UI elements.
+
+
+Data Output: Sector Manifest Requirements
+-----------------------------------------
+The generation process must output a manifest containing:
+
+1) Sector Metadata
+   - sector_id
+   - seed and derived sub-seeds
+   - difficulty tier
+   - theme ID and palette
+
+2) Gameplay Elements
+   - Each object’s type, position (x,y,z), rotation, scale.
+   - NPC spawn groups with faction, behavior, and patrol routes.
+   - Asteroid fields with density parameters.
+
+3) Background Elements
+   - Wireframe planet positions, sizes, colors, and meshes.
+   - Secondary visual elements (moons, rings, nebulae).
+
+4) Validation Results
+   - Constraint checks and any re-roll attempts.
+   - Total generation time (for performance profiling).
+
+
+Validation and QA Requirements
+------------------------------
+1) Constraint Checks
+   - No forbidden overlaps between outposts and hazards.
+   - Safe corridor exists between spawn and friendly outpost.
+   - Enemy outpost not within minimum distance of spawn.
+
+2) Playability Tests
+   - Simulate pathfinding or flight corridors through generated sectors.
+   - Ensure no unavoidable collisions in main transit corridor.
+
+3) Visual Clarity Tests
+   - Verify background elements do not obscure gameplay-critical objects.
+   - Validate color contrast between HUD and background.
+
+4) Regression
+   - Must be able to recreate any sector by using the same seed and settings.
+
+
+Performance and Scaling Considerations
+--------------------------------------
+1) Generation Time
+   - Aim for sector generation in under 100ms (target configurable).
+
+2) LOD and Culling
+   - Use LOD for asteroid fields and background elements.
+   - Background elements should have aggressive culling thresholds.
+
+3) Memory Limits
+   - Avoid excessive object counts; use instancing for asteroids.
+
+
+Implementation Requirements Checklist
+-------------------------------------
+1) Deterministic seed generation and sub-seeds.
+2) Mandatory gameplay element categories always present.
+3) Spacing and safety constraints enforced.
+4) Visual theme selection and background element placement.
+5) Sector manifest output for debugging.
+6) Validation pass with constraint re-rolls.
+7) Performance targets met.
+
+
+Appendix: Example Generation Parameters (Tunable)
+-------------------------------------------------
+- Sector radius: 10,000 units
+- Spawn safety radius: 1,000 units
+- Friendly outpost distance: 800–2,500 units
+- Enemy outpost distance: 3,000–8,000 units
+- Asteroid field density: 0.2–0.8 (normalized)
+- Max NPC count: 30 (varies by difficulty)
+- Hazard count: 1–3
+- Background major elements: 1–3
+- Background minor elements: 2–6
+
+End of Document
