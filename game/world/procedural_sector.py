@@ -546,6 +546,7 @@ class ProceduralSectorGenerator:
                         position=position,
                         patrol_route=self._patrol_route(rng, position),
                     )
+                )
                 break
         return npc_groups
 
