@@ -979,6 +979,9 @@ class VectorRenderer:
             "nebula_volume": 0,
             "derelict_megastructure": 2,
             "distant_beacon": 1,
+            "orbital_waygate": 1,
+            "fleet_hulk": 2,
+            "relay_lattice": 1,
         }
         for element in elements:
             wireframe = BACKGROUND_WIREFRAMES.get(element.type)
