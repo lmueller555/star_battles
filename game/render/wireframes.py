@@ -164,18 +164,32 @@ def _build_ring_system() -> list[tuple[Vector3, Vector3]]:
 
 def _build_nebula_volume() -> list[tuple[Vector3, Vector3]]:
     segments: list[tuple[Vector3, Vector3]] = []
-    offsets = [Vector3(-0.5, 0.3, -0.2), Vector3(0.6, -0.2, 0.4), Vector3(0.2, 0.5, -0.6)]
-    radii = [(2.2, 1.1), (1.8, 1.4), (2.0, 1.0)]
+    offsets = [
+        Vector3(-0.6, 0.4, -0.4),
+        Vector3(0.7, -0.15, 0.55),
+        Vector3(0.1, 0.55, -0.7),
+        Vector3(-0.2, -0.35, 0.2),
+    ]
+    radii = [(2.4, 1.2), (2.0, 1.5), (2.2, 1.1), (1.6, 1.3)]
     for offset, (radius_x, radius_z) in zip(offsets, radii):
-        ring = [
-            Vector3(
-                math.cos(angle) * radius_x + offset.x,
-                math.sin(angle * 0.5) * 0.6 + offset.y,
-                math.sin(angle) * radius_z + offset.z,
+        ring = []
+        for step in range(36):
+            angle = step * 2.0 * math.pi / 36
+            ring.append(
+                Vector3(
+                    math.cos(angle) * radius_x + offset.x,
+                    math.sin(angle * 0.6) * 0.7 + offset.y,
+                    math.sin(angle) * radius_z + offset.z,
+                )
             )
-            for angle in (step * 2.0 * math.pi / 32 for step in range(32))
-        ]
         _loop_segments(segments, ring)
+        wisps = [
+            Vector3(point.x * 0.55 + offset.x * 0.35, point.y + 0.25, point.z * 0.55 + offset.z * 0.25)
+            for point in ring[::2]
+        ]
+        _loop_segments(segments, wisps)
+        for outer, inner in zip(ring[::4], wisps[::2]):
+            segments.append((outer, inner))
     return segments
 
 
@@ -212,24 +226,49 @@ def _build_derelict_megastructure() -> list[tuple[Vector3, Vector3]]:
         if (start, end) in {(1, 2), (6, 7)}:
             continue
         segments.append((corners[start], corners[end]))
-    strut_rings = [1.1, 0.4, -0.7]
+    strut_rings = [1.2, 0.35, -0.9]
     for z in strut_rings:
-        ring = _circle_points(1.2, sides=12, plane="xy", offset=Vector3(0.0, 0.0, z))
+        ring = _circle_points(1.3, sides=14, plane="xy", offset=Vector3(0.0, 0.0, z))
         _loop_segments(segments, ring)
+        for point in ring[::3]:
+            segments.append((point, Vector3(0.0, 0.0, z)))
+    ribs = [
+        (Vector3(-width * 0.6, -height * 0.8, -depth * 0.2), Vector3(-width * 0.2, height * 0.6, depth * 0.6)),
+        (Vector3(width * 0.5, -height * 0.7, -depth * 0.1), Vector3(width * 0.1, height * 0.7, depth * 0.7)),
+        (Vector3(-width * 0.8, height * 0.2, -depth * 0.6), Vector3(width * 0.7, height * 0.4, depth * 0.4)),
+    ]
+    for start, end in ribs:
+        segments.append((start, end))
+    panel_offsets = [Vector3(-1.8, -0.8, 0.4), Vector3(1.6, 0.6, -0.5), Vector3(0.2, -1.1, -0.9)]
+    for offset in panel_offsets:
+        panel = _circle_points(0.7, sides=8, plane="xy", offset=offset)
+        _loop_segments(segments, panel)
     return segments
 
 
 def _build_distant_beacon() -> list[tuple[Vector3, Vector3]]:
     segments: list[tuple[Vector3, Vector3]] = []
-    tower_base = [Vector3(-0.3, -2.2, 0.0), Vector3(0.3, -2.2, 0.0), Vector3(0.0, 2.6, 0.0)]
+    tower_base = [
+        Vector3(-0.4, -2.4, -0.2),
+        Vector3(0.4, -2.4, -0.2),
+        Vector3(0.6, -1.8, 0.2),
+        Vector3(0.0, 2.5, 0.0),
+        Vector3(-0.6, -1.8, 0.2),
+    ]
     _loop_segments(segments, tower_base, close=False)
-    top = Vector3(0.0, 3.2, 0.0)
-    for point in tower_base:
+    top = Vector3(0.0, 3.4, 0.0)
+    for point in tower_base[::2]:
         segments.append((point, top))
-    halo = _circle_points(1.4, sides=24, plane="xz", offset=Vector3(0.0, 1.4, 0.0))
+    halo = _circle_points(1.6, sides=28, plane="xz", offset=Vector3(0.0, 1.6, 0.0))
     _loop_segments(segments, halo)
-    inner = _circle_points(0.7, sides=18, plane="xz", offset=Vector3(0.0, 1.4, 0.0))
+    inner = _circle_points(0.8, sides=20, plane="xz", offset=Vector3(0.0, 1.6, 0.0))
     _loop_segments(segments, inner)
+    for index in range(0, len(halo), 6):
+        segments.append((halo[index], inner[index % len(inner)]))
+    antenna = _circle_points(0.35, sides=12, plane="xy", offset=Vector3(0.0, 2.7, 0.0))
+    _loop_segments(segments, antenna)
+    for point in antenna[::3]:
+        segments.append((point, top))
     return segments
 
 
@@ -247,6 +286,15 @@ def _build_orbital_waygate() -> list[tuple[Vector3, Vector3]]:
         anchor = inner_ring[index]
         segments.append((anchor, Vector3(anchor.x, 0.8, anchor.z)))
         segments.append((anchor, Vector3(anchor.x, -0.8, anchor.z)))
+    pylon_ring = _circle_points(0.5, sides=12, plane="xz", offset=Vector3(0.0, 1.1, 0.0))
+    _loop_segments(segments, pylon_ring)
+    for point in pylon_ring[::3]:
+        segments.append((point, Vector3(0.0, 0.6, 0.0)))
+    for index in range(0, len(inner_ring), 6):
+        node = inner_ring[index]
+        segments.append((node, Vector3(node.x * 0.5, 0.0, node.z * 0.5)))
+    inner_cross = _circle_points(0.9, sides=18, plane="xy")
+    _loop_segments(segments, inner_cross)
     return segments
 
 
@@ -291,6 +339,16 @@ def _build_fleet_hulk() -> list[tuple[Vector3, Vector3]]:
     _add_hulk(Vector3(0.1, -0.5, 0.0), 0.7, 0.3, 0.4)
     spine = _circle_points(2.0, sides=18, plane="xy")
     _loop_segments(segments, spine)
+    cross_spine = _circle_points(1.4, sides=14, plane="xz")
+    _loop_segments(segments, cross_spine)
+    for point in cross_spine[::3]:
+        segments.append((point, Vector3(0.0, 0.0, 0.0)))
+    debris_offsets = [Vector3(-2.2, 0.6, 0.2), Vector3(2.0, -0.4, -0.3), Vector3(0.0, 1.2, 0.7)]
+    for offset in debris_offsets:
+        shard = _circle_points(0.35, sides=6, plane="xy", offset=offset)
+        _loop_segments(segments, shard)
+        for point in shard[::2]:
+            segments.append((point, Vector3(offset.x, offset.y + 0.3, offset.z)))
     return segments
 
 
@@ -309,6 +367,16 @@ def _build_relay_lattice() -> list[tuple[Vector3, Vector3]]:
         _loop_segments(segments, lattice)
         for point in lattice[::3]:
             segments.append((point, Vector3(0.0, offset, 0.0)))
+    inner_ring = _circle_points(1.0, sides=20, plane="xz")
+    _loop_segments(segments, inner_ring)
+    for index in range(0, len(inner_ring), 4):
+        segments.append((inner_ring[index], meridian[index % len(meridian)]))
+    cap_offsets = [Vector3(0.0, 1.9, 0.0), Vector3(0.0, -1.9, 0.0)]
+    for offset in cap_offsets:
+        cap = _circle_points(0.5, sides=10, plane="xy", offset=offset)
+        _loop_segments(segments, cap)
+        for point in cap[::2]:
+            segments.append((point, Vector3(0.0, offset.y, 0.0)))
     return segments
 
 
@@ -581,37 +649,56 @@ def _build_pulsar_spire() -> list[tuple[Vector3, Vector3]]:
         vertical_rake=0.4,
     )
     _loop_segments(segments, flare)
+    fins = [
+        [Vector3(0.0, 2.6, 0.0), Vector3(1.2, 1.2, 0.0), Vector3(0.0, 0.4, 0.0)],
+        [Vector3(0.0, 2.6, 0.0), Vector3(-1.2, 1.2, 0.0), Vector3(0.0, 0.4, 0.0)],
+    ]
+    for fin in fins:
+        _loop_segments(segments, fin, close=False)
+    halo = _circle_points(2.4, sides=32, plane="xz", offset=Vector3(0.0, 0.0, 0.0))
+    _loop_segments(segments, halo)
     return segments
 
 
 def _build_crystal_cluster() -> list[tuple[Vector3, Vector3]]:
     segments: list[tuple[Vector3, Vector3]] = []
-    offsets = [Vector3(-0.8, 0.0, -0.4), Vector3(0.6, 0.2, 0.5), Vector3(0.0, -0.2, 0.0)]
-    for offset in offsets:
+    offsets = [
+        (Vector3(-0.9, 0.0, -0.4), 0.8, 1.9),
+        (Vector3(0.7, 0.3, 0.6), 0.7, 1.6),
+        (Vector3(0.0, -0.2, 0.0), 0.9, 2.1),
+        (Vector3(0.4, -0.4, -0.8), 0.6, 1.4),
+    ]
+    for offset, radius, height in offsets:
         base_ring = _circle_points(
-            0.7,
+            radius,
             sides=6,
             plane="xz",
-            offset=Vector3(offset.x, offset.y - 0.8, offset.z),
+            offset=Vector3(offset.x, offset.y - 0.9, offset.z),
         )
         _loop_segments(segments, base_ring)
-        tip = Vector3(offset.x, offset.y + 1.6, offset.z)
+        tip = Vector3(offset.x, offset.y + height, offset.z)
         for point in base_ring:
             segments.append((point, tip))
         mid_ring = _circle_points(
-            0.35,
+            radius * 0.5,
             sides=6,
             plane="xz",
-            offset=Vector3(offset.x, offset.y + 0.4, offset.z),
+            offset=Vector3(offset.x, offset.y + height * 0.45, offset.z),
         )
         _loop_segments(segments, mid_ring)
         _connect_rings(segments, base_ring, mid_ring)
+        ridge = [
+            Vector3(offset.x - radius * 0.4, offset.y + height * 0.15, offset.z),
+            Vector3(offset.x, offset.y + height * 0.6, offset.z + radius * 0.25),
+            Vector3(offset.x + radius * 0.4, offset.y + height * 0.15, offset.z),
+        ]
+        _loop_segments(segments, ridge, close=False)
     return segments
 
 
 def _build_aurora_ribbon() -> list[tuple[Vector3, Vector3]]:
     segments: list[tuple[Vector3, Vector3]] = []
-    for offset in (-0.6, 0.7):
+    for offset in (-0.7, 0.0, 0.8):
         points: list[Vector3] = []
         for step in range(30):
             t = step / 29.0
@@ -620,10 +707,12 @@ def _build_aurora_ribbon() -> list[tuple[Vector3, Vector3]]:
             z = math.sin(t * math.pi * 1.5 + offset) * 1.4
             points.append(Vector3(x, y, z))
         _loop_segments(segments, points, close=False)
-        spine_points = [Vector3(point.x, point.y + 0.5, point.z * 0.4) for point in points[::3]]
+        spine_points = [Vector3(point.x, point.y + 0.55, point.z * 0.45) for point in points[::3]]
         _loop_segments(segments, spine_points, close=False)
         for primary, spine in zip(points[::3], spine_points):
             segments.append((primary, spine))
+        glow_band = [Vector3(point.x * 0.8, point.y + 0.2, point.z * 0.2) for point in points[::4]]
+        _loop_segments(segments, glow_band, close=False)
     return segments
 
 
