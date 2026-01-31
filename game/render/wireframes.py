@@ -481,6 +481,73 @@ def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
     return segments
 
 
+def _build_pulsar_spire() -> list[tuple[Vector3, Vector3]]:
+    segments: list[tuple[Vector3, Vector3]] = []
+    spine_levels = [-2.6, -1.4, 0.0, 1.4, 2.6]
+    spine_points = [Vector3(0.0, level, 0.0) for level in spine_levels]
+    for index in range(len(spine_points) - 1):
+        segments.append((spine_points[index], spine_points[index + 1]))
+    ring_specs = [(-1.6, 0.7, 18), (0.0, 1.3, 24), (1.6, 0.7, 18)]
+    for y_pos, radius, sides in ring_specs:
+        ring = _circle_points(radius, sides=sides, plane="xz", offset=Vector3(0.0, y_pos, 0.0))
+        _loop_segments(segments, ring)
+        for index in range(0, len(ring), max(1, len(ring) // 6)):
+            segments.append((ring[index], Vector3(0.0, y_pos, 0.0)))
+    flare = _stretched_oval_loop(
+        sides=26,
+        center_y=0.0,
+        center_z=0.0,
+        half_width_x=2.1,
+        half_depth_z=1.2,
+        vertical_rake=0.4,
+    )
+    _loop_segments(segments, flare)
+    return segments
+
+
+def _build_crystal_cluster() -> list[tuple[Vector3, Vector3]]:
+    segments: list[tuple[Vector3, Vector3]] = []
+    offsets = [Vector3(-0.8, 0.0, -0.4), Vector3(0.6, 0.2, 0.5), Vector3(0.0, -0.2, 0.0)]
+    for offset in offsets:
+        base_ring = _circle_points(
+            0.7,
+            sides=6,
+            plane="xz",
+            offset=Vector3(offset.x, offset.y - 0.8, offset.z),
+        )
+        _loop_segments(segments, base_ring)
+        tip = Vector3(offset.x, offset.y + 1.6, offset.z)
+        for point in base_ring:
+            segments.append((point, tip))
+        mid_ring = _circle_points(
+            0.35,
+            sides=6,
+            plane="xz",
+            offset=Vector3(offset.x, offset.y + 0.4, offset.z),
+        )
+        _loop_segments(segments, mid_ring)
+        _connect_rings(segments, base_ring, mid_ring)
+    return segments
+
+
+def _build_aurora_ribbon() -> list[tuple[Vector3, Vector3]]:
+    segments: list[tuple[Vector3, Vector3]] = []
+    for offset in (-0.6, 0.7):
+        points: list[Vector3] = []
+        for step in range(30):
+            t = step / 29.0
+            x = (t - 0.5) * 4.4
+            y = math.sin(t * math.pi * 2.0) * 0.6 + offset
+            z = math.sin(t * math.pi * 1.5 + offset) * 1.4
+            points.append(Vector3(x, y, z))
+        _loop_segments(segments, points, close=False)
+        spine_points = [Vector3(point.x, point.y + 0.5, point.z * 0.4) for point in points[::3]]
+        _loop_segments(segments, spine_points, close=False)
+        for primary, spine in zip(points[::3], spine_points):
+            segments.append((primary, spine))
+    return segments
+
+
 def _build_line_wireframe() -> list[tuple[Vector3, Vector3]]:
     """Construct a heavy line-ship silhouette with rich surface detail."""
 
@@ -2235,6 +2302,9 @@ BACKGROUND_WIREFRAMES = {
     "nebula_volume": _build_nebula_volume(),
     "derelict_megastructure": _build_derelict_megastructure(),
     "distant_beacon": _build_distant_beacon(),
+    "pulsar_spire": _build_pulsar_spire(),
+    "crystal_cluster": _build_crystal_cluster(),
+    "aurora_ribbon": _build_aurora_ribbon(),
 }
 
 
