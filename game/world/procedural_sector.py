@@ -106,8 +106,8 @@ THEMES: Tuple[ThemeProfile, ...] = (
         id="pulsar_shroud",
         name="Pulsar Shroud",
         palette=("#69E6FF", "#FFF07C", "#1A3552"),
-        primary_elements=("nebula_volume", "distant_beacon"),
-        secondary_elements=("wireframe_planet", "wireframe_moon", "ring_system"),
+        primary_elements=("nebula_volume", "pulsar_spire"),
+        secondary_elements=("wireframe_planet", "wireframe_moon", "ring_system", "distant_beacon"),
         lore=(
             "A distant pulsar washes the sector in rhythmic flashes, strobing every ridge of the "
             "nebula. Patrol logs note the time-keeping value of the pulses, while smugglers use "
@@ -118,7 +118,7 @@ THEMES: Tuple[ThemeProfile, ...] = (
         id="crystalline_expanse",
         name="Crystalline Expanse",
         palette=("#A7F6D9", "#F3FFF6", "#4EA4A8"),
-        primary_elements=("wireframe_planet", "distant_beacon"),
+        primary_elements=("wireframe_planet", "crystal_cluster"),
         secondary_elements=("wireframe_moon", "ring_system", "nebula_volume"),
         lore=(
             "Light refracts through icy particulate streams, turning the void into a prism of "
@@ -130,8 +130,8 @@ THEMES: Tuple[ThemeProfile, ...] = (
         id="aurora_frontier",
         name="Aurora Frontier",
         palette=("#6FFFCB", "#7AA7FF", "#14243A"),
-        primary_elements=("wireframe_planet", "nebula_volume"),
-        secondary_elements=("wireframe_moon", "distant_beacon", "ring_system"),
+        primary_elements=("wireframe_planet", "aurora_ribbon"),
+        secondary_elements=("wireframe_moon", "distant_beacon", "ring_system", "nebula_volume"),
         lore=(
             "Energetic winds comb the sector into long auroral curtains, marking the edge of a "
             "volatile magnetosphere. Frontier crews tell new arrivals to follow the green bands "
