@@ -99,6 +99,140 @@ def _mirror_vector(point: Vector3) -> Vector3:
     return Vector3(-point.x, point.y, point.z)
 
 
+def _circle_points(
+    radius: float,
+    *,
+    sides: int,
+    plane: str = "xy",
+    offset: Vector3 | None = None,
+) -> list[Vector3]:
+    if sides <= 2:
+        return []
+    angle_step = 2.0 * math.pi / sides
+    points: list[Vector3] = []
+    offset_vec = offset or Vector3()
+    for index in range(sides):
+        angle = angle_step * index
+        cos_angle = math.cos(angle) * radius
+        sin_angle = math.sin(angle) * radius
+        if plane == "xz":
+            point = Vector3(cos_angle, 0.0, sin_angle)
+        elif plane == "yz":
+            point = Vector3(0.0, cos_angle, sin_angle)
+        else:
+            point = Vector3(cos_angle, sin_angle, 0.0)
+        points.append(point + offset_vec)
+    return points
+
+
+def _build_wireframe_planet() -> list[tuple[Vector3, Vector3]]:
+    segments: list[tuple[Vector3, Vector3]] = []
+    for plane in ("xy", "xz", "yz"):
+        ring = _circle_points(1.0, sides=32, plane=plane)
+        _loop_segments(segments, ring)
+    for lat in (-0.65, -0.35, 0.35, 0.65):
+        ring_radius = max(0.2, math.cos(lat * math.pi / 2.0))
+        y_offset = math.sin(lat * math.pi / 2.0)
+        ring = [
+            Vector3(math.cos(angle) * ring_radius, y_offset, math.sin(angle) * ring_radius)
+            for angle in (step * 2.0 * math.pi / 28 for step in range(28))
+        ]
+        _loop_segments(segments, ring)
+    return segments
+
+
+def _build_wireframe_moon() -> list[tuple[Vector3, Vector3]]:
+    segments: list[tuple[Vector3, Vector3]] = []
+    for plane in ("xy", "xz"):
+        ring = _circle_points(1.0, sides=18, plane=plane)
+        _loop_segments(segments, ring)
+    ring = _circle_points(0.7, sides=16, plane="yz")
+    _loop_segments(segments, ring)
+    return segments
+
+
+def _build_ring_system() -> list[tuple[Vector3, Vector3]]:
+    segments: list[tuple[Vector3, Vector3]] = []
+    inner = _circle_points(1.4, sides=48, plane="xz")
+    outer = _circle_points(2.3, sides=64, plane="xz")
+    _loop_segments(segments, inner)
+    _loop_segments(segments, outer)
+    for index in range(0, len(inner), 8):
+        segments.append((inner[index], outer[index % len(outer)]))
+    return segments
+
+
+def _build_nebula_volume() -> list[tuple[Vector3, Vector3]]:
+    segments: list[tuple[Vector3, Vector3]] = []
+    offsets = [Vector3(-0.5, 0.3, -0.2), Vector3(0.6, -0.2, 0.4), Vector3(0.2, 0.5, -0.6)]
+    radii = [(2.2, 1.1), (1.8, 1.4), (2.0, 1.0)]
+    for offset, (radius_x, radius_z) in zip(offsets, radii):
+        ring = [
+            Vector3(
+                math.cos(angle) * radius_x + offset.x,
+                math.sin(angle * 0.5) * 0.6 + offset.y,
+                math.sin(angle) * radius_z + offset.z,
+            )
+            for angle in (step * 2.0 * math.pi / 32 for step in range(32))
+        ]
+        _loop_segments(segments, ring)
+    return segments
+
+
+def _build_derelict_megastructure() -> list[tuple[Vector3, Vector3]]:
+    segments: list[tuple[Vector3, Vector3]] = []
+    width = 3.6
+    height = 1.8
+    depth = 2.6
+    corners = [
+        Vector3(-width, -height, -depth),
+        Vector3(width, -height, -depth),
+        Vector3(width, height, -depth),
+        Vector3(-width, height, -depth),
+        Vector3(-width, -height, depth),
+        Vector3(width, -height, depth),
+        Vector3(width, height, depth),
+        Vector3(-width, height, depth),
+    ]
+    edges = [
+        (0, 1),
+        (1, 2),
+        (2, 3),
+        (3, 0),
+        (4, 5),
+        (5, 6),
+        (6, 7),
+        (7, 4),
+        (0, 4),
+        (1, 5),
+        (2, 6),
+        (3, 7),
+    ]
+    for start, end in edges:
+        if (start, end) in {(1, 2), (6, 7)}:
+            continue
+        segments.append((corners[start], corners[end]))
+    strut_rings = [1.1, 0.4, -0.7]
+    for z in strut_rings:
+        ring = _circle_points(1.2, sides=12, plane="xy", offset=Vector3(0.0, 0.0, z))
+        _loop_segments(segments, ring)
+    return segments
+
+
+def _build_distant_beacon() -> list[tuple[Vector3, Vector3]]:
+    segments: list[tuple[Vector3, Vector3]] = []
+    tower_base = [Vector3(-0.3, -2.2, 0.0), Vector3(0.3, -2.2, 0.0), Vector3(0.0, 2.6, 0.0)]
+    _loop_segments(segments, tower_base, close=False)
+    top = Vector3(0.0, 3.2, 0.0)
+    for point in tower_base:
+        segments.append((point, top))
+    halo = _circle_points(1.4, sides=24, plane="xz", offset=Vector3(0.0, 1.4, 0.0))
+    _loop_segments(segments, halo)
+    inner = _circle_points(0.7, sides=18, plane="xz", offset=Vector3(0.0, 1.4, 0.0))
+    _loop_segments(segments, inner)
+    return segments
+
+
 def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
     """Construct a capital-ship silhouette for Outposts."""
 
@@ -2094,5 +2228,14 @@ WIREFRAMES = {
     "thorim_siege": _build_thorim_wireframe(),
 }
 
+BACKGROUND_WIREFRAMES = {
+    "wireframe_planet": _build_wireframe_planet(),
+    "wireframe_moon": _build_wireframe_moon(),
+    "ring_system": _build_ring_system(),
+    "nebula_volume": _build_nebula_volume(),
+    "derelict_megastructure": _build_derelict_megastructure(),
+    "distant_beacon": _build_distant_beacon(),
+}
 
-__all__ = ["WIREFRAMES"]
+
+__all__ = ["WIREFRAMES", "BACKGROUND_WIREFRAMES"]

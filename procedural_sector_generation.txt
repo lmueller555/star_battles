@@ -315,6 +315,11 @@ Sector Themes and Visual Profiles
    - Must preserve gameplay visibility.
    - Must not obscure UI elements.
 
+4) Theme Implementation Notes
+   - Nebula Drift: Wireframe background models implemented (nebula volumes, planets, ring systems, derelict hulks, moons).
+   - Clockwork Relay: Wireframe background models implemented (relay lattice megastructures, ring systems, beacons, moons, planets).
+   - Ember Wastes: Wireframe background models implemented (ember-lit planets, derelict hulks, nebula glows, beacons, moons).
+
 
 Data Output: Sector Manifest Requirements
 -----------------------------------------
