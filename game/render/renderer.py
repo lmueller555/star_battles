@@ -14,8 +14,10 @@ from pygame.math import Vector3
 from game.combat.weapons import Projectile
 from game.render.camera import CameraFrameData, ChaseCamera
 from game.render.geometry import SHIP_GEOMETRY_CACHE, ShipGeometry
+from game.render.wireframes import BACKGROUND_WIREFRAMES
 from game.ships.ship import Ship
 from game.world.asteroids import Asteroid
+from game.world.procedural_sector import ManifestObject
 
 from game.render.state import ProjectedVertexCache, RenderSpatialState, TelemetryCounters
 
@@ -98,6 +100,41 @@ def _darken(color: tuple[int, int, int], amount: float) -> tuple[int, int, int]:
 
 def _lighten(color: tuple[int, int, int], amount: float) -> tuple[int, int, int]:
     return _blend(color, (255, 255, 255), amount)
+
+
+def _parse_hex_color(value: str, fallback: tuple[int, int, int]) -> tuple[int, int, int]:
+    if not value or not isinstance(value, str):
+        return fallback
+    cleaned = value.lstrip("#")
+    if len(cleaned) != 6:
+        return fallback
+    try:
+        return tuple(int(cleaned[index : index + 2], 16) for index in (0, 2, 4))  # type: ignore[return-value]
+    except ValueError:
+        return fallback
+
+
+def _rotate_vector(point: Vector3, rotation: Vector3) -> Vector3:
+    rx = math.radians(rotation.x)
+    ry = math.radians(rotation.y)
+    rz = math.radians(rotation.z)
+    cos_x = math.cos(rx)
+    sin_x = math.sin(rx)
+    cos_y = math.cos(ry)
+    sin_y = math.sin(ry)
+    cos_z = math.cos(rz)
+    sin_z = math.sin(rz)
+
+    y = point.y * cos_x - point.z * sin_x
+    z = point.y * sin_x + point.z * cos_x
+    x = point.x
+
+    x_rot = x * cos_y + z * sin_y
+    z_rot = -x * sin_y + z * cos_y
+
+    final_x = x_rot * cos_z - y * sin_z
+    final_y = x_rot * sin_z + y * cos_z
+    return Vector3(final_x, final_y, z_rot)
 
 
 def _ship_axes(ship: Ship) -> tuple[Vector3, Vector3, Vector3]:
@@ -927,6 +964,59 @@ class VectorRenderer:
     def clear(self) -> None:
         self._start_frame()
         self.surface.fill(BACKGROUND)
+
+    def draw_background_elements(
+        self,
+        camera: ChaseCamera,
+        elements: Sequence[ManifestObject],
+    ) -> None:
+        frame = self._get_camera_frame(camera)
+        palette_fallback = (80, 100, 120)
+        color_map = {
+            "wireframe_planet": 0,
+            "wireframe_moon": 2,
+            "ring_system": 1,
+            "nebula_volume": 0,
+            "derelict_megastructure": 2,
+            "distant_beacon": 1,
+        }
+        for element in elements:
+            wireframe = BACKGROUND_WIREFRAMES.get(element.type)
+            if not wireframe:
+                continue
+            palette = element.details.get("palette") if isinstance(element.details, dict) else None
+            parsed_palette = [
+                _parse_hex_color(color, palette_fallback)
+                for color in (palette or [])
+            ]
+            palette_index = color_map.get(element.type, 0)
+            base_color = (
+                parsed_palette[palette_index]
+                if parsed_palette and palette_index < len(parsed_palette)
+                else palette_fallback
+            )
+            position = Vector3(*element.position)
+            rotation = Vector3(*element.rotation)
+            scale = Vector3(*element.scale)
+            distance = (position - frame.position).length()
+            fade = min(0.7, max(0.2, distance / 24000.0))
+            color = _blend(base_color, BACKGROUND, fade)
+            for start, end in wireframe:
+                start_local = Vector3(start.x * scale.x, start.y * scale.y, start.z * scale.z)
+                end_local = Vector3(end.x * scale.x, end.y * scale.y, end.z * scale.z)
+                world_start = position + _rotate_vector(start_local, rotation)
+                world_end = position + _rotate_vector(end_local, rotation)
+                screen_a, vis_a = frame.project_point(world_start)
+                screen_b, vis_b = frame.project_point(world_end)
+                if not (vis_a and vis_b):
+                    continue
+                pygame.draw.aaline(
+                    self.surface,
+                    color,
+                    (screen_a.x, screen_a.y),
+                    (screen_b.x, screen_b.y),
+                    blend=1,
+                )
 
     def draw_grid(
         self,

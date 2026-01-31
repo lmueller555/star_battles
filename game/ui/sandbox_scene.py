@@ -679,6 +679,10 @@ class SandboxScene(Scene):
         self.renderer.set_player_ship(self.player)
         self.hud.surface = surface
         self.renderer.clear()
+        self.renderer.draw_background_elements(
+            self.camera,
+            self.world.background_elements_in_current_system(),
+        )
         self.renderer.draw_grid(self.camera, self.player.kinematics.position)
         asteroids = self.world.asteroids_in_current_system()
         self.renderer.draw_asteroids(

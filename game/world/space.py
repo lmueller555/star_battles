@@ -39,7 +39,7 @@ from game.world.mining import (
 )
 from game.ftl.utils import compute_ftl_charge, compute_ftl_cost
 from game.world.asteroids import Asteroid, AsteroidField, AsteroidFieldState
-from game.world.procedural_sector import ProceduralSectorGenerator, SectorManifest
+from game.world.procedural_sector import ProceduralSectorGenerator, SectorManifest, ManifestObject
 
 COLLISION_RADII = {
     "Strike": 9.0,
@@ -935,6 +935,11 @@ class SpaceWorld:
 
     def asteroids_in_current_system(self) -> list[Asteroid]:
         return list(self.asteroids.current_field())
+
+    def background_elements_in_current_system(self) -> list[ManifestObject]:
+        if not self.sector_manifest:
+            return []
+        return list(self.sector_manifest.background_elements)
 
     def _station_ships(self, *, team: str | None = None) -> Iterable[Ship]:
         for candidate in self.ships:
