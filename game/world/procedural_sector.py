@@ -466,6 +466,7 @@ class ProceduralSectorGenerator:
                         radius=rng.uniform(*self.HAZARD_RADIUS_RANGE),
                         severity=rng.uniform(0.3, 0.9),
                     )
+                )
                 break
         return hazards
 
