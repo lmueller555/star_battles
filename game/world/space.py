@@ -39,6 +39,7 @@ from game.world.mining import (
 )
 from game.ftl.utils import compute_ftl_charge, compute_ftl_cost
 from game.world.asteroids import Asteroid, AsteroidField, AsteroidFieldState
+from game.world.procedural_sector import ProceduralSectorGenerator, SectorManifest
 
 COLLISION_RADII = {
     "Strike": 9.0,
@@ -160,6 +161,9 @@ class SpaceWorld:
         mining: MiningDatabase,
         logger: GameLogger,
         rng: random.Random | None = None,
+        sector_seed: int | str = 1337,
+        difficulty: int = 1,
+        theme_hint: Optional[str] = None,
     ) -> None:
         self.weapons = weapons
         self.sector = sector
@@ -182,7 +186,14 @@ class SpaceWorld:
         self.mining = MiningManager(mining)
         self.mining.enter_system(self.current_system_id)
         self.asteroids = AsteroidField()
-        self.asteroids.enter_system(self.current_system_id)
+        self.sector_seed = sector_seed
+        self.sector_difficulty = difficulty
+        self.sector_theme_hint = theme_hint
+        self._sector_generator = ProceduralSectorGenerator()
+        self._sector_manifests: dict[str, SectorManifest] = {}
+        self.sector_manifest: Optional[SectorManifest] = self._manifest_for_system(self.current_system_id)
+        field_spec = self.sector_manifest.asteroid_fields[0] if self.sector_manifest and self.sector_manifest.asteroid_fields else None
+        self.asteroids.enter_system(self.current_system_id, field_spec=field_spec)
         self._ai: dict[int, "ShipAI"] = {}
         self._current_frame_index: int = 0
         self._collision_telemetry = CollisionTelemetry()
@@ -891,13 +902,28 @@ class SpaceWorld:
         self.place_ship_near_outpost(ship)
         self.current_system_id = destination
         self.mining.enter_system(destination)
-        self.asteroids.enter_system(destination)
+        self.sector_manifest = self._manifest_for_system(destination)
+        field_spec = self.sector_manifest.asteroid_fields[0] if self.sector_manifest and self.sector_manifest.asteroid_fields else None
+        self.asteroids.enter_system(destination, field_spec=field_spec)
         self.pending_jump_id = None
         self.pending_jump_cost = 0.0
         self.jump_ship = None
         self.ftl_cooldown = 8.0
         if logger:
             logger.info("FTL jump complete to %s", destination)
+
+    def _manifest_for_system(self, system_id: Optional[str]) -> Optional[SectorManifest]:
+        if not system_id:
+            return None
+        if system_id not in self._sector_manifests:
+            manifest = self._sector_generator.generate(
+                sector_id=system_id,
+                seed=self.sector_seed,
+                difficulty=self.sector_difficulty,
+                theme_hint=self.sector_theme_hint,
+            )
+            self._sector_manifests[system_id] = manifest
+        return self._sector_manifests[system_id]
 
     def stations_in_current_system(self) -> list[DockingStation]:
         if self.current_system_id is None:
