@@ -233,6 +233,85 @@ def _build_distant_beacon() -> list[tuple[Vector3, Vector3]]:
     return segments
 
 
+def _build_orbital_waygate() -> list[tuple[Vector3, Vector3]]:
+    segments: list[tuple[Vector3, Vector3]] = []
+    inner_ring = _circle_points(1.4, sides=28, plane="xz")
+    outer_ring = _circle_points(2.3, sides=48, plane="xz")
+    vertical_ring = _circle_points(1.1, sides=24, plane="yz")
+    _loop_segments(segments, inner_ring)
+    _loop_segments(segments, outer_ring)
+    _loop_segments(segments, vertical_ring)
+    for index in range(0, len(outer_ring), 8):
+        segments.append((outer_ring[index], inner_ring[index % len(inner_ring)]))
+    for index in range(0, len(inner_ring), 7):
+        anchor = inner_ring[index]
+        segments.append((anchor, Vector3(anchor.x, 0.8, anchor.z)))
+        segments.append((anchor, Vector3(anchor.x, -0.8, anchor.z)))
+    return segments
+
+
+def _build_fleet_hulk() -> list[tuple[Vector3, Vector3]]:
+    segments: list[tuple[Vector3, Vector3]] = []
+
+    def _add_hulk(center: Vector3, length: float, height: float, depth: float) -> None:
+        x = center.x
+        y = center.y
+        z = center.z
+        corners = [
+            Vector3(x - length, y - height, z - depth),
+            Vector3(x + length, y - height, z - depth),
+            Vector3(x + length, y + height, z - depth),
+            Vector3(x - length, y + height, z - depth),
+            Vector3(x - length, y - height, z + depth),
+            Vector3(x + length, y - height, z + depth),
+            Vector3(x + length, y + height, z + depth),
+            Vector3(x - length, y + height, z + depth),
+        ]
+        edges = [
+            (0, 1),
+            (1, 2),
+            (2, 3),
+            (3, 0),
+            (4, 5),
+            (5, 6),
+            (6, 7),
+            (7, 4),
+            (0, 4),
+            (1, 5),
+            (2, 6),
+            (3, 7),
+        ]
+        for start, end in edges:
+            segments.append((corners[start], corners[end]))
+        segments.append((corners[0], Vector3(x, y, z - depth * 1.6)))
+        segments.append((corners[4], Vector3(x, y, z + depth * 1.6)))
+
+    _add_hulk(Vector3(-1.4, -0.2, 0.4), 1.2, 0.4, 0.6)
+    _add_hulk(Vector3(1.1, 0.3, -0.6), 0.9, 0.35, 0.5)
+    _add_hulk(Vector3(0.1, -0.5, 0.0), 0.7, 0.3, 0.4)
+    spine = _circle_points(2.0, sides=18, plane="xy")
+    _loop_segments(segments, spine)
+    return segments
+
+
+def _build_relay_lattice() -> list[tuple[Vector3, Vector3]]:
+    segments: list[tuple[Vector3, Vector3]] = []
+    equator = _circle_points(2.1, sides=36, plane="xz")
+    polar = _circle_points(1.6, sides=28, plane="yz")
+    meridian = _circle_points(1.8, sides=30, plane="xy")
+    _loop_segments(segments, equator)
+    _loop_segments(segments, polar)
+    _loop_segments(segments, meridian)
+    for index in range(0, len(equator), 6):
+        segments.append((equator[index], Vector3(0.0, 0.0, 0.0)))
+    for offset in (-1.2, 1.2):
+        lattice = _circle_points(0.6, sides=12, plane="xz", offset=Vector3(0.0, offset, 0.0))
+        _loop_segments(segments, lattice)
+        for point in lattice[::3]:
+            segments.append((point, Vector3(0.0, offset, 0.0)))
+    return segments
+
+
 def _build_outpost_wireframe() -> list[tuple[Vector3, Vector3]]:
     """Construct a capital-ship silhouette for Outposts."""
 
@@ -2302,6 +2381,9 @@ BACKGROUND_WIREFRAMES = {
     "nebula_volume": _build_nebula_volume(),
     "derelict_megastructure": _build_derelict_megastructure(),
     "distant_beacon": _build_distant_beacon(),
+    "orbital_waygate": _build_orbital_waygate(),
+    "fleet_hulk": _build_fleet_hulk(),
+    "relay_lattice": _build_relay_lattice(),
     "pulsar_spire": _build_pulsar_spire(),
     "crystal_cluster": _build_crystal_cluster(),
     "aurora_ribbon": _build_aurora_ribbon(),

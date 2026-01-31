@@ -70,7 +70,7 @@ THEMES: Tuple[ThemeProfile, ...] = (
         id="ringed_planet_orbit",
         name="Ringed Planet Orbit",
         palette=("#7ED2FF", "#FFC58A", "#5C7A9A"),
-        primary_elements=("wireframe_planet", "ring_system"),
+        primary_elements=("wireframe_planet", "ring_system", "orbital_waygate"),
         secondary_elements=("wireframe_moon", "nebula_volume", "distant_beacon"),
         lore=(
             "A stately gas giant hangs beyond reachable space, its rings etched with the remnants "
@@ -94,8 +94,8 @@ THEMES: Tuple[ThemeProfile, ...] = (
         id="derelict_fleet_graveyard",
         name="Derelict Fleet Graveyard",
         palette=("#9AA3B2", "#E2B68A", "#566070"),
-        primary_elements=("derelict_megastructure", "wireframe_planet"),
-        secondary_elements=("wireframe_moon", "distant_beacon", "nebula_volume"),
+        primary_elements=("derelict_megastructure", "fleet_hulk"),
+        secondary_elements=("wireframe_planet", "wireframe_moon", "distant_beacon", "nebula_volume"),
         lore=(
             "Colossal hulks float in silent formation, the remains of a defensive line that "
             "never received the retreat order. The only light is a beacon looped in emergency "
@@ -142,8 +142,8 @@ THEMES: Tuple[ThemeProfile, ...] = (
         id="clockwork_relay",
         name="Clockwork Relay",
         palette=("#F2C879", "#C9D1E8", "#3B4A66"),
-        primary_elements=("derelict_megastructure", "ring_system"),
-        secondary_elements=("wireframe_planet", "distant_beacon", "wireframe_moon"),
+        primary_elements=("relay_lattice", "ring_system"),
+        secondary_elements=("wireframe_planet", "distant_beacon", "wireframe_moon", "derelict_megastructure"),
         lore=(
             "A skeletal relay lattice surrounds the sector like a broken astrolabe, its rings "
             "aligned with a long-dead trade calendar. The rumor is that restoring a single relay "
