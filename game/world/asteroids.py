@@ -1,6 +1,7 @@
 """Asteroid field generation and scanning state."""
 from __future__ import annotations
 
+import hashlib
 import math
 import random
 from dataclasses import dataclass, field
@@ -10,6 +11,7 @@ from pygame.math import Vector3
 
 if TYPE_CHECKING:  # pragma: no cover - only used for typing
     from game.ships.ship import Ship
+    from game.world.procedural_sector import AsteroidFieldSpec
 
 from game.render.state import RenderSpatialState
 
@@ -236,13 +238,13 @@ class AsteroidField:
         self._current_system: Optional[str] = None
         self._current: List[Asteroid] = []
 
-    def enter_system(self, system_id: Optional[str]) -> None:
+    def enter_system(self, system_id: Optional[str], *, field_spec: Optional["AsteroidFieldSpec"] = None) -> None:
         self._current_system = system_id
         if not system_id:
             self._current = []
             return
         if system_id not in self._fields:
-            self._fields[system_id] = self._generate_field(system_id)
+            self._fields[system_id] = self._generate_field(system_id, field_spec=field_spec)
         self._current = self._fields[system_id]
         for asteroid in self._current:
             asteroid.halt_scan()
@@ -276,17 +278,27 @@ class AsteroidField:
             asteroid.update(dt)
         self._prune_destroyed()
 
-    def _generate_field(self, system_id: str) -> List[Asteroid]:
+    def _generate_field(self, system_id: str, *, field_spec: Optional["AsteroidFieldSpec"] = None) -> List[Asteroid]:
+        if field_spec:
+            seed_payload = f"{system_id}|{field_spec.field_type}|{field_spec.center}|{field_spec.radius}"
+            seed_value = int(hashlib.sha256(seed_payload.encode("utf-8")).hexdigest()[:16], 16)
+            rng = random.Random(seed_value)
+            count = max(20, int(self.ASTEROID_COUNT * max(0.1, field_spec.density)))
+            positions = self._positions_for_field(rng, field_spec, count)
+        else:
+            rng = self._rng
+            count = self.ASTEROID_COUNT
+            positions = [self._random_position(rng, self.FIELD_RADIUS) for _ in range(count)]
         asteroids: List[Asteroid] = []
-        for index in range(self.ASTEROID_COUNT):
-            health = self._rng.uniform(*self.HEALTH_RANGE)
-            resource = self._rng.choice(self.RESOURCE_OPTIONS)
+        for index in range(count):
+            health = rng.uniform(*self.HEALTH_RANGE)
+            resource = rng.choice(self.RESOURCE_OPTIONS)
             if resource:
-                ratio = self._rng.uniform(*self.RESOURCE_RATIO_RANGE)
+                ratio = rng.uniform(*self.RESOURCE_RATIO_RANGE)
                 resource_amount = ratio * health
             else:
                 resource_amount = 0.0
-            position = self._random_position()
+            position = positions[index % len(positions)]
             asteroid = Asteroid(
                 id=f"{system_id}-asteroid-{index}",
                 position=position,
@@ -297,15 +309,49 @@ class AsteroidField:
             asteroids.append(asteroid)
         return asteroids
 
-    def _random_position(self) -> Vector3:
-        radius = self._rng.uniform(0.0, self.FIELD_RADIUS)
-        u = self._rng.uniform(-1.0, 1.0)
-        theta = self._rng.uniform(0.0, 2.0 * math.pi)
+    def _random_position(self, rng: random.Random, radius: float) -> Vector3:
+        radius = rng.uniform(0.0, radius)
+        u = rng.uniform(-1.0, 1.0)
+        theta = rng.uniform(0.0, 2.0 * math.pi)
         sqrt_term = math.sqrt(max(0.0, 1.0 - u * u))
         x = radius * sqrt_term * math.cos(theta)
         y = radius * sqrt_term * math.sin(theta)
         z = radius * u
         return Vector3(x, y, z)
+
+    def _positions_for_field(
+        self,
+        rng: random.Random,
+        field_spec: "AsteroidFieldSpec",
+        count: int,
+    ) -> List[Vector3]:
+        positions: List[Vector3] = []
+        if field_spec.field_type == "cluster":
+            for _ in range(count):
+                offset = self._random_position(rng, field_spec.radius * 0.6)
+                positions.append(
+                    Vector3(
+                        field_spec.center[0] + offset.x,
+                        field_spec.center[1] + offset.y * 0.4,
+                        field_spec.center[2] + offset.z,
+                    )
+                )
+        elif field_spec.field_type == "belt":
+            angle_start = rng.uniform(0.0, 2.0 * math.pi)
+            angle_span = rng.uniform(math.pi * 0.6, math.pi * 1.4)
+            for index in range(count):
+                t = index / max(1, count - 1)
+                angle = angle_start + angle_span * t
+                radial = rng.uniform(field_spec.radius * 0.6, field_spec.radius)
+                jitter = rng.uniform(-field_spec.radius * 0.15, field_spec.radius * 0.15)
+                x = field_spec.center[0] + math.cos(angle) * radial
+                z = field_spec.center[2] + math.sin(angle) * radial
+                positions.append(Vector3(x + jitter, field_spec.center[1], z - jitter))
+        else:
+            for _ in range(count):
+                offset = self._random_position(rng, field_spec.radius)
+                positions.append(Vector3(field_spec.center[0] + offset.x, field_spec.center[1] + offset.y, field_spec.center[2] + offset.z))
+        return positions
 
     def scan_step(self, ship: "Ship", dt: float) -> None:
         if not self._current:
