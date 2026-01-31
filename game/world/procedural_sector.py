@@ -57,29 +57,110 @@ def _random_point_in_sphere(rng: "random.Random", min_radius: float, max_radius:
 @dataclass(frozen=True)
 class ThemeProfile:
     id: str
+    name: str
     palette: Tuple[str, str, str]
     primary_elements: Tuple[str, ...]
     secondary_elements: Tuple[str, ...]
+    lore: str
 
 
+# Sector Theme Profiles
 THEMES: Tuple[ThemeProfile, ...] = (
     ThemeProfile(
         id="ringed_planet_orbit",
+        name="Ringed Planet Orbit",
         palette=("#7ED2FF", "#FFC58A", "#5C7A9A"),
         primary_elements=("wireframe_planet", "ring_system"),
         secondary_elements=("wireframe_moon", "nebula_volume", "distant_beacon"),
+        lore=(
+            "A stately gas giant hangs beyond reachable space, its rings etched with the remnants "
+            "of ancient cargo lanes. Pilots whisper that the rings still hum with dormant "
+            "navigation beacons that once guided pilgrim fleets through this corridor."
+        ),
     ),
     ThemeProfile(
         id="nebula_drift",
+        name="Nebula Drift",
         palette=("#A56BFF", "#FF7AD9", "#4A2C6B"),
         primary_elements=("nebula_volume", "wireframe_planet"),
         secondary_elements=("wireframe_moon", "ring_system", "derelict_megastructure"),
+        lore=(
+            "Thick, luminous clouds coil around the sector, tinting every hull with magenta "
+            "afterglow. The nebula is a graveyard of lost signals, and scavengers claim the "
+            "static hides a still-broadcasting distress call from the first survey mission."
+        ),
     ),
     ThemeProfile(
         id="derelict_fleet_graveyard",
+        name="Derelict Fleet Graveyard",
         palette=("#9AA3B2", "#E2B68A", "#566070"),
         primary_elements=("derelict_megastructure", "wireframe_planet"),
         secondary_elements=("wireframe_moon", "distant_beacon", "nebula_volume"),
+        lore=(
+            "Colossal hulks float in silent formation, the remains of a defensive line that "
+            "never received the retreat order. The only light is a beacon looped in emergency "
+            "mode, inviting anyone brave enough to sift through the armored debris."
+        ),
+    ),
+    ThemeProfile(
+        id="pulsar_shroud",
+        name="Pulsar Shroud",
+        palette=("#69E6FF", "#FFF07C", "#1A3552"),
+        primary_elements=("nebula_volume", "distant_beacon"),
+        secondary_elements=("wireframe_planet", "wireframe_moon", "ring_system"),
+        lore=(
+            "A distant pulsar washes the sector in rhythmic flashes, strobing every ridge of the "
+            "nebula. Patrol logs note the time-keeping value of the pulses, while smugglers use "
+            "the flicker to mask their jumps."
+        ),
+    ),
+    ThemeProfile(
+        id="crystalline_expanse",
+        name="Crystalline Expanse",
+        palette=("#A7F6D9", "#F3FFF6", "#4EA4A8"),
+        primary_elements=("wireframe_planet", "distant_beacon"),
+        secondary_elements=("wireframe_moon", "ring_system", "nebula_volume"),
+        lore=(
+            "Light refracts through icy particulate streams, turning the void into a prism of "
+            "greens and whites. Prospectors tell stories of a frozen vault world beyond the "
+            "horizon, sealed when the first freeze wave swept the system."
+        ),
+    ),
+    ThemeProfile(
+        id="aurora_frontier",
+        name="Aurora Frontier",
+        palette=("#6FFFCB", "#7AA7FF", "#14243A"),
+        primary_elements=("wireframe_planet", "nebula_volume"),
+        secondary_elements=("wireframe_moon", "distant_beacon", "ring_system"),
+        lore=(
+            "Energetic winds comb the sector into long auroral curtains, marking the edge of a "
+            "volatile magnetosphere. Frontier crews tell new arrivals to follow the green bands "
+            "if they want to find the only stable slipstream out."
+        ),
+    ),
+    ThemeProfile(
+        id="clockwork_relay",
+        name="Clockwork Relay",
+        palette=("#F2C879", "#C9D1E8", "#3B4A66"),
+        primary_elements=("derelict_megastructure", "ring_system"),
+        secondary_elements=("wireframe_planet", "distant_beacon", "wireframe_moon"),
+        lore=(
+            "A skeletal relay lattice surrounds the sector like a broken astrolabe, its rings "
+            "aligned with a long-dead trade calendar. The rumor is that restoring a single relay "
+            "node could light an ancient jump route across the frontier."
+        ),
+    ),
+    ThemeProfile(
+        id="ember_wastes",
+        name="Ember Wastes",
+        palette=("#FF9A6A", "#FCD38A", "#5B3238"),
+        primary_elements=("wireframe_planet", "derelict_megastructure"),
+        secondary_elements=("nebula_volume", "distant_beacon", "wireframe_moon"),
+        lore=(
+            "The background glow is a bruise of burnt orange from old reactor scars and drifting "
+            "plasma embers. The sector is notorious for running hot, and every station log keeps "
+            "a memorial to the convoy that vanished in the flare season."
+        ),
     ),
 )
 
