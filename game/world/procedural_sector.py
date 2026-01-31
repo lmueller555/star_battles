@@ -507,6 +507,7 @@ class ProceduralSectorGenerator:
                         amount=rng.uniform(*self.RESOURCE_AMOUNT_RANGE),
                         source=source,
                     )
+                )
                 break
         return nodes
 
